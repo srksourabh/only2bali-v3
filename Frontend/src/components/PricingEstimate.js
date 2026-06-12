@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { calculatePrice, matchVendors } from "../services/api";
+import { fetchRates, formatCurrency } from "../services/currency";
 import VendorCard from "./VendorCard";
 import "./PricingEstimate.css";
 
@@ -18,6 +19,24 @@ const PricingEstimate = ({ tripId, groupSize, days, onProceedToBooking }) => {
   const [isLoadingPrice, setIsLoadingPrice] = useState(false);
   const [isLoadingVendors, setIsLoadingVendors] = useState(false);
   const [error, setError] = useState("");
+  const [currency, setCurrency] = useState(
+    localStorage.getItem("only2bali_currency") || "USD"
+  );
+  const [exchangeRates, setExchangeRates] = useState(null);
+
+  useEffect(() => {
+    const loadRates = async () => {
+      const rates = await fetchRates();
+      setExchangeRates(rates);
+    };
+    loadRates();
+  }, []);
+
+  const handleCurrencyChange = (newCurrency) => {
+    setCurrency(newCurrency);
+    localStorage.setItem("only2bali_currency", newCurrency);
+    window.dispatchEvent(new Event("only2bali_currency_changed"));
+  };
 
   const fetchPricing = async (tier) => {
     setIsLoadingPrice(true);
@@ -75,6 +94,8 @@ const PricingEstimate = ({ tripId, groupSize, days, onProceedToBooking }) => {
       ? totalPerPerson * groupSize
       : null);
 
+  const rate = exchangeRates ? exchangeRates[currency] || 1 : 1;
+
   return (
     <div className="pe-container">
       <div className="loading-bar-container">
@@ -88,6 +109,25 @@ const PricingEstimate = ({ tripId, groupSize, days, onProceedToBooking }) => {
       <p className="pe-subtitle">
         Select a tier to see estimated costs and matched vendors.
       </p>
+
+      {/* Currency Selector */}
+      <div className="pe-currency-row">
+        <label htmlFor="pe-currency-select" className="pe-currency-label">Display Currency:</label>
+        <select
+          id="pe-currency-select"
+          value={currency}
+          onChange={(e) => handleCurrencyChange(e.target.value)}
+          className="pe-currency-select"
+        >
+          <option value="USD">USD ($)</option>
+          <option value="IDR">IDR (Rp)</option>
+          <option value="EUR">EUR (€)</option>
+          <option value="AUD">AUD (A$)</option>
+          <option value="SGD">SGD (S$)</option>
+          <option value="INR">INR (₹)</option>
+          <option value="GBP">GBP (£)</option>
+        </select>
+      </div>
 
       {/* Tier Toggle */}
       <div className="pe-tier-group">
@@ -129,8 +169,8 @@ const PricingEstimate = ({ tripId, groupSize, days, onProceedToBooking }) => {
                       <td className="pe-category">
                         {key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, " ")}
                       </td>
-                      <td>${Number(perPerson).toFixed(0)}</td>
-                      <td>${Number(total).toFixed(0)}</td>
+                      <td>{formatCurrency(perPerson, rate, currency)}</td>
+                      <td>{formatCurrency(total, rate, currency)}</td>
                     </tr>
                   );
                 })
@@ -139,29 +179,29 @@ const PricingEstimate = ({ tripId, groupSize, days, onProceedToBooking }) => {
                   {pricing.hotel != null && (
                     <tr>
                       <td className="pe-category">Hotel</td>
-                      <td>${Number(pricing.hotel).toFixed(0)}</td>
-                      <td>${(Number(pricing.hotel) * (groupSize || 1)).toFixed(0)}</td>
+                      <td>{formatCurrency(pricing.hotel, rate, currency)}</td>
+                      <td>{formatCurrency(Number(pricing.hotel) * (groupSize || 1), rate, currency)}</td>
                     </tr>
                   )}
                   {pricing.food != null && (
                     <tr>
                       <td className="pe-category">Food</td>
-                      <td>${Number(pricing.food).toFixed(0)}</td>
-                      <td>${(Number(pricing.food) * (groupSize || 1)).toFixed(0)}</td>
+                      <td>{formatCurrency(pricing.food, rate, currency)}</td>
+                      <td>{formatCurrency(Number(pricing.food) * (groupSize || 1), rate, currency)}</td>
                     </tr>
                   )}
                   {pricing.transport != null && (
                     <tr>
                       <td className="pe-category">Transport</td>
-                      <td>${Number(pricing.transport).toFixed(0)}</td>
-                      <td>${(Number(pricing.transport) * (groupSize || 1)).toFixed(0)}</td>
+                      <td>{formatCurrency(pricing.transport, rate, currency)}</td>
+                      <td>{formatCurrency(Number(pricing.transport) * (groupSize || 1), rate, currency)}</td>
                     </tr>
                   )}
                   {pricing.tours != null && (
                     <tr>
                       <td className="pe-category">Tours</td>
-                      <td>${Number(pricing.tours).toFixed(0)}</td>
-                      <td>${(Number(pricing.tours) * (groupSize || 1)).toFixed(0)}</td>
+                      <td>{formatCurrency(pricing.tours, rate, currency)}</td>
+                      <td>{formatCurrency(Number(pricing.tours) * (groupSize || 1), rate, currency)}</td>
                     </tr>
                   )}
                 </>
@@ -174,7 +214,7 @@ const PricingEstimate = ({ tripId, groupSize, days, onProceedToBooking }) => {
                 </td>
                 <td>
                   {totalPerPerson != null ? (
-                    <strong>${Number(totalPerPerson).toFixed(0)}</strong>
+                    <strong>{formatCurrency(totalPerPerson, rate, currency)}</strong>
                   ) : (
                     "—"
                   )}
@@ -182,7 +222,7 @@ const PricingEstimate = ({ tripId, groupSize, days, onProceedToBooking }) => {
                 <td>
                   {grandTotal != null ? (
                     <strong className="pe-grand-total">
-                      ${Number(grandTotal).toFixed(0)}
+                      {formatCurrency(grandTotal, rate, currency)}
                     </strong>
                   ) : (
                     "—"

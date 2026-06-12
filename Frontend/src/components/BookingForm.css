@@ -211,3 +211,13 @@
     font-size: 1.4rem;
   }
 }
+
+.bf-price-usd-sub {
+  display: block;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+  margin-top: 4px;
+  text-align: center;
+}
+

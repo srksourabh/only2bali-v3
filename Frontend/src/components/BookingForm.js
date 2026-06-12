@@ -1,5 +1,6 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createBooking } from "../services/api";
+import { fetchRates, formatCurrency } from "../services/currency";
 import "./BookingForm.css";
 
 const BookingForm = ({ tripId, itineraryId, totalPrice, onSuccess }) => {
@@ -8,6 +9,19 @@ const BookingForm = ({ tripId, itineraryId, totalPrice, onSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const formRef = useRef(null);
+
+  const [currency] = useState(
+    localStorage.getItem("only2bali_currency") || "USD"
+  );
+  const [exchangeRates, setExchangeRates] = useState(null);
+
+  useEffect(() => {
+    const loadRates = async () => {
+      const rates = await fetchRates();
+      setExchangeRates(rates);
+    };
+    loadRates();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -65,7 +79,16 @@ const BookingForm = ({ tripId, itineraryId, totalPrice, onSuccess }) => {
             <div className="bf-summary-item">
               <span className="bf-summary-label">Total Price</span>
               <span className="bf-summary-value bf-price">
-                ${Number(totalPrice).toFixed(0)}
+                {currency !== "USD" && exchangeRates ? (
+                  <>
+                    <span>{formatCurrency(totalPrice, exchangeRates[currency] || 1, currency)}</span>
+                    <span className="bf-price-usd-sub">
+                      (equiv. ${Number(totalPrice).toFixed(0)} USD)
+                    </span>
+                  </>
+                ) : (
+                  `$${Number(totalPrice).toFixed(0)}`
+                )}
               </span>
             </div>
           )}

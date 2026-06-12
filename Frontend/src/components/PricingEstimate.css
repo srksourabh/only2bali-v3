@@ -298,3 +298,53 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Display Currency Selector */
+.pe-currency-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.pe-currency-label {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pe-currency-select {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.pe-currency-select:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #4EBB87;
+  box-shadow: 0 4px 12px rgba(78, 187, 135, 0.25);
+}
+
+.pe-currency-select:focus {
+  border-color: #4EBB87;
+  box-shadow: 0 0 0 2px rgba(78, 187, 135, 0.4);
+}
+
+.pe-currency-select option {
+  background: #232c3f;
+  color: #fff;
+}
+

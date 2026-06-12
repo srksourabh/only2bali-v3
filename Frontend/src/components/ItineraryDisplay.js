@@ -1,7 +1,29 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { fetchRates, formatCurrency } from "../services/currency";
 import "./ItineraryDisplay.css";
 
 const ItineraryDisplay = ({ itinerary, onProceed }) => {
+  const [currency, setCurrency] = useState(
+    localStorage.getItem("only2bali_currency") || "USD"
+  );
+  const [exchangeRates, setExchangeRates] = useState(null);
+
+  useEffect(() => {
+    const loadRates = async () => {
+      const rates = await fetchRates();
+      setExchangeRates(rates);
+    };
+    loadRates();
+
+    const handleCurrencyChange = () => {
+      setCurrency(localStorage.getItem("only2bali_currency") || "USD");
+    };
+    window.addEventListener("only2bali_currency_changed", handleCurrencyChange);
+    return () => {
+      window.removeEventListener("only2bali_currency_changed", handleCurrencyChange);
+    };
+  }, []);
+
   if (!itinerary) {
     return (
       <div className="itin-page">
@@ -13,6 +35,8 @@ const ItineraryDisplay = ({ itinerary, onProceed }) => {
   const days = itinerary.days || [];
   const totalDays = days.length || itinerary.total_days || 0;
   const title = itinerary.title || `Your ${totalDays}-Day Bali Itinerary`;
+
+  const rate = exchangeRates ? exchangeRates[currency] || 1 : 1;
 
   return (
     <div className="itin-page">
@@ -109,7 +133,7 @@ const ItineraryDisplay = ({ itinerary, onProceed }) => {
                 {/* Cost */}
                 {day.estimated_cost !== undefined && day.estimated_cost !== null && (
                   <div className="itin-cost-badge">
-                    Est. ${day.estimated_cost} / person
+                    Est. {formatCurrency(day.estimated_cost, rate, currency)} / person
                   </div>
                 )}
               </div>
@@ -120,7 +144,7 @@ const ItineraryDisplay = ({ itinerary, onProceed }) => {
         {itinerary.total_estimated_cost && (
           <div className="itin-total-cost">
             <span>Total Estimated Cost:</span>
-            <strong>${itinerary.total_estimated_cost} per person</strong>
+            <strong>{formatCurrency(itinerary.total_estimated_cost, rate, currency)} per person</strong>
           </div>
         )}
 
