@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Fraunces, Inter } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
+import CustomCursor from "./components/CustomCursor";
 
 const fraunces = Fraunces({ subsets: ["latin"], variable: "--font-display" });
 const inter = Inter({ subsets: ["latin"], variable: "--font-body" });
@@ -23,9 +24,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={`${fraunces.variable} ${inter.variable}`}>
+        <CustomCursor />
         <nav aria-label="Main navigation">
           <div className="wrap navrow">
-            <Link className="brand" href="/">Only<span>2</span>Bali</Link>
+            <Link className="brand" href="/">
+              <img src="/Asset/bali%20loogoo.svg" alt="Only2Bali Logo" style={{ height: "46px", width: "auto", display: "block" }} />
+            </Link>
             <div className="links">
               <Link href="/#packages">Packages</Link>
               <Link href="/planner">Planner</Link>
@@ -42,8 +46,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="wrap">
             <div className="frow">
               <div>
-                <Link className="brand" style={{ color: "#fff" }} href="/">
-                  Only<span>2</span>Bali
+                <Link className="brand" href="/">
+                  <img src="/Asset/bali%20loogoo.svg" alt="Only2Bali Logo" style={{ height: "46px", width: "auto", display: "block", filter: "brightness(0) invert(1)" }} />
                 </Link>
                 <p style={{ marginTop: ".8rem", maxWidth: "340px" }}>
                   India&apos;s first Bali travel platform built exclusively for vegetarian, Jain and vegan group travelers. Premium customization, cultural fluency, zero food anxiety.
