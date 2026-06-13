@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Only2Bali — Vegetarian, Jain & Vegan Bali Group Tours from India</title>
+<meta name="description" content="India's first Bali travel platform exclusively for vegetarian, Jain and vegan group travelers. Customized itineraries, Jain-protocol kitchens, Indian-language guides, villas with kitchens, and accompanying cooks for groups of 10+.">
+<meta property="og:title" content="Only2Bali — Pure Veg, Jain & Vegan Bali Travel from India">
+<meta property="og:description" content="Customized Bali group tours with 100% vegetarian, Jain and vegan meals. Indian-language guides, kitchens in villas, bring-a-cook for 10+ pax.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://only2bali.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"TravelAgency","name":"Only2Bali","description":"Bali travel exclusively for vegetarian, Jain and vegan group travelers from India.","url":"https://only2bali.com","areaServed":["India","Bali"],"knowsLanguage":["en","hi","ta","gu","te","kn","mr"]}
+</script>
+<style>
+:root{
+  --emerald:#0e4f44; --emerald-d:#093830; --saffron:#e8941a; --saffron-d:#c97a0a;
+  --ivory:#faf6ee; --cream:#f3ecdd; --ink:#1d2a27; --muted:#5d6f6a; --line:#e3dccb;
+  --ok:#1e7d4f; --err:#c0392b; --r:14px; --shadow:0 10px 30px rgba(14,79,68,.10);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,sans-serif;color:var(--ink);background:var(--ivory);line-height:1.6}
+h1,h2,h3,.brand{font-family:'Fraunces',Georgia,serif}
+h2{font-size:clamp(1.6rem,3.2vw,2.3rem);color:var(--emerald-d);margin-bottom:.5rem}
+.sub{color:var(--muted);max-width:640px;margin-bottom:2rem}
+section{padding:64px 0}
+.wrap{width:min(1140px,92%);margin:0 auto}
+.tag{display:inline-block;background:var(--cream);color:var(--saffron-d);font-weight:600;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .8rem;border-radius:99px;margin-bottom:.8rem}
+/* NAV */
+nav{position:sticky;top:0;z-index:50;background:rgba(250,246,238,.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.navrow{display:flex;align-items:center;justify-content:space-between;height:64px}
+.brand{font-size:1.35rem;font-weight:700;color:var(--emerald-d);text-decoration:none}
+.brand span{color:var(--saffron)}
+.links{display:flex;gap:1.4rem;align-items:center}
+.links a{text-decoration:none;color:var(--ink);font-size:.92rem;font-weight:500}
+.links a:hover{color:var(--emerald)}
+.btn{display:inline-block;border:none;cursor:pointer;text-decoration:none;font-weight:600;font-size:.95rem;padding:.75rem 1.5rem;border-radius:99px;transition:.2s}
+.btn-p{background:var(--saffron);color:#fff}.btn-p:hover{background:var(--saffron-d)}
+.btn-o{background:transparent;color:var(--emerald-d);border:2px solid var(--emerald)}
+.btn-o:hover{background:var(--emerald);color:#fff}
+.btn-g{background:var(--emerald);color:#fff}.btn-g:hover{background:var(--emerald-d)}
+#menuBtn{display:none;background:none;border:none;font-size:1.6rem;color:var(--emerald-d);cursor:pointer}
+/* HERO */
+header.hero{background:linear-gradient(160deg,var(--emerald-d) 0%,var(--emerald) 55%,#15695b 100%);color:#fff;padding:84px 0 64px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-120px;top:-120px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(232,148,26,.35),transparent 70%)}
+.hero h1{font-size:clamp(2rem,5vw,3.3rem);line-height:1.15;max-width:760px}
+.hero h1 em{color:#f6b85a;font-style:normal}
+.hero p{max-width:620px;margin:1.2rem 0 2rem;color:#dcebe6;font-size:1.07rem}
+.hero .cta{display:flex;gap:1rem;flex-wrap:wrap}
+.trust{display:flex;gap:1.6rem;flex-wrap:wrap;margin-top:2.6rem}
+.trust div{display:flex;align-items:center;gap:.5rem;font-size:.88rem;color:#cfe5de}
+.trust b{color:#fff}
+/* CARDS */
+.grid{display:grid;gap:1.4rem}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g2{grid-template-columns:repeat(2,1fr)}
+.card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:1.6rem;box-shadow:var(--shadow)}
+.card h3{color:var(--emerald-d);margin-bottom:.4rem}
+.pkg .band{font-size:.8rem;font-weight:700;color:var(--saffron-d);letter-spacing:.05em;text-transform:uppercase}
+.pkg .price{font-family:'Fraunces',serif;font-size:1.3rem;color:var(--emerald-d);margin:.5rem 0}
+.pkg .price small{font-family:'Inter';font-size:.75rem;color:var(--muted);font-weight:400}
+.chips{display:flex;flex-wrap:wrap;gap:.4rem;margin:.7rem 0}
+.chip{background:var(--cream);border-radius:99px;padding:.2rem .7rem;font-size:.74rem;font-weight:600;color:var(--emerald-d)}
+.filters{display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1.6rem}
+.fbtn{background:#fff;border:1.5px solid var(--line);border-radius:99px;padding:.45rem 1.1rem;font-size:.85rem;font-weight:600;cursor:pointer;color:var(--muted)}
+.fbtn.on{background:var(--emerald);border-color:var(--emerald);color:#fff}
+/* FORMS */
+form .row{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin-bottom:1rem}
+label{display:block;font-size:.85rem;font-weight:600;margin-bottom:.3rem;color:var(--emerald-d)}
+input,select,textarea{width:100%;padding:.7rem .9rem;border:1.5px solid var(--line);border-radius:10px;font:inherit;font-size:.93rem;background:#fff}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--saffron);border-color:var(--saffron)}
+.checks{display:flex;flex-wrap:wrap;gap:.6rem}
+.checks label{display:flex;align-items:center;gap:.4rem;font-weight:500;background:#fff;border:1.5px solid var(--line);border-radius:99px;padding:.45rem .9rem;cursor:pointer;font-size:.85rem;margin:0}
+.checks input{width:auto}
+.checks label:has(input:checked){background:var(--emerald);color:#fff;border-color:var(--emerald)}
+.fineprint{font-size:.78rem;color:var(--muted);margin-top:.6rem}
+.errmsg{color:var(--err);font-size:.8rem;margin-top:.4rem;display:none}
+.okbox{display:none;background:#e8f5ee;border:1.5px solid var(--ok);color:var(--ok);border-radius:10px;padding:1rem;margin-top:1rem;font-weight:500}
+/* RESULTS */
+.result{border-left:5px solid var(--saffron);margin-bottom:1.2rem}
+.result .why{margin:.6rem 0 .2rem;padding-left:1.1rem}
+.result .why li{font-size:.88rem;color:var(--muted)}
+.days{font-size:.85rem;color:var(--muted);background:var(--cream);border-radius:10px;padding:.8rem 1rem;margin:.7rem 0}
+/* SECTIONS ALT */
+.alt{background:var(--cream)}
+.dark{background:var(--emerald-d);color:#fff}
+.dark h2{color:#fff}.dark .sub{color:#cfe5de}
+/* FAQ */
+details{background:#fff;border:1px solid var(--line);border-radius:10px;padding:1rem 1.2rem;margin-bottom:.7rem}
+summary{font-weight:600;cursor:pointer;color:var(--emerald-d)}
+details p{margin-top:.6rem;color:var(--muted);font-size:.92rem}
+/* TESTIMONIALS */
+.quote{font-size:.95rem;color:var(--muted);font-style:italic}
+.who{margin-top:.8rem;font-weight:600;color:var(--emerald-d);font-size:.85rem}
+.sample{font-size:.7rem;color:#b09a6a;text-transform:uppercase;letter-spacing:.06em}
+/* FOOTER */
+footer{background:var(--emerald-d);color:#cfe5de;padding:48px 0 24px;font-size:.88rem}
+footer a{color:#f6b85a;text-decoration:none}
+.frow{display:grid;grid-template-columns:2fr 1fr 1fr;gap:2rem;margin-bottom:2rem}
+.foot-note{border-top:1px solid rgba(255,255,255,.15);padding-top:1.2rem;font-size:.78rem;color:#9dbbb2}
+@media(max-width:880px){
+  .g3,.g2,.frow,form .row{grid-template-columns:1fr}
+  .links{display:none;position:absolute;top:64px;left:0;right:0;background:var(--ivory);flex-direction:column;padding:1.2rem;border-bottom:1px solid var(--line)}
+  .links.open{display:flex}
+  #menuBtn{display:block}
+}
+</style>
+</head>
+<body>
+
+<nav aria-label="Main navigation"><div class="wrap navrow">
+  <a class="brand" href="#top">Only<span>2</span>Bali</a>
+  <button id="menuBtn" aria-label="Toggle menu" aria-expanded="false">☰</button>
+  <div class="links" id="navLinks">
+    <a href="#packages">Packages</a><a href="#planner">Itinerary Planner</a>
+    <a href="#food">Food</a><a href="#stays">Stays & Cook</a><a href="#guides">Guides</a>
+    <a href="#vendors">For Vendors</a><a href="#faq">FAQ</a>
+    <a class="btn btn-p" href="#inquiry">Plan My Trip</a>
+  </div>
+</div></nav>
+
+<header class="hero" id="top"><div class="wrap">
+  <span class="tag" style="background:rgba(255,255,255,.12);color:#f6b85a">India's first 100% vegetarian Bali travel platform</span>
+  <h1>Bali, the way your family eats.<br><em>Pure veg. Jain. Vegan. Always.</em></h1>
+  <p>Customized group tours from India with Jain-protocol kitchens, Indian-language guides, villas with private cooking facilities — and your own accompanying cook for groups of 10 or more.</p>
+  <div class="cta">
+    <a class="btn btn-p" href="#planner">Get My Custom Itinerary</a>
+    <a class="btn btn-o" style="border-color:#f6b85a;color:#f6b85a" href="#vendors">Partner With Us (Bali Vendors)</a>
+  </div>
+  <div class="trust">
+    <div>🥗 <span><b>100%</b> veg-only kitchens</span></div>
+    <div>🙏 <span><b>Jain protocol</b> — no onion, garlic or root veg</span></div>
+    <div>🗣️ <span>Guides in <b>7 Indian languages</b></span></div>
+    <div>👨‍🍳 <span><b>Bring-a-cook</b> for 10+ pax groups</span></div>
+  </div>
+</div></header>
+
+<section id="why"><div class="wrap">
+  <span class="tag">Why Only2Bali</span>
+  <h2>Generic Bali tours weren't built for you. This one is.</h2>
+  <p class="sub">Most Bali operators add a "veg option" as an afterthought. We built the entire platform around it — every restaurant verified, every kitchen audited, every itinerary planned around how your group actually eats, prays and travels.</p>
+  <div class="grid g3">
+    <div class="card"><h3>🍛 Food-first planning</h3><p class="quote" style="font-style:normal">Indian, Indonesian and Chinese vegetarian, Jain and vegan menus — pre-confirmed before you fly, meal by meal.</p></div>
+    <div class="card"><h3>🛕 Culturally fluent</h3><p class="quote" style="font-style:normal">Temple-friendly schedules, satvik options for Brahmin travelers, sunset-meal timing for Jain groups, and festival-aware planning.</p></div>
+    <div class="card"><h3>✨ Economical to premium</h3><p class="quote" style="font-style:normal">Honest banded pricing from value group trips to private-villa celebrations. Customized, never cookie-cutter.</p></div>
+  </div>
+</div></section>
+
+<section id="packages" class="alt"><div class="wrap">
+  <span class="tag">Curated Packages</span>
+  <h2>Vegetarian Bali packages, by protocol & budget</h2>
+  <p class="sub">Filter by your food protocol. Every package below is indicative and fully customizable — final itineraries are tailored to your group on consultation.</p>
+  <div class="filters" id="pkgFilters" role="group" aria-label="Filter packages">
+    <button class="fbtn on" data-f="all">All</button>
+    <button class="fbtn" data-f="jain">Jain</button>
+    <button class="fbtn" data-f="vegetarian">Vegetarian</button>
+    <button class="fbtn" data-f="vegan">Vegan</button>
+    <button class="fbtn" data-f="economical">Economical</button>
+    <button class="fbtn" data-f="premium">Premium</button>
+  </div>
+  <div class="grid g3" id="pkgGrid"></div>
+</div></section>
+
+<section id="planner"><div class="wrap">
+  <span class="tag">Customized Itinerary Planner</span>
+  <h2>Tell us about your group. Get matched itineraries instantly.</h2>
+  <p class="sub">Rules-based recommendations you can refine on a call. Nothing is booked — this helps us understand you and helps you see what's possible.</p>
+  <form id="plannerForm" novalidate>
+    <div class="row">
+      <div><label for="pCity">Departure city</label>
+        <select id="pCity" required><option value="">Select…</option><option>Delhi</option><option>Mumbai</option><option>Bengaluru</option><option>Chennai</option><option>Hyderabad</option><option>Ahmedabad</option><option>Kolkata</option><option>Other</option></select></div>
+      <div><label for="pMonth">Travel month</label>
+        <select id="pMonth" required><option value="">Select…</option><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></div>
+    </div>
+    <div class="row">
+      <div><label for="pSize">Group size (pax)</label><input id="pSize" type="number" min="2" max="200" placeholder="e.g. 12" required></div>
+      <div><label for="pBudget">Budget per person (ex-flights)</label>
+        <select id="pBudget" required><option value="">Select…</option><option value="economical">Economical — ₹55–75k</option><option value="comfort">Comfort — ₹75–110k</option><option value="premium">Premium — ₹110k+</option></select></div>
+    </div>
+    <div class="row">
+      <div><label for="pFood">Food protocol</label>
+        <select id="pFood" required><option value="">Select…</option><option value="jain">Jain (no onion/garlic/root veg)</option><option value="vegetarian">Strict vegetarian</option><option value="vegan">Vegan</option></select></div>
+      <div><label for="pLang">Preferred guide language</label>
+        <select id="pLang"><option value="">No preference</option><option>Hindi</option><option>Tamil</option><option>Gujarati</option><option>Telugu</option><option>Kannada</option><option>Marathi</option><option>English</option></select></div>
+    </div>
+    <div style="margin-bottom:1rem">
+      <label>Interests (choose any)</label>
+      <div class="checks" id="pInterests">
+        <label><input type="checkbox" value="temples">🛕 Temples</label>
+        <label><input type="checkbox" value="beaches">🏖️ Beaches</label>
+        <label><input type="checkbox" value="adventure">🚣 Adventure</label>
+        <label><input type="checkbox" value="wellness">🧘 Wellness</label>
+        <label><input type="checkbox" value="culture">🎭 Culture & arts</label>
+        <label><input type="checkbox" value="shopping">🛍️ Shopping</label>
+      </div>
+    </div>
+    <div class="checks" style="margin-bottom:1.2rem">
+      <label><input type="checkbox" id="pKitchen"> Need stay with kitchen access</label>
+      <label><input type="checkbox" id="pCook"> Want an accompanying cook</label>
+    </div>
+    <p class="errmsg" id="plannerErr" role="alert"></p>
+    <button class="btn btn-g" type="submit">Show My Matched Itineraries</button>
+  </form>
+  <div id="plannerOut" style="margin-top:2rem" aria-live="polite"></div>
+</div></section>
+
+<section id="food" class="alt"><div class="wrap">
+  <span class="tag">Food Preferences</span>
+  <h2>Three cuisines. Three protocols. Zero compromise.</h2>
+  <p class="sub">Every meal on your itinerary is pre-planned and confirmed with our verified kitchen partners across Bali.</p>
+  <div class="grid g3">
+    <div class="card"><h3>Jain</h3><p class="quote" style="font-style:normal">No onion, no garlic, no root vegetables. Sunset-meal timing on request. Dedicated Jain-trained kitchens in Ubud, Kuta and Nusa Dua areas.</p><div class="chips"><span class="chip">Gujarati thali</span><span class="chip">Jain Indonesian nasi</span><span class="chip">Jain Chinese</span></div></div>
+    <div class="card"><h3>Vegetarian</h3><p class="quote" style="font-style:normal">Strict veg — no egg by default, dairy welcome. Satvik options for Brahmin community travelers, including temple-day meal plans.</p><div class="chips"><span class="chip">North & South Indian</span><span class="chip">Veg gado-gado</span><span class="chip">Veg dim sum</span></div></div>
+    <div class="card"><h3>Vegan</h3><p class="quote" style="font-style:normal">Bali is one of Asia's best vegan destinations — we curate its finest plant-based cafés alongside vegan Indian and Chinese meals.</p><div class="chips"><span class="chip">Vegan warungs</span><span class="chip">Plant-based Indian</span><span class="chip">Raw & smoothie bars</span></div></div>
+  </div>
+</div></section>
+
+<section id="stays"><div class="wrap">
+  <span class="tag">Stays, Kitchens & Your Own Cook</span>
+  <h2>Villas with kitchens. Hotels with veg meal support. Or bring a cook.</h2>
+  <div class="grid g3">
+    <div class="card"><h3>🏡 Private villas with kitchens</h3><p class="quote" style="font-style:normal">Group villas (4–30 pax) with full cooking facilities, utensils suited to Indian cooking, and grocery pre-stocking on request.</p></div>
+    <div class="card"><h3>🏨 Veg-supportive hotels</h3><p class="quote" style="font-style:normal">Hotels whose kitchens we've personally verified for separate veg preparation and Jain-protocol capability.</p></div>
+    <div class="card" style="border:2px solid var(--saffron)"><h3>👨‍🍳 Bring-a-cook (10+ pax)</h3><p class="quote" style="font-style:normal">For groups of 10 or more, request a dedicated accompanying cook — Indian-cuisine trained, Jain-protocol aware — for your entire stay.</p><a class="btn btn-p" style="margin-top:.8rem" href="#inquiry">Request a Cook</a></div>
+  </div>
+</div></section>
+
+<section id="guides" class="alt"><div class="wrap">
+  <span class="tag">Guides Who Speak Your Language</span>
+  <h2>Explore Bali in Hindi, Tamil, Gujarati, Telugu, Kannada or Marathi</h2>
+  <p class="sub">Our Bali guide network includes Indian-language speakers who understand both cultures — temple etiquette, food sensitivities and family travel rhythms included.</p>
+  <div class="chips" style="font-size:1rem">
+    <span class="chip">हिन्दी Hindi</span><span class="chip">தமிழ் Tamil</span><span class="chip">ગુજરાતી Gujarati</span><span class="chip">తెలుగు Telugu</span><span class="chip">ಕನ್ನಡ Kannada</span><span class="chip">मराठी Marathi</span><span class="chip">English</span>
+  </div>
+</div></section>
+
+<section id="vendors" class="dark"><div class="wrap">
+  <span class="tag" style="background:rgba(255,255,255,.12)">Bali Vendor Onboarding</span>
+  <h2>Run a veg-friendly business in Bali? Join the network.</h2>
+  <p class="sub">We onboard vegetarian restaurants, vegan cafés, Jain-capable kitchens, villas with kitchens, veg-supportive hotels, transport providers, Indian-language guides, chefs and activity partners.</p>
+  <form id="vendorForm" novalidate style="background:#fff;color:var(--ink);padding:1.8rem;border-radius:var(--r)">
+    <div class="row">
+      <div><label for="vName">Business / your name *</label><input id="vName" required placeholder="Warung Shanti / I Made…"></div>
+      <div><label for="vType">Business type *</label>
+        <select id="vType" required><option value="">Select…</option><option>Vegetarian restaurant</option><option>Vegan café</option><option>Jain-capable kitchen</option><option>Villa with kitchen</option><option>Hotel with veg meal support</option><option>Transport provider</option><option>Guide (Indian language)</option><option>Chef / cook</option><option>Activity partner</option></select></div>
+    </div>
+    <div class="row">
+      <div><label for="vLoc">Location / service areas *</label><input id="vLoc" required placeholder="Ubud, Seminyak…"></div>
+      <div><label for="vCuisine">Cuisine / service type</label><input id="vCuisine" placeholder="South Indian veg, ayurvedic spa…"></div>
+    </div>
+    <div style="margin-bottom:1rem"><label>Dietary capability *</label>
+      <div class="checks" id="vCap">
+        <label><input type="checkbox" value="Vegetarian"> Vegetarian</label>
+        <label><input type="checkbox" value="Jain"> Jain protocol</label>
+        <label><input type="checkbox" value="Vegan"> Vegan</label>
+        <label><input type="checkbox" value="Kitchen available"> Kitchen available</label>
+      </div></div>
+    <div class="row">
+      <div><label for="vLang">Languages spoken</label><input id="vLang" placeholder="English, Hindi, Bahasa…"></div>
+      <div><label for="vPrice">Pricing band</label>
+        <select id="vPrice"><option value="">Select…</option><option>Budget</option><option>Mid-range</option><option>Premium</option></select></div>
+    </div>
+    <div class="row">
+      <div><label for="vPhone">WhatsApp / phone *</label><input id="vPhone" type="tel" required placeholder="+62…"></div>
+      <div><label for="vEmail">Email</label><input id="vEmail" type="email" placeholder="you@business.com"></div>
+    </div>
+    <div class="row">
+      <div><label for="vAvail">Availability</label><input id="vAvail" placeholder="Year-round / seasonal…"></div>
+      <div><label for="vNotes">Special notes</label><input id="vNotes" placeholder="Anything we should know"></div>
+    </div>
+    <p class="errmsg" id="vendorErr" role="alert"></p>
+    <button class="btn btn-p" type="submit">Apply to Join</button>
+    <p class="fineprint">Submitting opens WhatsApp (or email) with your application pre-filled — nothing is sent without your confirmation.</p>
+    <div class="okbox" id="vendorOk">✅ Application prepared! Complete sending it in WhatsApp/email. We typically respond within 2 business days.</div>
+  </form>
+</div></section>
+
+<section id="inquiry"><div class="wrap">
+  <span class="tag">Group Inquiry</span>
+  <h2>Ready to plan? Tell us about your group.</h2>
+  <p class="sub">Share the basics and our travel designer will call you back with a customized plan — no payment, no obligation.</p>
+  <form id="leadForm" novalidate>
+    <div class="row">
+      <div><label for="lName">Your name *</label><input id="lName" required></div>
+      <div><label for="lPhone">WhatsApp number *</label><input id="lPhone" type="tel" required placeholder="+91…"></div>
+    </div>
+    <div class="row">
+      <div><label for="lCity">Departure city *</label><input id="lCity" required></div>
+      <div><label for="lSize">Group size *</label><input id="lSize" type="number" min="2" required></div>
+    </div>
+    <div class="row">
+      <div><label for="lFood">Food protocol *</label>
+        <select id="lFood" required><option value="">Select…</option><option>Jain</option><option>Vegetarian</option><option>Vegan</option><option>Mixed (veg household)</option></select></div>
+      <div><label for="lWhen">Tentative travel month</label><input id="lWhen" placeholder="e.g. October 2026"></div>
+    </div>
+    <div style="margin-bottom:1rem"><label for="lMsg">Anything else?</label><textarea id="lMsg" rows="3" placeholder="Cook needed, kitchen stay, temple visits, special occasions…"></textarea></div>
+    <p class="errmsg" id="leadErr" role="alert"></p>
+    <button class="btn btn-g" type="submit">Send Inquiry via WhatsApp</button>
+    <p class="fineprint">Opens WhatsApp with your inquiry pre-filled. Prefer email? <a id="leadMailto" href="#" style="color:var(--saffron-d)">Send by email instead</a>.</p>
+    <div class="okbox" id="leadOk">✅ Inquiry prepared! Complete sending it in WhatsApp — we reply within 24 hours.</div>
+  </form>
+</div></section>
+
+<section class="alt"><div class="wrap">
+  <span class="tag">Traveler Stories</span>
+  <h2>Groups like yours, fed like family</h2>
+  <p class="sample">Sample testimonials for layout — replace with verified reviews before launch</p>
+  <div class="grid g3" style="margin-top:1.2rem">
+    <div class="card"><p class="quote">"14 of us, all Jain. Not one meal worry in 6 days — even the boat-day lunch was protocol-perfect."</p><p class="who">Mehta family group · Ahmedabad <span class="sample">(sample)</span></p></div>
+    <div class="card"><p class="quote">"Our guide spoke Tamil with my parents and English with the kids. The temple mornings were beautifully planned."</p><p class="who">Iyer group · Chennai <span class="sample">(sample)</span></p></div>
+    <div class="card"><p class="quote">"The villa kitchen plus our own cook made it feel like a holiday, not a hunt for food."</p><p class="who">Vegan friends' group · Bengaluru <span class="sample">(sample)</span></p></div>
+  </div>
+</div></section>
+
+<section id="faq"><div class="wrap">
+  <span class="tag">FAQ</span>
+  <h2>Common questions</h2>
+  <details><summary>Is the food really 100% vegetarian — including cooking surfaces and oil?</summary><p>Yes. We only work with kitchens that are fully vegetarian or have audited separate veg preparation lines, utensils and oils. Jain meals follow no-onion, no-garlic, no-root-vegetable protocol.</p></details>
+  <details><summary>How does the accompanying cook work for 10+ pax groups?</summary><p>We arrange an Indian-cuisine-trained cook who travels with your group or is stationed at your villa, shops for groceries, and prepares meals to your protocol throughout the stay. Costs are quoted per group.</p></details>
+  <details><summary>Can you plan around temple visits and religious observances?</summary><p>Absolutely — early-morning temple circuits, satvik meal days, sunset-meal timing for Jain travelers, and festival-aware scheduling are all standard for us.</p></details>
+  <details><summary>What's included in package pricing?</summary><p>Indicative bands cover stays, all meals per your protocol, private transport, guide and activities — excluding international flights and visa-on-arrival. Final quotes follow consultation.</p></details>
+  <details><summary>Do you handle flights from India?</summary><p>We advise on best routes and fares from your departure city (direct and via Singapore/KL) and can book on request.</p></details>
+  <details><summary>I run a business in Bali — how do I join?</summary><p>Use the vendor form above. We verify dietary capability, visit where possible, and onboard partners who meet our protocol standards.</p></details>
+</div></section>
+
+<footer><div class="wrap">
+  <div class="frow">
+    <div><a class="brand" style="color:#fff" href="#top">Only<span>2</span>Bali</a>
+      <p style="margin-top:.8rem;max-width:340px">India's first Bali travel platform built exclusively for vegetarian, Jain and vegan group travelers. Premium customization, cultural fluency, zero food anxiety.</p></div>
+    <div><b style="color:#fff">Explore</b><br><br>
+      <a href="#packages">Packages</a><br><a href="#planner">Itinerary Planner</a><br><a href="#stays">Stays & Cook</a><br><a href="#vendors">Vendor Onboarding</a></div>
+    <div><b style="color:#fff">Contact</b><br><br>
+      <a href="#" id="footWa">WhatsApp us</a><br>
+      <a href="mailto:hello@only2bali.com">hello@only2bali.com</a><br><br>
+      <span style="font-size:.78rem">Serving travelers from Delhi, Mumbai, Bengaluru, Chennai, Hyderabad, Ahmedabad & Kolkata.</span></div>
+  </div>
+  <div class="foot-note">© 2026 Only2Bali. All rights reserved. · <a href="#" onclick="alert('Privacy Policy — draft placeholder. Legal copy to be added before launch.');return false">Privacy Policy</a> · <a href="#" onclick="alert('Terms & Conditions — draft placeholder. Legal copy to be added before launch.');return false">Terms</a> · Draft site — pricing indicative, sample content labeled.</div>
+</div></footer>
+
+<script>
+/* ============ CONFIG — replace before launch ============ */
+const CFG = {
+  whatsapp: "6281200000000",          // TODO: real WhatsApp business number, digits only
+  email: "hello@only2bali.com"        // TODO: confirm inbox
+};
+
+/* ============ PACKAGE CATALOG ============ */
+const CATALOG = [
+ {id:"sattvik", name:"Sattvik Serenity", tier:"premium", protocols:["jain","vegetarian"], days:6,
+  band:"Premium · ₹1,18,000+ /pax", tags:["temples","wellness","culture"], kitchen:true, cookReady:true,
+  langs:["Hindi","Gujarati","English"],
+  blurb:"Ubud + Uluwatu in private villas with Jain-protocol kitchen and optional accompanying cook.",
+  outline:"D1 Arrival, villa check-in, welcome Jain thali · D2 Tirta Empul & Ubud palace · D3 Tegallalang + wellness spa · D4 Uluwatu temple & Kecak · D5 Nusa Dua beach day, satvik dinner · D6 Departure"},
+ {id:"explorer", name:"Bali Veg Explorer", tier:"economical", protocols:["vegetarian","jain"], days:5,
+  band:"Economical · ₹58,000+ /pax", tags:["beaches","adventure","shopping"], kitchen:false, cookReady:true,
+  langs:["Hindi","English"],
+  blurb:"Value-packed group trip: Kuta, Ubud and water sports with verified Indian veg restaurants throughout.",
+  outline:"D1 Arrival, Kuta sunset · D2 Water sports + Uluwatu · D3 Ubud day trip, veg warung lunch · D4 Shopping + beach clubs (veg menus) · D5 Departure"},
+ {id:"vegan", name:"Vegan Vitality Retreat", tier:"comfort", protocols:["vegan"], days:6,
+  band:"Comfort · ₹86,000+ /pax", tags:["wellness","beaches","culture"], kitchen:true, cookReady:false,
+  langs:["English","Hindi"],
+  blurb:"Ubud and Canggu's celebrated plant-based scene with yoga, raw cafés and a cooking class.",
+  outline:"D1 Arrival, Canggu vegan café crawl · D2 Yoga + rice terraces · D3 Vegan cooking class · D4 Ubud markets & monkey forest · D5 Beach + sunset raw dinner · D6 Departure"},
+ {id:"temple", name:"Temple & Tranquility", tier:"comfort", protocols:["vegetarian","jain"], days:7,
+  band:"Comfort · ₹92,000+ /pax", tags:["temples","culture","wellness"], kitchen:true, cookReady:true,
+  langs:["Tamil","Telugu","Kannada","Hindi","English"],
+  blurb:"A Brahmin-community favourite: Bali's sacred temple circuit with satvik meals and South-Indian-speaking guides.",
+  outline:"D1 Arrival, satvik dinner · D2 Besakih mother temple · D3 Tirta Empul holy springs · D4 Lempuyang gates + rest · D5 Tanah Lot sunset · D6 Cultural performances · D7 Departure"},
+ {id:"celebration", name:"Premium Family Celebration", tier:"premium", protocols:["jain","vegetarian","vegan"], days:7,
+  band:"Premium · ₹1,45,000+ /pax", tags:["beaches","wellness","shopping","culture"], kitchen:true, cookReady:true,
+  langs:["Hindi","Gujarati","Marathi","English"],
+  blurb:"Milestone birthdays & anniversaries: private villa estate, dedicated cook, curated celebration evening.",
+  outline:"D1 Arrival, estate check-in · D2 Beach + spa day · D3 Private celebration evening, custom menu · D4 Ubud excursion · D5 Yacht / Nusa Penida option · D6 Leisure + shopping · D7 Departure"},
+ {id:"adventure", name:"Active Bali (Veg-Fueled)", tier:"economical", protocols:["vegetarian","vegan"], days:5,
+  band:"Economical · ₹62,000+ /pax", tags:["adventure","beaches"], kitchen:false, cookReady:false,
+  langs:["Hindi","English"],
+  blurb:"Rafting, ATV, snorkeling and volcano sunrise — with high-energy veg/vegan meal plans.",
+  outline:"D1 Arrival · D2 Ayung river rafting + ATV · D3 Mt Batur sunrise trek, veg brunch · D4 Nusa Penida snorkeling · D5 Departure"}
+];
+
+/* ============ HELPERS ============ */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function wa(text){return "https://wa.me/"+CFG.whatsapp+"?text="+encodeURIComponent(text);}
+function mailto(subj,body){return "mailto:"+CFG.email+"?subject="+encodeURIComponent(subj)+"&body="+encodeURIComponent(body);}
+
+/* ============ NAV ============ */
+$("menuBtn").addEventListener("click",()=>{const l=$("navLinks");const open=l.classList.toggle("open");$("menuBtn").setAttribute("aria-expanded",open);});
+$("navLinks").addEventListener("click",e=>{if(e.target.tagName==="A")$("navLinks").classList.remove("open");});
+$("footWa").href=wa("Hi Only2Bali! I'd like to know more.");
+
+/* ============ PACKAGE GRID + FILTERS ============ */
+function pkgCard(p){
+  return `<div class="card pkg" data-protocols="${p.protocols.join(" ")}" data-tier="${p.tier}">
+    <span class="band">${esc(p.tier)} · ${p.days} days</span>
+    <h3>${esc(p.name)}</h3>
+    <div class="price">${esc(p.band)} <small>ex-flights · indicative</small></div>
+    <p style="font-size:.9rem;color:var(--muted)">${esc(p.blurb)}</p>
+    <div class="chips">${p.protocols.map(x=>`<span class="chip">${x==="jain"?"Jain ✓":x.charAt(0).toUpperCase()+x.slice(1)+" ✓"}</span>`).join("")}${p.kitchen?'<span class="chip">Kitchen stay</span>':""}${p.cookReady?'<span class="chip">Cook option</span>':""}</div>
+    <a class="btn btn-o" style="margin-top:.6rem;font-size:.85rem;padding:.5rem 1.1rem" href="${wa("Hi Only2Bali! I'm interested in the "+p.name+" package. Please share details.")}" target="_blank" rel="noopener">Enquire on WhatsApp</a>
+  </div>`;
+}
+function renderPkgs(f){
+  $("pkgGrid").innerHTML = CATALOG.filter(p=>{
+    if(f==="all")return true;
+    if(f==="economical"||f==="premium")return p.tier===f;
+    return p.protocols.includes(f);
+  }).map(pkgCard).join("") || '<p class="sub">No packages match this filter yet — use the planner below for a custom plan.</p>';
+}
+renderPkgs("all");
+$("pkgFilters").addEventListener("click",e=>{
+  if(!e.target.dataset.f)return;
+  document.querySelectorAll("#pkgFilters .fbtn").forEach(b=>b.classList.remove("on"));
+  e.target.classList.add("on");renderPkgs(e.target.dataset.f);
+});
+
+/* ============ RECOMMENDATION ENGINE ============ */
+function recommend(inp){
+  // HARD filter: food protocol compliance
+  let pool = CATALOG.filter(p=>p.protocols.includes(inp.food));
+  const scored = pool.map(p=>{
+    let s=0, why=[];
+    if(p.tier===inp.budget){s+=3;why.push("Fits your "+inp.budget+" budget band");}
+    const hits=p.tags.filter(t=>inp.interests.includes(t));
+    s+=hits.length*2;
+    if(hits.length)why.push("Matches interests: "+hits.join(", "));
+    if(inp.kitchen&&p.kitchen){s+=2;why.push("Stay includes private kitchen access");}
+    if(inp.lang&&p.langs.includes(inp.lang)){s+=1;why.push(inp.lang+"-speaking guide available");}
+    if(inp.cook&&p.cookReady&&inp.size>=10){s+=2;why.push("Accompanying cook available for your group of "+inp.size);}
+    why.unshift("100% "+(inp.food==="jain"?"Jain-protocol":inp.food)+" meals — pre-confirmed");
+    return {p,s,why};
+  }).sort((a,b)=>b.s-a.s);
+  return scored.slice(0,3);
+}
+$("plannerForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const err=$("plannerErr");err.style.display="none";
+  const inp={
+    city:$("pCity").value, month:$("pMonth").value,
+    size:parseInt($("pSize").value||"0",10),
+    budget:$("pBudget").value, food:$("pFood").value, lang:$("pLang").value,
+    kitchen:$("pKitchen").checked, cook:$("pCook").checked,
+    interests:[...document.querySelectorAll("#pInterests input:checked")].map(c=>c.value)
+  };
+  if(!inp.city||!inp.month||!inp.size||!inp.budget||!inp.food){
+    err.textContent="Please fill departure city, month, group size, budget and food protocol.";
+    err.style.display="block";return;
+  }
+  if(inp.cook&&inp.size<10){
+    err.textContent="Accompanying cook is available for groups of 10+ pax. Increase group size or untick the cook option.";
+    err.style.display="block";return;
+  }
+  const recs=recommend(inp);
+  const note = inp.size>=10 ? `<p class="fineprint">👨‍🍳 Your group of ${inp.size} qualifies for an <b>accompanying cook</b> and group pricing. ${inp.cook?"Cook request noted.":"Ask us about it!"}</p>` : "";
+  const summary=`Departure: ${inp.city} · ${inp.month} · ${inp.size} pax · ${inp.food} · ${inp.budget}`;
+  $("plannerOut").innerHTML =
+    `<h3 style="font-family:Fraunces,serif;color:var(--emerald-d)">Your top matches</h3>
+     <p class="fineprint">${esc(summary)} — indicative plans, confirmed on consultation.</p>${note}` +
+    recs.map(r=>`<div class="card result">
+      <span class="band" style="font-size:.78rem;font-weight:700;color:var(--saffron-d);text-transform:uppercase">${esc(r.p.tier)} · ${r.p.days} days · match score ${r.s}</span>
+      <h3>${esc(r.p.name)}</h3>
+      <div class="price" style="font-family:Fraunces,serif;color:var(--emerald-d)">${esc(r.p.band)}</div>
+      <ul class="why">${r.why.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>
+      <div class="days"><b>Outline:</b> ${esc(r.p.outline)}</div>
+      <a class="btn btn-g" target="_blank" rel="noopener" href="${wa(
+        "Hi Only2Bali! Planner request:\n• Package: "+r.p.name+"\n• "+summary+
+        (inp.kitchen?"\n• Kitchen stay needed":"")+(inp.cook?"\n• Accompanying cook requested":"")+
+        (inp.lang?"\n• Guide language: "+inp.lang:"")+
+        (inp.interests.length?"\n• Interests: "+inp.interests.join(", "):"")+
+        "\nPlease customize this for my group.")}">Customize This Trip →</a>
+    </div>`).join("");
+  $("plannerOut").scrollIntoView({behavior:"smooth",block:"start"});
+});
+
+/* ============ VENDOR FORM ============ */
+$("vendorForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const err=$("vendorErr");err.style.display="none";
+  const caps=[...document.querySelectorAll("#vCap input:checked")].map(c=>c.value);
+  const f={name:$("vName").value.trim(),type:$("vType").value,loc:$("vLoc").value.trim(),
+    cuisine:$("vCuisine").value.trim(),langs:$("vLang").value.trim(),price:$("vPrice").value,
+    phone:$("vPhone").value.trim(),email:$("vEmail").value.trim(),avail:$("vAvail").value.trim(),notes:$("vNotes").value.trim()};
+  if(!f.name||!f.type||!f.loc||!f.phone||caps.length===0){
+    err.textContent="Please complete: name, business type, location, WhatsApp/phone, and at least one dietary capability.";
+    err.style.display="block";return;
+  }
+  if(f.email&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email)){
+    err.textContent="Please enter a valid email address (or leave it blank).";err.style.display="block";return;
+  }
+  const body="VENDOR APPLICATION — Only2Bali\n• Business: "+f.name+"\n• Type: "+f.type+"\n• Location/areas: "+f.loc+
+    (f.cuisine?"\n• Cuisine/service: "+f.cuisine:"")+"\n• Capability: "+caps.join(", ")+
+    (f.langs?"\n• Languages: "+f.langs:"")+(f.price?"\n• Pricing band: "+f.price:"")+
+    "\n• Phone/WA: "+f.phone+(f.email?"\n• Email: "+f.email:"")+
+    (f.avail?"\n• Availability: "+f.avail:"")+(f.notes?"\n• Notes: "+f.notes:"");
+  window.open(wa(body),"_blank");
+  $("vendorOk").style.display="block";
+});
+
+/* ============ LEAD FORM ============ */
+function leadBody(){
+  return "GROUP INQUIRY — Only2Bali\n• Name: "+$("lName").value.trim()+"\n• WhatsApp: "+$("lPhone").value.trim()+
+    "\n• Departure city: "+$("lCity").value.trim()+"\n• Group size: "+$("lSize").value+
+    "\n• Food protocol: "+$("lFood").value+($("lWhen").value?"\n• Travel month: "+$("lWhen").value.trim():"")+
+    ($("lMsg").value?"\n• Notes: "+$("lMsg").value.trim():"");
+}
+function leadValid(){
+  const err=$("leadErr");err.style.display="none";
+  if(!$("lName").value.trim()||!$("lPhone").value.trim()||!$("lCity").value.trim()||!$("lSize").value||!$("lFood").value){
+    err.textContent="Please complete name, WhatsApp number, departure city, group size and food protocol.";
+    err.style.display="block";return false;
+  }
+  if(!/^[+\d][\d\s-]{7,}$/.test($("lPhone").value.trim())){
+    err.textContent="Please enter a valid phone number (e.g. +91 98xxxxxxx).";err.style.display="block";return false;
+  }
+  return true;
+}
+$("leadForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  if(!leadValid())return;
+  window.open(wa(leadBody()),"_blank");
+  $("leadOk").style.display="block";
+});
+$("leadMailto").addEventListener("click",e=>{
+  e.preventDefault();
+  if(!leadValid())return;
+  window.location.href=mailto("Group Inquiry — Only2Bali",leadBody());
+  $("leadOk").style.display="block";
+});
+</script>
+</body>
+</html>
