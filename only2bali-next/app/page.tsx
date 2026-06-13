@@ -216,11 +216,17 @@ export default function Home() {
                   {p.kitchen && <span className="chip">Kitchen stay</span>}
                   {p.cookReady && <span className="chip">Cook option</span>}
                 </div>
-                <a className="btn btn-o" style={{ marginTop: ".8rem", fontSize: ".85rem", padding: ".5rem 1.1rem" }}
-                   href={wa(`Hi Only2Bali! I'm interested in the ${p.name} package. Please share details.`)}
-                   target="_blank" rel="noopener noreferrer">
-                  Enquire on WhatsApp
-                </a>
+                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.8rem" }}>
+                  <a className="btn btn-o" style={{ fontSize: ".85rem", padding: ".5rem 1.1rem" }}
+                     href={wa(`Hi Only2Bali! I'm interested in the ${p.name} package. Please share details.`)}
+                     target="_blank" rel="noopener noreferrer">
+                    Enquire on WhatsApp
+                  </a>
+                  <Link className="btn btn-p" style={{ fontSize: ".85rem", padding: ".5rem 1.1rem", border: "1.5px solid var(--emerald)", background: "var(--emerald)", color: "#fff" }}
+                        href={`/planner?package=${p.id}`}>
+                    Customize with AI ✨
+                  </Link>
+                </div>
               </div>
             ))}
           </div>

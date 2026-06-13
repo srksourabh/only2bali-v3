@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { wa } from "@/lib/config";
 import "./planner.css";
 
@@ -136,12 +137,75 @@ interface DayItinerary {
   estimated_cost_inr: number;
 }
 
-export default function PlannerWizard() {
+function PlannerWizardComponent() {
   // ── MULTI-STEP FLOW STATE ──
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
+
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const pkgId = searchParams.get("package");
+    if (!pkgId) return;
+
+    // Pre-populate states based on selected package ID
+    if (pkgId === "sattvik") {
+      setBudgetTier("premium");
+      setFoodProtocol("jain");
+      setDietChoices(["jain_veg"]);
+      setKitchenAccess(true);
+      setCookAccompaniment(true);
+      setPreferredLanguages(["Hindi", "Gujarati", "English"]);
+      setSelectedInterests(["culture", "wellness"]);
+      setSelectedStays(["villa"]);
+    } else if (pkgId === "explorer") {
+      setBudgetTier("economical");
+      setFoodProtocol("vegetarian");
+      setKitchenAccess(false);
+      setCookAccompaniment(true);
+      setPreferredLanguages(["Hindi", "English"]);
+      setSelectedInterests(["beaches", "adventure", "shopping"]);
+      setSelectedStays(["hotel"]);
+    } else if (pkgId === "vegan") {
+      setBudgetTier("comfort");
+      setFoodProtocol("vegan");
+      setDietChoices(["vegan"]);
+      setKitchenAccess(true);
+      setCookAccompaniment(false);
+      setPreferredLanguages(["English", "Hindi"]);
+      setSelectedInterests(["wellness", "beaches", "culture"]);
+      setSelectedStays(["hotel", "villa"]);
+    } else if (pkgId === "temple") {
+      setBudgetTier("comfort");
+      setFoodProtocol("vegetarian");
+      setDietChoices(["north_indian_veg", "south_indian_veg"]);
+      setKitchenAccess(true);
+      setCookAccompaniment(true);
+      setPreferredLanguages(["Tamil", "English", "Hindi", "Kannada"]);
+      setSelectedInterests(["culture", "wellness"]);
+      setSelectedStays(["villa", "hotel"]);
+    } else if (pkgId === "celebration") {
+      setBudgetTier("premium");
+      setFoodProtocol("vegetarian");
+      setDietChoices(["north_indian_veg", "jain_veg", "vegan"]);
+      setKitchenAccess(true);
+      setCookAccompaniment(true);
+      setPreferredLanguages(["Hindi", "Gujarati", "Marathi", "English"]);
+      setSelectedInterests(["beaches", "wellness", "shopping", "culture"]);
+      setSelectedStays(["villa"]);
+    } else if (pkgId === "adventure") {
+      setBudgetTier("economical");
+      setFoodProtocol("vegetarian");
+      setDietChoices(["north_indian_veg", "vegan"]);
+      setKitchenAccess(false);
+      setCookAccompaniment(false);
+      setPreferredLanguages(["Hindi", "English"]);
+      setSelectedInterests(["adventure", "beaches"]);
+      setSelectedStays(["hotel"]);
+    }
+  }, [searchParams]);
 
   // ── INPUT STATES ──
   const [name, setName] = useState("");
@@ -750,5 +814,19 @@ export default function PlannerWizard() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function PlannerWizard() {
+  return (
+    <Suspense fallback={
+      <div className="wrap" style={{ padding: "8rem 0", textAlign: "center" }}>
+        <div className="ai-spinner" style={{ margin: "0 auto 1.5rem" }}></div>
+        <h3>Loading Itinerary Planner Wizard...</h3>
+        <p style={{ color: "var(--muted)", fontSize: "0.9rem", marginTop: "0.5rem" }}>Please wait while we initialize the dynamic form setup</p>
+      </div>
+    }>
+      <PlannerWizardComponent />
+    </Suspense>
   );
 }

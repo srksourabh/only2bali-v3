@@ -1,11 +1,30 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { wa, mailto } from "@/lib/config";
 
-export default function Inquiry() {
+function InquiryComponent() {
   const [f, setF] = useState({ name: "", phone: "", city: "", size: "", food: "", when: "", msg: "" });
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
+
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const pkg = searchParams.get("package");
+    const service = searchParams.get("service");
+
+    let initialMsg = "";
+    if (service === "cook") {
+      initialMsg = "Requesting accompanying Indian cook/chef services.";
+    } else if (pkg) {
+      initialMsg = `Interested in customizing the ${pkg} package.`;
+    }
+
+    if (initialMsg) {
+      setF((s) => ({ ...s, msg: initialMsg }));
+    }
+  }, [searchParams]);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setF((s) => ({ ...s, [k]: e.target.value }));
 
@@ -53,5 +72,18 @@ export default function Inquiry() {
         {ok && <div className="okbox">✅ Inquiry prepared! Complete sending it — we reply within 24 hours.</div>}
       </form>
     </div></section></main>
+  );
+}
+
+export default function Inquiry() {
+  return (
+    <Suspense fallback={
+      <div className="wrap" style={{ padding: "8rem 0", textAlign: "center" }}>
+        <div className="ai-spinner" style={{ margin: "0 auto 1.5rem" }}></div>
+        <h3>Loading Inquiry Form...</h3>
+      </div>
+    }>
+      <InquiryComponent />
+    </Suspense>
   );
 }

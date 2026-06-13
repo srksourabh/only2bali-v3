@@ -43,7 +43,7 @@ export async function POST(req: Request) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
     // Use gemini-2.5-flash if possible, fallback to gemini-2.0-flash or gemini-1.5-flash
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `You are a premium Bali travel architect specializing in group travels from India. 
 Create a highly customized day-by-day itinerary based on the user's selections.
