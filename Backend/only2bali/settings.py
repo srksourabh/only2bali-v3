@@ -53,9 +53,12 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'  # Use SMTP for re
 EMAIL_HOST = 'smtp.zoho.com'  # Change to your email service provider
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-  # Use your email here
-  # Use your email password
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER  # Default sender email
+# Credentials come from the environment so they are not committed to source.
+# Using .get() with a default keeps the app booting even if they are unset
+# (email sending will fail at send time rather than crashing on import).
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or 'no-reply@only2bali.com'  # Default sender email
 
 
 FRONTEND_URL = 'http://localhost:3000'  # Frontend URL for the reset page
@@ -99,6 +102,9 @@ REST_FRAMEWORK = {
 }
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # CorsMiddleware must come before any middleware that can generate a
+    # response (WhiteNoise, CommonMiddleware) so CORS headers are attached.
+    'corsheaders.middleware.CorsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -106,7 +112,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    'corsheaders.middleware.CorsMiddleware',
 ]
 
 
@@ -116,13 +121,18 @@ CORS_ALLOW_CREDENTIALS = True
 # ]
 
 CORS_ALLOWED_ORIGINS = [
-    # "http://192.168.1.7:3000",
-    # "http://103.197.112.7:8000" ,
-    # "http://192.168.1.14:8000",
-      "http://127.0.0.1:8000", # React app running on another laptop
+      "http://127.0.0.1:8000",
+      "http://127.0.0.1:3000",
       "http://localhost:3000",
-      "https://happy-dune-02aab6b00.6.azurestaticapps.net"
-    #   "http://192.168.1.14:3000",
+      "https://happy-dune-02aab6b00.6.azurestaticapps.net",
+      "https://polite-sand-06cb85900.6.azurestaticapps.net",
+]
+
+# Match the deployed frontend hostnames regardless of the generated
+# subdomain/region: Azure Static Web Apps and Vercel (incl. preview URLs).
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.azurestaticapps\.net$",
+    r"^https://.*\.vercel\.app$",
 ]
 CORS_ALLOW_HEADERS = [
     'content-type',
