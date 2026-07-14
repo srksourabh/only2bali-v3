@@ -3,13 +3,22 @@ from .settings import *
 from .settings import BASE_DIR
 
 ALLOWED_HOSTS=['pybackend-eeamcqf4evb6hacn.centralindia-01.azurewebsites.net']
-CSRF_TRUSTED_ORIGINS=['https://'+os.environ['pybackend-eeamcqf4evb6hacn.centralindia-01.azurewebsites.net']]
+# Azure sets WEBSITE_HOSTNAME to the app's hostname; fall back to the known
+# host so a missing env var can never crash startup (the previous code read an
+# env var literally named after the hostname, which raised KeyError on boot).
+_BACKEND_HOST = os.environ.get(
+    'WEBSITE_HOSTNAME',
+    'pybackend-eeamcqf4evb6hacn.centralindia-01.azurewebsites.net',
+)
+CSRF_TRUSTED_ORIGINS=['https://' + _BACKEND_HOST]
 DEBUG=False
 SECRET_KEY = os.environ['MY_SECRET_KEY']
 
 MIDDLEWARE=[
-	
     "django.middleware.security.SecurityMiddleware",
+    # CorsMiddleware must precede any response-generating middleware
+    # (WhiteNoise, CommonMiddleware) so CORS headers are attached.
+    'corsheaders.middleware.CorsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -17,11 +26,20 @@ MIDDLEWARE=[
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    'corsheaders.middleware.CorsMiddleware',
 ]
 
 
-CORS_ALLOWED_ORIGINS=['https://happy-dune-02aab6b00.6.azurestaticapps.net']
+CORS_ALLOWED_ORIGINS=[
+    'https://happy-dune-02aab6b00.6.azurestaticapps.net',
+    'https://polite-sand-06cb85900.6.azurestaticapps.net',
+]
+# Match the deployed frontend hostnames (Azure Static Web Apps and Vercel,
+# including preview URLs). Restated here so the deployment config is
+# self-contained.
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.azurestaticapps\.net$",
+    r"^https://.*\.vercel\.app$",
+]
 
 #DJANGO VERSION 4.2
 STORAGES={
