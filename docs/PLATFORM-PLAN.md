@@ -164,12 +164,19 @@ Vendor accounts + onboarding + **admin verification queue** (evidence-checked ve
 curated listings go live in circuit-aware matching; vendor dashboard on shadcn/ui.
 
 ### Phase 5 - Payments *(Task 3)*
-Booking → server-priced quote → traveller pays Only2Bali (start **manual/hybrid**: collect via
-gateway, record `payout`/`ledger`, pay vendors by bank/Wise; move to **Stripe Connect** later) →
-margin deducted → vendor payout + ledger → reviews. **Flag:** merchant-of-record cross-border
-money movement needs a payments/compliance/legal advisor before go-live - engineering builds it,
-but the structure is not an engineering decision. *(Still open: provider, default commission
-rate, legal structure.)*
+Booking → server-priced quote → traveller pays Only2Bali → margin deducted → vendor payout +
+ledger → reviews. Adopt the travel-standard patterns (Appendix E-E): **deposit + instalment**
+plan (travel norm; ~+30-40% conversion), **split-payment / commission-at-capture** (Stripe
+destination charges or Razorpay Route), **hold the vendor payout until confirmation vouchers are
+issued** (escrow / fraud control), and **refund-first-from-platform, claw-back-from-vendor**.
+Start manual/hybrid; automate as volume grows.
+**⚠ Compliance gate (not optional, not just advice):** cross-border payout India→Indonesia must
+route through an **RBI PA-CB (Payment Aggregator - Cross-Border) licensed provider** (e.g.
+Razorpay) or an AD Category-I bank, with **RBI purpose codes** on every payout (bake a
+purpose-code field into `payout` from day one); LRS does not apply to a company. Only2Bali
+**cannot self-build** a "pay Bali vendors from India" rail. Resolve with a licensed partner +
+payments/legal advisor before any payout goes live - this shapes the Phase 5 architecture.
+*(Still open: provider, default commission rate, legal structure.)*
 
 ### Phase 6 - Retire legacy
 Migrate remaining users off Django; delete the FastAPI app; sunset the React frontend.
@@ -314,6 +321,14 @@ dashboard + Vercel env), and this plan does **not** give financial or legal advi
 record cross-border money movement has licensing, tax (GST/VAT), and travel-regulation
 implications - engage a payments/compliance/legal advisor before go-live.
 
+**Hard regulatory gate (research 2026-07-16):** moving money cross-border for Indian payers
+requires an **RBI PA-CB (Payment Aggregator - Cross-Border) licensed** provider (e.g. Razorpay)
+or an AD Category-I bank - a generic gateway is not sufficient and unauthorised channels are a
+FEMA violation. Every vendor payout must carry an **RBI purpose code** (add the field to
+`payout` now). LRS ($250k/yr) applies to individuals only, not to Only2Bali as a company - this
+is a B2B remittance handled by an AD bank / licensed partner. This is a blocker to resolve
+before any payout, and it reinforces starting **manual/hybrid** while the licensed rail is set up.
+
 ## Appendix D - Seed supply (for the curated v1)
 
 - **Culinary vendors (pure-veg / Jain-capable, operating in Bali):** Sattvik By Nature
@@ -327,3 +342,77 @@ implications - engage a payments/compliance/legal advisor before go-live.
 
 These populate `circuit`, `point_of_interest`, and the first `vendor`/`service_listing` rows so
 the curated matcher has real inventory on day one.
+
+## Appendix E - Competitive feature backlog (research 2026-07-16)
+
+Synthesised from four parallel research streams - tour/activity marketplaces (Viator,
+GetYourGuide, Klook, TourRadar, Rezdy); AI planners + group travel (Wanderlog, Mindtrip, Layla,
+Troupe, SquadTrip); dietary/faith niche travel (HalalBooking, CrescentRating, Kosherica, Indian
+Jain operators); India-outbound OTAs + payment mechanics (TravelTriangle, Thrillophilia, MMT,
+Stripe Connect, Razorpay Route) - plus the product-trio brainstorm (`docs/IDEAS.md`). `[P#]` =
+target phase. **★** = surfaced independently from multiple streams (strong signal).
+
+### Three category "whitespace" differentiators (no competitor - halal, kosher, or Jain - does these)
+1. **"How We Verify Every Kitchen" public methodology page** - inspection checklist, no-onion/garlic
+   protocol, separate oil/utensils, photos from the verification visit. [P3 + marketing]
+2. **Refund-if-the-guarantee-fails policy** - "if a verified meal is not compliant, that day's
+   package cost is refunded." First-in-category. [P5]
+3. **Colour-coded per-listing/per-meal compliance rating** (green = fully Jain-safe · amber = veg
+   but shared kitchen · red = avoid) - makes the "100% veg" claim scannable and auditable. [P3/P4]
+
+### A. Trust & the veg moat  [Phase 3-4 + marketing]
+- ★ **Traveling cook / "Kitchen Caravan" premium tier** for group departures - matches Loganathan's
+  accompanying-cook idea; the most-trusted mechanism in Indian Jain travel. [P4]
+- Verified-booking-gated dietary reviews ("veg guarantee kept"). [P3]
+- Named, accountable veg-compliance lead per trip (kosher "mashgiach" model). [P4]
+- Public directory of verified veg/Jain places in Bali - SEO + proof-of-work flywheel. [P3]
+- Private veg-only group departures (removes cross-contamination anxiety). [P3/P5]
+- Temple/derasar access + fasting-day (Paryushan/Ekadashi) meal handling alongside the food filter. [P3]
+- Founder / community-credential storytelling. [marketing]
+- Vendor performance/quality ranking so reliable veg vendors surface first. [P4]
+
+### B. Planning & group decision  [Phase 3]
+- ★ Group voting/polling on circuit, dates, activities (the family/committee bottleneck).
+- ★ Collaborative itinerary with edit attribution + item-level comment threads.
+- ★ Shareable no-login itinerary link + PDF export.
+- In-app trip chat with @AI tag to reconcile group preferences.
+- Saved trips / collections (persist across the multi-week decision cycle).
+- Structured diet/pace/budget fields in the AI prompt (harden the veg logic, not free text).
+- Conversational refinement - swap one stop without a full regenerate (also cuts AI cost).
+- Map-first route sequencing; a "pace" slider (relaxed / moderate / packed).
+
+### C. Lead, quote & support  [Phase 1-3]
+- ★ **Curated multi-quote** (2-3 vetted vendors, ~24h SLA) - the proven UX for curated-matcher v1.
+- ★ **WhatsApp Business API as the primary channel**, pre-trip and in-trip concierge (not a deep link).
+- Departure-city-localised package pages (SEO + flight-cost accuracy: Mumbai/Delhi/Dubai…).
+- "Free customization" + visible free-cancellation badges; all-in, tax-inclusive pricing.
+- Single booking-conversation thread per trip (docs, dietary confirmation, room-sharing).
+
+### D. Marketplace mechanics  [Phase 4]
+- Manual vendor verification before go-live, shown as a trust badge (already the v1 model).
+- Simple vendor dashboard (bookings, availability, payout status).
+- Real-time availability + hold to prevent overbooking on capacity-limited villas/departures.
+- Published vendor payout SLA (e.g. "paid within 14 days of trip completion").
+- Instant-book (fixed departures) vs request-to-book (custom/private) labelling.
+- AI-assisted vendor listing creation - reuse the existing Gemini access.
+- Incremental KYC onboarding (collect minimum-to-activate, request more later).
+
+### E. Payments & money  [Phase 5]
+- ★ **Deposit + instalment** plan with reminders/retries (travel norm; ~+30-40% conversion).
+- ★ **Hold vendor payout until confirmation vouchers are issued** (escrow / fraud control).
+- Split-payment / commission-at-capture (Stripe destination charges or Razorpay Route) - avoids
+  hand-rolled reconciliation.
+- Refund-first-from-platform, claw-back-from-vendor (traveller refund never waits on the vendor).
+- Per-traveller split deposit via a shareable link (each group member pays their share).
+- India-consumer options: no-cost EMI, book-now-pay-later, ₹1 price-lock soft-commit.
+- Multi-currency virtual accounts for diaspora (USD/AED/SGD) collection.
+- **⚠ Compliance gate:** RBI PA-CB-licensed provider + purpose codes (see Phase 5 / Appendix C).
+
+### Deprioritised (scale problems Only2Bali doesn't have yet)
+Reseller / channel-manager distribution network, self-serve global vendor onboarding, AI dynamic
+pricing, native mobile app. Revisit after traction.
+
+### Brainstorm top 5 (from `docs/IDEAS.md`, folded in above)
+WhatsApp two-way concierge (C) · Community Trust Engine (A + the 3 whitespace items) · Group
+organizer toolkit + community-leader referral (C/D) · Collaborative shareable itinerary (B) ·
+Fixed-date festival departures (A/D - dated `availability` + `package`).
