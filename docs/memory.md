@@ -191,3 +191,36 @@ Read from `settings.py`, which is authoritative over `.env.example`:
 - `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` - optional, OTP breaks without them
 - `REDIS_ACCESS_KEY`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` - optional
 - `GEMINI_API_KEY` - Next.js planner; falls back to mock itinerary if absent
+
+## Session log - 2026-07-16 (planning + UI samples)
+
+A full planning cycle was completed. **No application code was changed** - all outputs are
+documents and design previews.
+
+**Produced (committed to `main`):**
+- `docs/PLATFORM-PLAN.md` - approved phased master plan: managed two-sided marketplace,
+  four circuits (Ramayana/Adventure/Culinary/Artistic), Next.js full-stack backend,
+  curated-matcher v1, accounts-lite, preserve-and-polish design, Tailwind+shadcn (ADR-004).
+  Appendix E = competitive feature backlog; Appendix C + Phase 5 = the RBI PA-CB cross-border
+  payout compliance gate.
+- `docs/IDEAS.md` - product-trio brainstorm, top 5 ideas.
+- `docs/ASSUMPTIONS.md` - 8-category risk map; 5 leap-of-faith assumptions to test first.
+- `plans/2026-07-16-only2bali-upgrade-v1.md` - step-by-step implementation strategy.
+- `tasks/plan.md` + `tasks/todo.md` - task breakdown (Track V + Phase 0-1 fully decomposed
+  with acceptance criteria; Phases 2-6 as epics).
+
+**UI/UX uplift preview (design direction: preserve & polish; not committed to repo - private
+Claude artifacts):**
+- Icon homepage: https://claude.ai/code/artifact/8711868a-d160-4e0d-9760-4315f98c555c
+- Photo homepage (real assets): https://claude.ai/code/artifact/2522fb91-5b57-4b37-9797-09dd7fd40e4f
+- Mobile + planner wizard + itinerary result: https://claude.ai/code/artifact/75d6b8bd-9f08-474e-88b7-5519bf97b83f
+
+**RESERVED / pending Sourabh's decision (do NOT treat as locked):**
+- Whether to adopt the shown UI/UX uplift direction.
+- Whether to begin building (Track V1 + Phase 0) or keep planning.
+- Payment provider, default commission rate, legal structure (Phase 5 only).
+
+**Agreed next step when the user is ready:** Track V1 (concierge validation, doubles as
+curated-matcher v1) and Phase 0 Task 0.1 (lock down the unauthenticated delete-journey
+endpoint at `Backend/journeys/views.py:467`). See [[platform-direction]] and
+[[security-fixes-outstanding]] in auto-memory.

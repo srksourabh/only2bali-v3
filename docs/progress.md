@@ -16,6 +16,23 @@
 | Migration CRA → Next.js | **In progress** | Blocked on accounts. See below. |
 | Test coverage | **Minimal** | Vitest in Next.js only. Nothing runs in CI. |
 | Docs | **Done** (2026-07-16) | This set of files. |
+| Upgrade planning | **Done** (2026-07-16) | Plan, backlog, assumptions, task breakdown, UI samples. |
+| Build | **Not started** | Decision reserved by Sourabh - see below. No code changed yet. |
+
+---
+
+## Decision reserved (2026-07-16)
+
+Full planning is complete (see `docs/PLATFORM-PLAN.md`, `docs/IDEAS.md`, `docs/ASSUMPTIONS.md`,
+`plans/2026-07-16-only2bali-upgrade-v1.md`, `tasks/plan.md`, `tasks/todo.md`) and UI/UX uplift
+previews were produced (links in `docs/memory.md` session log). **No application code has been
+changed.** Sourabh has **reserved the decision** on:
+- adopting the shown UI direction,
+- starting the build (Track V1 + Phase 0) vs continuing to plan,
+- payment provider / commission / legal structure (Phase 5 only).
+
+Do not begin implementation until Sourabh confirms. When he does, start with Track V1 and
+Phase 0 Task 0.1 (delete-endpoint auth).
 
 ---
 
