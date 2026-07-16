@@ -155,6 +155,9 @@ Verified against the codebase on 2026-07-16. Not yet fixed.
 
 | Issue | Severity | Status | Notes |
 |---|---|---|---|
+| **Zoho + SpringEdge credentials committed to source** | **CRITICAL** | open | `journeys/views.py:495-497,537` (Zoho refresh token, client id, client secret, access token) and `users/serializers.py:67` (SMS API key). Both repos were public. **Rotate at the provider - deleting the lines does not revoke them.** |
+| **OTP is 4-digit plaintext, not hardened** | **CRITICAL** | open | `users/views.py:54,56,106`. The `OTP`/`OTPAuditLog`/`RateLimitLog` models exist but are never imported. `SECURITY_FIXES.md` claims this was fixed - it was not. |
+| `SECURITY_FIXES.md` is factually false | **High** | open | Claims secret removal and OTP hardening that never reached the view layer. Actively misleads. See `docs/SECURITY.md`. |
 | Placeholder WhatsApp + email on live site | **High** | open | `only2bali-next/lib/config.ts` - `6281200000000`, `hello@only2bali.com`. Both marked TODO. Real customers hit these. |
 | Production site runs on someone else's Vercel | **High** | open | `only2bali-v3-0.vercel.app` is not on Sourabh's Vercel account - no matching project exists among his 36. It is deployed from caloganathan's account. He cannot change env vars or roll it back. |
 | Inherited Azure workflows disabled | Medium | mitigated | Both deploy to caloganathan's Azure using secrets this repo does not have. Disabled 2026-07-16 - see ADR-003. Re-enable only with separate Azure resources. |

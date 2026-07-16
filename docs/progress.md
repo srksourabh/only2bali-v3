@@ -19,6 +19,26 @@
 
 ---
 
+## Do this first
+
+> Security. Everything else on this page can wait.
+
+- [ ] **Rotate the Zoho credentials.** `Backend/journeys/views.py:495-497` and `:537`
+      hardcode the refresh token, client id, client secret, and an access token. Both
+      repos holding them were public. The refresh token never expires on its own and
+      reaches the CRM - i.e. customer data. **Revoke and reissue at Zoho.** Deleting the
+      lines does not revoke anything; git history and the public fork keep them forever.
+- [ ] **Rotate the SpringEdge SMS API key.** `Backend/users/serializers.py:67`. It sends
+      the login OTPs and is billable.
+- [ ] **Move both to env vars.** `Backend/users/views.py:332-334` already reads the same
+      Zoho credentials correctly with `os.getenv` - copy that pattern into `journeys`.
+- [ ] **Fix the OTP flow.** `users/views.py` generates 4-digit codes, caches them in
+      plaintext, and compares with `!=`. The hardened `OTP` / `OTPAuditLog` /
+      `RateLimitLog` models already exist in `models.py` and are never imported. Wire
+      them in - the hard part is written.
+- [ ] **Correct or remove `SECURITY_FIXES.md`.** It asserts both of the above were fixed.
+      They were not. It is actively misleading.
+
 ## Urgent
 
 > Things that affect real customers right now.

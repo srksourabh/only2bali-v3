@@ -80,8 +80,12 @@ npm test                            # Vitest
 
 ## Rules
 
-1. **Never commit secrets.** `Frontend/.env` is committed and currently holds only URLs.
-   Keep it that way. Real keys go in Vercel / Azure environment settings.
+1. **Never commit secrets** - and know that this rule is currently **broken**. Zoho
+   credentials are hardcoded at `Backend/journeys/views.py:495-497` and the SpringEdge
+   SMS key at `Backend/users/serializers.py:67`, in repos that were public. They need
+   rotating at the provider, not just deleting. See `docs/SECURITY.md`.
+   `Frontend/.env` is committed but holds only URLs - keep it that way. Real keys go in
+   Vercel / Azure environment settings.
 2. **Do not restructure the repo.** The layout is load-bearing for two Vercel projects
    and one Azure pipeline. See ADR-001.
 3. **Do not "fix" the two-frontend duplication by deleting one.** That is a product
@@ -104,5 +108,10 @@ silently "fix" them without a ticket - some are load-bearing.
   `MY_SECRET_KEY`. Several other names diverge too.
 - CORS allows regex wildcards on all of `*.vercel.app` and `*.azurestaticapps.net`.
 - The FastAPI app under `Backend/app/` has **no auth on any route** and is not deployed.
+- **`SECURITY_FIXES.md` is factually false.** It claims the OTP was hardened to 6 digits
+  with hashing, constant-time compare, and audit logging. The live path in
+  `users/views.py` still generates 4-digit codes, caches them in plaintext, and compares
+  with `!=`. The hardened models exist in `models.py` but are never imported. Verify
+  security claims against the code, not against that file.
 
 Full detail and context for each: `docs/ARCHITECTURE.md` and `docs/memory.md`.

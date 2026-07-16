@@ -1,117 +1,175 @@
 # Security model - Only2Bali v3.0
 
-> The real security posture as of 2026-07-16, honestly stated.
+> The real security posture as of 2026-07-16, verified against the code that runs.
 >
-> **See also `SECURITY_FIXES.md` at the repo root** - it documents the January 2026 OTP
-> hardening work in detail. This file is the current whole-system picture and does not
-> repeat it.
+> **Do not trust `SECURITY_FIXES.md` at the repo root.** It claims OTP hardening and
+> secret removal that were **never wired into the running code**. See "The
+> SECURITY_FIXES.md problem" below. This file supersedes it.
+
+## Read this first
+
+Two live problems outrank everything else in this document:
+
+1. **Credentials are committed to source, in repos that were public.** Rotate them now.
+2. **The OTP implementation is weak** - 4 digits, stored and compared in plaintext. The
+   hardened models exist but nothing calls them.
 
 ## What is protected, and what is not
 
 | Surface | Control | Verdict |
 |---|---|---|
 | Django API | JWT (`IsAuthenticated`) on protected views | Good |
-| OTP | SHA-256 hashed, constant-time compare, rate limited, audit logged | **Strong** |
-| Rate limiting | Per-mobile and per-IP, progressive 30-min lockout | Good |
-| Secrets | Env vars; hard-fail on boot if core ones are missing | Good |
 | SQL injection | Django ORM, parameterised | Good |
-| CORS | Whitelist **plus** wildcard regexes | **Weak** - see below |
-| React routes | None - auth enforced per-component | **Weak** |
-| JWT storage | `localStorage`, not httpOnly cookies | **Weak** |
-| FastAPI (`Backend/app/`) | **None whatsoever** | **Unacceptable if deployed** |
 | Gemini API key | Server-side only, both implementations | Good |
+| Django `SECRET_KEY`, DB connection string | Env vars, hard-fail on boot | Good |
+| **Zoho credentials** | **Hardcoded in `journeys/views.py`** | **LEAKED** |
+| **SpringEdge SMS key** | **Hardcoded in `users/serializers.py`** | **LEAKED** |
+| **OTP** | **4-digit, plaintext cache, plaintext compare** | **WEAK** |
+| Rate limiting | Cache-based, per-mobile only, fixed window | Partial |
+| CORS | Whitelist **plus** wildcard regexes | Weak |
+| React routes | None - auth enforced per-component | Weak |
+| JWT storage | `localStorage`, not httpOnly cookies | Weak |
+| FastAPI (`Backend/app/`) | **None whatsoever** | Unacceptable if deployed |
 | CI dependency scanning | None | Missing |
-| CI tests | None (step is commented out) | Missing |
+| CI tests | None | Missing |
+
+## 1. Committed credentials - rotate these
+
+Verified present in tracked, committed files. Both repos that contain them
+(`caloganathan/Only2bali_v3.0` and the fork `srksourabh/Only2bali_v3.0`) are **public**,
+so treat all of these as compromised regardless of what happens next.
+
+| Credential | Location | Action |
+|---|---|---|
+| Zoho refresh token | `Backend/journeys/views.py:495` | **Revoke + reissue** |
+| Zoho client ID | `Backend/journeys/views.py:496` | Rotate alongside the secret |
+| Zoho client secret | `Backend/journeys/views.py:497` | **Revoke + reissue** |
+| Zoho access token | `Backend/journeys/views.py:537` | Short-lived, but reissue anyway |
+| SpringEdge SMS API key | `Backend/users/serializers.py:67` | **Revoke + reissue** |
+
+The Zoho **refresh token** is the serious one. It does not expire on its own - it mints
+new access tokens indefinitely until revoked. With the client secret alongside it, anyone
+who read the public repo has persistent access to the Zoho CRM, which holds customer
+records. The SMS key allows sending SMS billed to the account, and OTP SMS is the login
+mechanism.
+
+These have been in git history for many commits (since the `confirm_journey_crm_zoho`
+work). **Rotation at the provider is the only fix.** Deleting the lines does not help:
+git history retains them, and the repos were public.
+
+`Backend/journeys/views.py:495` carries the comment *"Store this securely (e.g., in
+environment variables)"* directly above the hardcoded value. The same three Zoho
+credentials are read correctly with `os.getenv` in `Backend/users/views.py:332-334`.
+The correct pattern already exists in this codebase - `journeys` just does not use it.
+That makes the code fix cheap once the credentials are rotated.
+
+## 2. OTP - weak, despite what SECURITY_FIXES.md claims
+
+The **live** registration and login flow in `Backend/users/views.py`:
+
+| Line | Code | Problem |
+|---|---|---|
+| 54 | `get_random_string(length=4, allowed_chars='0123456789')` | **4 digits** = 10,000 combinations |
+| 56 | `cache.set(cache_key, {"otp": otp, ...})` | **Plaintext** in Redis, not hashed |
+| 106 | `if cached_data['otp'] != otp:` | **Plaintext `!=`** - not constant-time |
+| 19 | `from .models import CustomUser` | `OTP`, `OTPAuditLog`, `RateLimitLog` **never imported** |
+
+`Backend/users/models.py` **does** define `OTP` (line 51, with SHA-256 hashing),
+`OTPAuditLog` (line 25), and `RateLimitLog` (line 114). They are **dead code**. Nothing
+in the request path uses them. There is no audit trail, no constant-time comparison, no
+hashing, and no per-IP limiting in the flow that actually runs.
+
+The rate limiting that *does* run is cache-based, keyed on mobile number only
+(`otp_rate_limit_{mobile_number}`), with a fixed window - no per-IP limit, no
+progressive lockout.
+
+**To fix**: wire the existing models into `users/views.py`. The hard part is already
+written; it was never connected.
+
+## The SECURITY_FIXES.md problem
+
+`SECURITY_FIXES.md` at the repo root states, with ✅ FIXED markers:
+
+- *"Hardcoded Secrets Removed ... No more credential exposure in GitHub"* - **false.**
+  Zoho and SpringEdge credentials remain committed.
+- *"Changed from 4-digit to 6-digit OTP"* - **false.** The live path generates 4 digits.
+- *"Implemented constant-time comparison (secrets.compare_digest)"* - **false** for the
+  live path. Plaintext `!=`.
+- *"OTP now verified against hash, never plaintext comparison"* - **false** for the live
+  path.
+- *"Added complete audit trail with OTPAuditLog"* - the model exists; **nothing writes
+  to it.**
+
+The likely explanation: models and migrations were written, but the view layer was never
+updated to use them. The document records intent, not outcome.
+
+**This is worse than having no security documentation**, because it moves a live weak
+auth path off the risk register. The first version of this very file repeated those
+claims as fact, having trusted the document instead of reading the code. Do not delete
+`SECURITY_FIXES.md` - leave it, with this correction on record, until the work is
+genuinely done.
 
 ## Authentication
 
 - **Mechanism**: JWT via `djangorestframework_simplejwt`
 - **Tokens**: access 60 min, refresh 1 day. `ROTATE_REFRESH_TOKENS=False`,
-  `BLACKLIST_AFTER_ROTATION=True`, `token_blacklist` app installed and used by `LogoutView`
-- **Login and registration**: OTP over Twilio SMS, not passwords
-- **Storage**: the React client keeps `access_token` and `refresh_token` in
-  `localStorage`. This is readable by any XSS payload. httpOnly cookies would be
-  stronger, but changing it touches 16+ files - see the note under Known gaps.
+  `BLACKLIST_AFTER_ROTATION=True`, `token_blacklist` installed, used by `LogoutView`
+- **Login and registration**: OTP over SMS - see the weakness above
+- **Storage**: the React client keeps both tokens in `localStorage`, readable by any XSS
 
-## OTP - the strongest part of the system
+## Other known gaps
 
-Hardened in January 2026 (full detail in `SECURITY_FIXES.md`):
+3. **FastAPI has no auth on any route.** `Backend/app/` exposes user creation, trips,
+   itineraries, pricing, vendor matching, and booking unauthenticated. Mitigated **only
+   by not being deployed**. Do not deploy it as-is.
+4. **CORS wildcards.** `CORS_ALLOWED_ORIGIN_REGEXES` allows every `*.vercel.app` and
+   `*.azurestaticapps.net`, with `CORS_ALLOW_CREDENTIALS = True`. Anyone who deploys to
+   Vercel gets a credentialed cross-origin path to the API.
+5. **No route guards in the React app.** Auth is checked per component across 16+ files.
+6. **No dependency scanning, no CI tests.**
+7. **`Frontend/.env` is committed.** URLs only today - keep it that way.
 
-- 6-digit (1M combinations), up from 4
-- Stored as SHA-256 hash salted with `SECRET_KEY[:16]` - never plaintext
-- Constant-time comparison via `secrets.compare_digest` - no timing attack
-- Complete audit trail in `OTPAuditLog`: timestamp, IP, user agent, success/failure reason
-- Per-mobile and per-IP rate limiting in `RateLimitLog`, with a 30-minute account lockout
-- Attempt counting and expiry on the `OTP` model
+## Secrets - the actual rules
 
-This is genuinely well built. Do not weaken it.
-
-## Known gaps
-
-Listed in rough priority order. None are currently being exploited as far as we know,
-but all are real.
-
-1. **FastAPI has no auth on any route.** `Backend/app/` exposes user creation, trip
-   creation, itinerary generation, pricing, vendor matching, and booking - all
-   unauthenticated. It is currently mitigated **only by not being deployed**. If anyone
-   deploys it as-is, that is an immediate breach. Decide its fate before it ships.
-2. **CORS wildcards.** `CORS_ALLOWED_ORIGIN_REGEXES` allows *every* `*.vercel.app` and
-   `*.azurestaticapps.net` host. Combined with `CORS_ALLOW_CREDENTIALS = True`, any
-   attacker who deploys to Vercel gets a credentialed cross-origin path to the API.
-   This is the highest-value fix on the list.
-3. **No route guards in the React app.** Auth is checked per-component. A missed check
-   in any one of 27 routes is an unprotected page.
-4. **JWT in localStorage.** Any XSS becomes a full account takeover. The CRA is being
-   retired, so the pragmatic call may be to accept this and make sure Next.js does it
-   properly - but that is a decision to make consciously, not by default.
-5. **No dependency scanning, no CI tests.** The Azure workflow has a commented-out test
-   step. Nothing checks for vulnerable packages.
-6. **`Frontend/.env` is committed.** It holds only URLs today - no keys. Keep it that
-   way; a future careless commit is the risk.
-7. **Hardcoded infra values in `settings.py`**: Twilio phone number, Redis host,
-   `FRONTEND_URL`. Not secrets, but they mean config changes need a code deploy.
-
-## Secrets
-
-- **Never commit secrets.** Real values live in Azure App Service configuration and
-  Vercel environment variables.
-- `settings.py` is authoritative over `.env.example`, which is out of date and names
-  several variables incorrectly (`DJANGO_SECRET_KEY` vs the actual `MY_SECRET_KEY`).
-- Hard-fail on boot (`os.environ[...]`): `MY_SECRET_KEY`,
-  `AZURE_POSTGRESQL_CONNECTIONSTRING`, `WEBSITE_HOSTNAME`
-- Soft (`.getenv`): `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `REDIS_ACCESS_KEY`,
+- `settings.py` is authoritative over `.env.example`, which is out of date and misnames
+  variables (`DJANGO_SECRET_KEY` vs the real `MY_SECRET_KEY`).
+- Hard-fail on boot: `MY_SECRET_KEY`, `AZURE_POSTGRESQL_CONNECTIONSTRING`,
+  `WEBSITE_HOSTNAME`
+- Soft: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `REDIS_ACCESS_KEY`,
   `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`
-- `GEMINI_API_KEY` - server-side only. It must never be exposed to the browser, and must
-  never be prefixed `NEXT_PUBLIC_` or `REACT_APP_`.
+- `GEMINI_API_KEY` - server-side only. Never `NEXT_PUBLIC_` or `REACT_APP_`.
+- **Zoho and SpringEdge do not follow these rules today.** See section 1.
 
 ## Data we hold
 
-Worth knowing, because it sets the stakes:
-
-- Names, ages, dates of birth, gender, email addresses, mobile numbers (`CustomUser`)
+- Names, ages, dates of birth, gender, emails, mobile numbers (`CustomUser`)
 - Travel plans, party composition, dietary and religious preferences (`journeys`)
-- IP addresses and user agents (`OTPAuditLog`, `RateLimitLog`)
+- Whatever is synced to Zoho CRM - which the leaked refresh token reaches
 
 Dietary and religious preference data (Jain, vegetarian, vegan) is arguably sensitive
-personal data under Indian DPDP and EU GDPR. If the product takes EU customers, that
-needs a real review - it is not one today.
+personal data under India's DPDP Act and the GDPR. The leaked Zoho credentials therefore
+carry more than commercial risk.
 
 ## If something goes wrong
 
-1. **Stop.** Do not push a fix straight to `main` - it deploys to Azure automatically.
-2. Rotate the affected credential first: Azure App Service config, Vercel env vars,
-   Twilio console, or Google AI Studio for the Gemini key.
-3. Check `OTPAuditLog` and `RateLimitLog` - they hold IPs and user agents and are the
-   best forensic trail in the system.
-4. Record what happened in `docs/memory.md` under Known issues.
-5. Only then fix forward.
+1. **Stop.** Do not push a fix straight to `main` on the original repo - it auto-deploys.
+2. Rotate the affected credential **at the provider**: Zoho API console, SpringEdge
+   dashboard, Twilio console, Azure App Service config, Vercel env vars, or Google AI
+   Studio.
+3. Removing a secret from code does **not** revoke it. Only the provider can. Git history
+   and public forks retain it forever.
+4. `OTPAuditLog` and `RateLimitLog` are **empty** - nothing writes to them. There is no
+   OTP forensic trail. Azure App Service logs are the fallback.
+5. Record what happened in `docs/memory.md`.
 
 ## Before any PR that touches input handling, auth, or payments
 
-- [ ] No secret in the diff (check `.env`, `settings.py`, any config file)
+- [ ] No secret in the diff - and check whether you are *reading* one that is hardcoded
 - [ ] Input validated at the boundary - serializer on Django, Zod on Next.js
-- [ ] No new CORS origin added without justification
+- [ ] No new CORS origin without justification
 - [ ] Gemini key still server-side only
-- [ ] OTP hardening not weakened
+- [ ] **Claims about security controls verified against the code that runs**, not against
+      a document asserting they exist. That mistake produced the first version of this
+      file.
 - [ ] If auth or PII handling changed: escalate. `AGENTS.md` §7 puts that outside
       autonomous authority.

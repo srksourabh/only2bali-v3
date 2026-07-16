@@ -47,9 +47,14 @@ The real backend. Serves the React app.
 | Model | Represents |
 |---|---|
 | `CustomUser` | `AbstractUser` subclass. Unique email + mobile. Is `AUTH_USER_MODEL`. |
-| `OTP` | SHA-256 hashed OTP, salted with `SECRET_KEY[:16]`. Attempt count, expiry. |
-| `OTPAuditLog` | Every generate/verify/rate-limit event, with IP and user agent. |
-| `RateLimitLog` | Per-mobile and per-IP throttling, account lockout. |
+| `OTP` | SHA-256 hashed OTP, salted with `SECRET_KEY[:16]`. **Dead code - never imported.** |
+| `OTPAuditLog` | Intended audit trail with IP and user agent. **Dead code - nothing writes to it.** |
+| `RateLimitLog` | Intended per-mobile and per-IP throttling. **Dead code - never imported.** |
+
+> **Only `CustomUser` is actually used.** `users/views.py:19` imports it and nothing
+> else. The live OTP flow generates 4-digit codes, caches them in plaintext, and
+> compares with `!=`. `SECURITY_FIXES.md` claims otherwise and is wrong. See
+> `docs/SECURITY.md`.
 
 `journeys` - a hub-and-spoke schema around one root record:
 - **Hub**: `JourneyPreferences` (FK to user; name, age, party size, crew type, confirmed)
@@ -164,18 +169,25 @@ touched on the same day (2026-07-14).
 | Boundary | Control |
 |---|---|
 | Django API | JWT required (`IsAuthenticated`); OTP for login/registration |
-| OTP | SHA-256 hashed, constant-time compare, rate limited, fully audit-logged |
+| OTP | **Weak.** 4-digit, plaintext cache, plaintext compare. Not audit-logged. |
+| Zoho + SMS credentials | **Hardcoded in source.** See `docs/SECURITY.md` §1. |
 | CORS | Whitelist **plus** regex wildcards on `*.vercel.app`, `*.azurestaticapps.net` |
 | Gemini key | Server-side only, both in FastAPI and in the Next.js route handler |
 | FastAPI | **None.** No auth on any route. Mitigated only by not being deployed. |
 | React routes | **None.** Auth is enforced per-component, not by the router. |
 
-See `docs/SECURITY.md` and the existing `SECURITY_FIXES.md` at the repo root.
+See `docs/SECURITY.md`. Do **not** rely on `SECURITY_FIXES.md` - it asserts hardening
+that never reached the running code.
 
 ## Known architectural defects
 
 Real, verified, and currently live. Recorded here so nobody rediscovers them.
 
+0. **Credentials are hardcoded in source, and the OTP is weak.** Zoho refresh token,
+   client id, client secret and an access token sit in `journeys/views.py:495-497,537`;
+   the SpringEdge SMS key in `users/serializers.py:67`. The OTP flow is 4-digit
+   plaintext. `SECURITY_FIXES.md` claims both were fixed - it is wrong. These outrank
+   everything below. See `docs/SECURITY.md`.
 1. **`wsgi.py` settings selection is broken.** It does
    `if 'pybackend-….azurewebsites.net' in os.environ` - which tests dict **keys**, not
    values. It always falls through to `only2bali.settings`, so `deployment.py` never
