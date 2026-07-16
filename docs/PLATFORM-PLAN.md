@@ -1,405 +1,329 @@
-# Only2Bali - platform build-out plan
+# Only2Bali - master build-out plan (single, phased)
 
-> A detailed plan to turn Only2Bali from "a website with a questionnaire" into a
-> two-sided marketplace: verified Bali service providers on one side, Indian
-> vegetarian / Jain / vegan group travellers on the other.
->
-> Written 2026-07-16, off the back of the full codebase review. Plain English first,
-> then schema and flows. Decisions that need Sourabh's call are marked **[DECIDE]**.
->
-> **Locked decisions (2026-07-16):**
-> 1. **Backend = Next.js full-stack** (Option A, delivered the bridge way - §2).
-> 2. **Version one = curated matcher** - Only2Bali enlists and verifies vendors;
->    vendor self-onboarding (§5) is a later phase. Same schema either way.
->
-> Still open: payments provider + commission model (§8); these do not block Phases 1-2.
+> The single source of truth for the platform build-out. The main body is the approved,
+> phased programme; the appendices carry the detailed schema, payment flow, enlistment flows,
+> and seed supply for execution. Approved 2026-07-16.
 
----
+## Context
 
-## 1. What we are building, in one paragraph
+Only2Bali sells fully-managed, 100% vegetarian, own-language (Tamil/Hindi) guide-led group
+trips to Bali for Indian travellers worldwide - airport pickup, roam Bali, airport drop.
+Founder Loganathan has confirmed the direction: turn today's questionnaire-that-emails-Zoho
+into a **managed two-sided marketplace** organised around **four themed circuits**, where
+**Only2Bali holds the money and pays vendors a margin-net amount**.
 
-Today the product captures a trip questionnaire and pushes a lead to Zoho. The plan is
-to make it a **marketplace**: Bali suppliers (hotels/villas, transport, guides, cooks,
-restaurants, activity operators) enlist and get **verified** for dietary compliance;
-Indian travellers plan a group trip, get matched only to verified-compliant options,
-and book. The moat is not the catalogue or the AI - it is the **verified 100% Jain /
-veg / vegan guarantee**, which is hard for a generic operator to copy.
+A full codebase review (2026-07-16) found the product is four apps in one repo with real
+security debt (an unauthenticated delete-any-trip endpoint, a brute-forceable OTP, hardcoded
+credentials), a live "100% veg" promise that isn't actually enforced in code, and every lead
+from the new site going to placeholder contacts. This plan consolidates everything into one
+phased programme: fix the urgent risks, take control of hosting, then build the marketplace on
+the Next.js stack, preserving and polishing the existing look and feel.
 
-Two user types drive everything:
-- **Service providers (vendors)** - supply-side. They list services and get leads.
-- **Service takers (customers)** - demand-side. They plan and book trips.
+**Locked decisions (2026-07-16):**
+- Backend = **Next.js full-stack** (Postgres + ORM on Vercel), migrating off legacy Django
+  gradually. Delete the dead FastAPI app.
+- v1 = **curated matcher** (Only2Bali enlists/verifies vendors; self-onboarding later).
+- Payment model = **managed marketplace / merchant of record** (money routes through Only2Bali,
+  margin kept, vendors paid out).
+- Four circuits (**Ramayana, Adventure, Culinary, Artistic**) are first-class.
+- Traveller **accounts-lite** (passwordless) built in Next.js.
+- Look & feel = **preserve & polish** the current identity.
+- New marketplace UI = **Tailwind + shadcn/ui themed with existing tokens** (needs ADR-004).
 
----
-
-## 2. Architecture - the one decision that shapes the rest
-
-The review found the Django backend is live but carries real security debt, the FastAPI
-app is dead and internally broken, and Next.js is the intended future but has no
-accounts. A marketplace is mostly **new** functionality, so where we build it matters.
-
-**[DECIDE] Pick the backend direction:**
-
-| | Option A - Next.js full-stack **(recommended)** | Option B - Keep Django as the API | Option C - Bridge |
-|---|---|---|---|
-| Shape | Next.js API routes + Postgres (Prisma/Drizzle) + Vercel KV, on Vercel | Harden Django, add vendor/customer models, Next.js calls it | New marketplace in Next.js full-stack; Django kept only for existing legacy logins until migrated |
-| Reuses live data | No (migrate) | Yes | Partly |
-| Matches AGENTS.md target | Yes | No | Yes |
-| Security posture | Clean by design | Inherits debt (must fix Tier 1 first) | Clean for the new part |
-| Effort | Medium-high rebuild | Medium, but two stacks forever | Medium; retires legacy gradually |
-| Recommendation | **Best long-term** | Fastest to reuse accounts | **Best if you want to move now without a big-bang migration** |
-
-**My recommendation: Option A, delivered the Option C way** - build the marketplace
-fresh in Next.js full-stack, keep the old Django logins alive only until the new
-accounts are ready, then retire Django and delete FastAPI. This avoids doubling down on
-the legacy stack while never taking the live site down.
-
-The schema and flows below are written to be **stack-agnostic** - the same tables work
-whether they land in Postgres-via-Prisma (Option A) or Django models (Option B).
+Loganathan's five tasks map to the phases: (1) fix Vercel + go live, (2) take over the GitHub
+repo, (3) payment gateway, (4) marketplace with two logins, (5) the four circuits.
 
 ---
 
-## 3. Data model - the entities and how they relate
+## The four circuits (product spine)
 
-```
-                         ┌────────────┐
-                         │  Account   │  (email/mobile, one login per human/business)
-                         └─────┬──────┘
-              role=customer    │    role=vendor
-            ┌──────────────────┴──────────────────┐
-            ▼                                      ▼
-     ┌────────────┐                         ┌────────────┐
-     │  Customer  │                         │   Vendor   │  business, verification status
-     └─────┬──────┘                         └─────┬──────┘
-           │ 1:N                                  │ 1:N
-           ▼                                      ▼
-     ┌────────────┐    matched to          ┌───────────────┐
-     │ TripRequest│◄──────────────────────►│ ServiceListing│  price, area, dietary caps
-     └─────┬──────┘   (Match / Quote)      └───────┬───────┘
-           │ 1:1                                    │ N:1
-           ▼                                        ▼
-     ┌────────────┐                          ┌────────────┐
-     │  Itinerary │  day-by-day plan         │ Compliance │  Jain/veg/vegan, verified
-     └─────┬──────┘                          └────────────┘
-           │ 1:1
-           ▼
-     ┌────────────┐
-     │  Booking   │  selected listings, price, deposit, payment status
-     └────────────┘
-
-  Lookup tables (shared): Protocol, Tier, Area, Language, Interest, ServiceType, VendorType
-  Pre-account:            Lead  (WhatsApp/email capture before someone signs up)
-```
-
-The design principle: **one `Account` table for login**, with a `role` that points to
-either a `Customer` or a `Vendor` profile. This keeps auth in one place (fixing the
-"auth logic copy-pasted in 16 files" problem the review found) and lets one human be
-both if ever needed.
+A `circuit` is a first-class object; packages, listings and points-of-interest tag to it, and
+travellers pick one as planning step 1. Real Bali supply already exists to seed each:
+- **Ramayana** - Kecak Fire Dance at Uluwatu; temple circuit (Tanah Lot, Besakih, Tirta Empul,
+  Lempuyang); Ubud Barong/Ramayana ballet.
+- **Adventure** - Ayung rafting, ATV + jungle trek, Mount Batur sunrise, Nusa Penida snorkelling,
+  glass bridge, jungle swings.
+- **Culinary** - vegetarian food trail; seed vendors: Sattvik By Nature, Darbar (separate 100%
+  veg kitchen), Punjabi Grill, Queen's of India, Vinayak.
+- **Artistic** - wood-carving, sculpture and painting workshops with local artisans.
 
 ---
 
-## 4. Schema - table by table
+## Design system - preserve & polish (the look and feel)
 
-Types shown generically. `id` is a UUID (or bigint) primary key on every table.
-`created_at` / `updated_at` timestamps assumed on every table.
+The identity is strong and stays. The work is to remove drift and make it consistent and fast,
+then extend it into marketplace screens.
 
-### 4.1 Identity and accounts
+**Keep (the identity):**
+- Palette (tokens in `globals.css:1-5`): emerald `#0e4f44` / `#093830`, saffron `#e8941a` /
+  `#c97a0a`, ivory `#faf6ee`, cream `#f3ecdd`, ink `#1d2a27`, muted `#5d6f6a`, line `#e3dccb`,
+  ok `#1e7d4f`, err `#c0392b`. Emerald-tinted shadow, pill (`99px`) buttons/chips.
+- Fraunces display headings; Bali hero photography + friendly chef/guide illustrations
+  (`COOK.png`, `TOURGUIDE.png`); the custom cursor (`app/components/CustomCursor.tsx`);
+  multilingual Indian-script chips; the warm editorial mood.
 
-**`account`** - one row per login (customer or vendor).
-| Column | Type | Notes |
-|---|---|---|
-| email | string, unique | login identifier |
-| mobile | string, unique, nullable | for OTP |
-| role | enum: `customer` \| `vendor` \| `admin` | drives which profile is attached |
-| status | enum: `active` \| `suspended` | |
-| email_verified_at | timestamp, nullable | magic-link / OTP confirmation |
-| last_login_at | timestamp, nullable | |
+**Fix (drift found in the review + design exploration):**
+- **Fonts:** remove the Montserrat CDN `@import` + `body{...!important}` (`globals.css:102-106`).
+  Standardise the body face on **Inter** (already wired via `next/font` in `app/layout.tsx`,
+  matches the `index.html` benchmark and DESIGN.md). One display + one body face, via CSS vars.
+- **Radius drift:** reconcile 14px vs 20px cards into a token scale (`--r-sm/--r/--r-lg`).
+- **Inline hardcoded hex** (`#4b352d`, `#f6b85a`, mint tints) → move into tokens; stop scattering
+  colours in `style={{}}`.
+- **Images:** `COOK.png` / `TOURGUIDE.png` are ~6.7MB each; many section backgrounds are multi-MB.
+  Convert to optimised WebP and render via `next/image` (replaces raw `<img>`) - big LCP/CLS win
+  on Indian mobile connections.
+- **Accessibility:** the planner's click-only `<div>` selection cards get real
+  `button`/`role`/keyboard support; keep saffron for large text/fills only (WCAG per DESIGN.md).
+- **SEO:** add per-page metadata, `sitemap.ts`, `robots.ts`, `metadataBase`, and fix the OG `url`
+  to the live domain.
 
-> Login is **passwordless**: email magic link (customers) or mobile OTP (vendors, who
-> may prefer WhatsApp/SMS). No password column - removes the brute-force and
-> credential-stuffing risk the review flagged. OTP, if used, must be 6-digit, hashed,
-> attempt-limited (the hardened model already exists in the Django code, unused).
-
-**`session`** - server-side sessions (httpOnly cookie), not JWT-in-localStorage.
-| Column | Type | Notes |
-|---|---|---|
-| account_id | FK → account | |
-| token_hash | string | never store the raw token |
-| expires_at | timestamp | |
-
-### 4.2 Customer side (service takers)
-
-**`customer`** - demand-side profile.
-| Column | Type | Notes |
-|---|---|---|
-| account_id | FK → account, unique | |
-| full_name | string | |
-| home_city | string | departure city |
-| default_protocol | enum: `jain` \| `vegetarian` \| `vegan` | |
-| preferred_language | FK → language | |
-
-**`trip_request`** - a trip being planned (replaces today's `JourneyPreferences`).
-| Column | Type | Notes |
-|---|---|---|
-| customer_id | FK → customer, nullable | nullable = anonymous/lead-stage plan |
-| status | enum: `draft` \| `submitted` \| `quoted` \| `confirmed` \| `completed` \| `cancelled` | |
-| protocol | enum protocol | **hard filter for matching** |
-| tier | enum: `economical` \| `comfort` \| `premium` | |
-| group_size | int | |
-| crew_type | enum: `family` \| `friends` \| `corporate` \| `celebration` | |
-| from_date / to_date | date | |
-| departure_airport | string | |
-| interests | string[] (or M2M → interest) | |
-| kitchen_required | bool | private kitchen access |
-| cook_required | bool | valid only when group_size ≥ 10 (enforce server-side) |
-
-**`itinerary`** - the day-by-day plan for a trip request.
-| Column | Type | Notes |
-|---|---|---|
-| trip_request_id | FK, unique | one live itinerary per request |
-| source | enum: `ai` \| `curated` \| `hybrid` | |
-| compliance_checked | bool | **must be true before it is shown as "compliant"** |
-| days | jsonb | array of day objects (validated against a schema, see §7) |
-
-### 4.3 Vendor side (service providers)
-
-**`vendor`** - supply-side business profile.
-| Column | Type | Notes |
-|---|---|---|
-| account_id | FK → account, unique | |
-| business_name | string | |
-| vendor_type | FK → vendor_type | hotel/villa, transport, guide, cook, restaurant, activity |
-| areas | M2M → area | Ubud, Seminyak, Nusa Dua, Canggu, … |
-| languages | M2M → language | guide/staff languages |
-| whatsapp | string | primary contact |
-| verification_status | enum: `pending` \| `in_review` \| `verified` \| `rejected` | gate to going live |
-| verified_at | timestamp, nullable | |
-
-**`service_listing`** - a specific sellable offering (a vendor has many).
-| Column | Type | Notes |
-|---|---|---|
-| vendor_id | FK → vendor | |
-| service_type | FK → service_type | stay / transport / guide / cook / meal / activity |
-| title | string | |
-| area | FK → area | |
-| capacity_min / capacity_max | int | group-size fit |
-| tier | enum tier | economical/comfort/premium |
-| price_amount | int (minor units) | store in paise/cents, never float - review found a float-price bug |
-| price_unit | enum: `per_person` \| `per_day` \| `per_group` \| `per_night` | removes the per-day-vs-total ambiguity the review flagged |
-| currency | enum: `INR` \| `USD` | |
-| active | bool | |
-
-**`listing_compliance`** - the moat. What a listing can *guarantee*.
-| Column | Type | Notes |
-|---|---|---|
-| service_listing_id | FK | |
-| protocol | enum: `jain` \| `vegetarian` \| `vegan` | one row per protocol supported |
-| guarantee_level | enum: `certified` \| `capable` \| `on_request` | |
-| evidence_url | string, nullable | photo of kitchen / menu, checked at verification |
-| verified_by | FK → account (admin), nullable | **compliance is verified, never self-attested** |
-
-**`availability`** - simple calendar per listing.
-| Column | Type | Notes |
-|---|---|---|
-| service_listing_id | FK | |
-| date | date | |
-| status | enum: `open` \| `held` \| `booked` | |
-
-### 4.4 Marketplace glue
-
-**`lead`** - pre-account capture (fixes "every lead goes nowhere").
-| account_id nullable, source (`whatsapp`\|`web`\|`planner`), trip_request_id nullable, contact, message, status (`new`\|`contacted`\|`converted`) |
-
-**`quote`** - a priced proposal from a trip request to a customer.
-| trip_request_id FK, total_amount (minor units), currency, valid_until, status (`sent`\|`accepted`\|`expired`), line_items jsonb (listing_id + price snapshot) |
-
-**`booking`** - a confirmed trip.
-| Column | Type | Notes |
-|---|---|---|
-| trip_request_id | FK, unique | |
-| customer_id | FK | |
-| total_amount | int (minor units) | **server-recomputed from listings, never trusted from client** (review found a client-controlled-price bug) |
-| deposit_amount | int | |
-| payment_status | enum: `unpaid` \| `deposit_paid` \| `paid` \| `refunded` | |
-| selected_listings | M2M → service_listing | who is actually supplying |
-
-**`review`** - customer rating of a vendor after a completed booking.
-| booking_id FK, vendor_id FK, rating 1-5, comment, published bool |
-
-**Lookup tables** (small, seeded): `protocol`, `tier`, `area`, `language`, `interest`,
-`service_type`, `vendor_type`. These replace today's scattered choice tables and the
-hardcoded `lib/catalog.ts` constants.
+**Extend (marketplace UI):** adopt **Tailwind + shadcn/ui** for the new surfaces (vendor and
+traveller dashboards, listing management, checkout, admin verification queue), themed with the
+tokens above (map emerald/saffron/ivory into the Tailwind theme; Fraunces/Inter as font vars).
+Marketing pages stay on the polished existing CSS and migrate opportunistically. This needs
+**ADR-004** because DESIGN.md currently forbids Tailwind without one.
 
 ---
 
-## 5. How service providers (vendors) get enlisted
+## Architecture & data model (summary)
 
-The supply side. Goal: get verified-compliant listings live with as little friction as
-possible, but never skip compliance verification.
+**Stack:** Next.js App Router (server components by default) + Postgres via an ORM
+(Prisma/Drizzle) + Vercel KV for rate-limit/session, on Vercel. One auth layer (passwordless),
+httpOnly server sessions - not JWT-in-localStorage.
 
-**Flow (states in `vendor.verification_status`):**
+**Core schema (condensed; money always integer minor units, never float; full detail in
+Appendix A):**
+- **Identity:** `account` (email/mobile, role `traveller|vendor|admin`), `session`.
+- **Traveller:** `traveller`; `trip_request` (**circuit_id**, protocol [hard filter], tier,
+  group_size, crew_type, dates, interests, kitchen/cook); `itinerary`
+  (source, `compliance_checked`, days jsonb schema-validated).
+- **Vendor:** `vendor` (business, `vendor_type` = restaurant|accommodation|transport|guide|cook|
+  produce|artisan|activity_operator|tour_agency; languages; `verification_status`;
+  `commission_rate`); `service_listing` (circuits M2M, area, capacity, tier, price + unit,
+  currency); `listing_compliance` (protocol, guarantee_level, evidence_url, **verified_by admin**);
+  `availability`.
+- **Circuit spine:** `circuit`, `point_of_interest`, `package` (migrates `lib/catalog.ts` into DB).
+- **Glue:** `lead` (server-written on every intent), `quote`, `booking` (**server-recomputed
+  price**), `review`.
+- **Money:** `payment` (traveller in), `vendor_payout_account` (tokenised), `payout`
+  (gross/commission/net), `ledger_entry` (append-only).
 
-1. **Land** - vendor visits `/vendors` → "List your services on Only2Bali".
-2. **Sign up** - enters business email or mobile → passwordless verify (magic link / OTP)
-   → `account(role=vendor)` + `vendor(status=pending)` created.
-3. **Onboarding wizard** (multi-step, saveable draft):
-   - Business basics - name, type, areas served, languages, WhatsApp.
-   - Add listing(s) - service type, title, area, capacity, tier, price + price unit.
-   - **Dietary capability** - for each listing, which protocols it can guarantee and at
-     what level (`certified` / `capable` / `on_request`), with **evidence upload**
-     (kitchen photo, menu, certificate). This is the step that matters.
-   - Photos and availability.
-4. **Submit for review** → `status = in_review`. Nothing is public yet.
-5. **Admin verification** - an Only2Bali admin checks the evidence, especially dietary
-   claims, and marks each `listing_compliance` row `verified_by = admin`. Vendor moves to
-   `verified` (or `rejected` with a reason).
-6. **Live** - verified listings enter the matching pool and can receive leads/quotes.
-7. **Ongoing** - vendor manages availability, responds to quote requests, accrues reviews.
-
-**Why verification is a human step, not self-service:** the entire brand promise is
-"guaranteed compliant." A self-attested checkbox destroys that. The verification queue is
-a small admin screen; at low volume you (or a trusted reviewer) do it manually.
-
----
-
-## 6. How service takers (customers) get enlisted
-
-The demand side. Goal: let people plan instantly (no signup wall), then convert them into
-saved accounts and leads that actually reach you.
-
-**Flow (states in `trip_request.status`):**
-
-1. **Land** - customer visits `/` → browse packages or "Plan my trip".
-2. **Plan anonymously** - the planner wizard runs with no login. A `trip_request` is
-   created with `customer_id = null`. The AI + deterministic engine (§7) produce a
-   compliance-checked itinerary. This removes the signup wall entirely.
-3. **Capture** - to save, share, or get a quote, the customer enters email/mobile:
-   - A `lead` row is written immediately (so **you never lose the lead**, even if they
-     drop off), synced to CRM.
-   - Passwordless verify → `account(role=customer)` + `customer` created, and the
-     anonymous `trip_request` is claimed (its `customer_id` is set).
-4. **Save & share** - itinerary saved to account, shareable link + PDF export.
-5. **Request quote** - `trip_request.status = submitted`; system matches to verified
-   listings and produces a `quote`.
-6. **Confirm & pay deposit** - customer accepts the quote → `booking` created,
-   server-recomputed price, deposit via payment provider → `status = confirmed`.
-7. **Travel & review** - after the trip, `status = completed`, customer can leave a review.
-
-**Key difference from today:** planning needs no account, but every serious intent
-(save / quote / book) writes a durable `lead` and, when they verify, a real account -
-instead of firing a WhatsApp/mailto link into a placeholder.
+**Matching + compliance engine (wires in the currently-dead `lib/recommend.ts`):** circuit filter
+→ **hard verified-veg filter** → score (tier/interest/kitchen/language/cook) → AI itinerary that
+is **schema-validated and protocol-checked** before it is ever labelled compliant. Rate-limit +
+validate the public AI route (`app/api/planner/route.ts`).
 
 ---
 
-## 7. The matching and compliance engine (the moat)
+## What we can upgrade (consolidated)
 
-This is where the dead `lib/recommend.ts` logic gets wired in for real.
-
-1. **Hard filter** - a `trip_request.protocol` only ever matches `service_listing`s that
-   have a **verified** `listing_compliance` row for that protocol. Non-compliant options
-   are never shown. (Today this filter exists in code but is disconnected.)
-2. **Score** - among compliant listings: +tier match, +interest overlap, +kitchen,
-   +language, +cook-for-groups. This is the existing, tested scoring - just applied to DB
-   rows instead of a hardcoded array.
-3. **AI itinerary, then validate** - Gemini drafts the day-by-day plan, but the response
-   is **validated against a schema** (day/date/meals/activities shape) and each meal is
-   checked against the protocol before `itinerary.compliance_checked` is set true. If it
-   fails, fall back to a curated plan. (Review found the AI output is currently rendered
-   unchecked, which can both break the page and violate the diet promise.)
-4. **Guardrails on the AI route** - rate limiting, input validation (schema + length
-   caps), and a request timeout, so the public planner cannot be abused into a large
-   Google bill or prompt-injected.
-
----
-
-## 8. Booking, pricing, and payments
-
-- **Pricing is server-authoritative.** `booking.total_amount` is recomputed from the
-  selected listings' prices at booking time. The client never sends a price. All money is
-  stored in minor units (paise/cents) as integers, never floats.
-- **Deposit model** - take a deposit to confirm, balance later. Amounts and rules are a
-  business decision.
-- **[DECIDE] Payment provider** - Razorpay (India-native, INR, UPI) is the natural fit for
-  an Indian customer base; Stripe if you want global. Note: I will wire up the integration
-  and the server-side flow, but per safety rules I will not enter or handle live payment
-  credentials - you set those in the provider dashboard and in Vercel env vars.
-- **[DECIDE] Commission model** - marketplace take-rate on bookings, a listing/lead fee for
-  vendors, or a flat markup baked into the quote. This determines revenue and some schema
-  (e.g. a `commission_rate` on vendor or listing).
-
----
-
-## 9. Who benefits, and how
-
-**Customers (service takers)**
-- Only ever see options that are verified-compliant with their diet - the anxiety is gone.
-- Plan in minutes with no signup wall; save and share with the family/group who decide.
-- Transparent, itemised pricing; one place to plan and book instead of DM chaos.
-
-**Vendors (service providers)**
-- Qualified, high-intent leads from a niche they cannot easily reach themselves.
-- A "verified" badge that builds trust and lets them charge for a premium guarantee.
-- No upfront cost to list; they pay only when they win business (depending on §8 model).
-
-**The business (Only2Bali)**
-- A defensible moat: **verified dietary compliance** is operationally hard to copy, unlike
-  a catalogue or an AI wrapper.
-- Marketplace revenue (commission / fees) instead of one-off lead handoffs.
-- A data flywheel: every trip request sharpens matching and reveals demand by protocol,
-  city, season - which guides which vendors to recruit next.
-- Far less manual coordination than the current questionnaire-to-Zoho-to-WhatsApp flow.
-
----
-
-## 10. How this plan fixes the review findings
-
-| Review finding | How the plan resolves it |
+| Area | Upgrades |
 |---|---|
-| Delete-any-trip (no auth) | One auth layer + every query scoped to the owner; server sessions, not JWT-in-localStorage |
-| Brute-forceable 4-digit OTP, no rate limit | Passwordless magic link / 6-digit hashed attempt-limited OTP; rate limits on all auth + AI routes |
-| Hardcoded Zoho / SMS secrets | All secrets in env vars from day one; **still must be rotated at the provider now** |
-| "100% Jain/veg" not enforced | Hard compliance filter + AI-output validation before anything is labelled compliant |
-| Every lead goes nowhere | `lead` row written server-side on every intent; CRM sync; real contact config |
-| Client-controlled booking price | Server recomputes price from listings; money as integers |
-| Data-model 500s (PlacesToVisit etc.) | Clean, normalised schema with correct cardinalities |
-| FastAPI dead/broken | Deleted; its ideas folded into this one backend |
-| Two frontends | Consolidate on Next.js; retire React once accounts land here |
-
-Tier-1 security items are **not** deferred to this plan - see §12; they should be fixed
-immediately, independent of the marketplace build.
+| Security | Auth on delete endpoint; passwordless/hashed rate-limited OTP; rate limits on auth + AI routes; rotate Zoho + SMS secrets; secrets to env; server sessions |
+| Product | Four circuits; enforced veg compliance; working lead capture + CRM; save/share/PDF itineraries; vendor & traveller dashboards; payments |
+| Performance | `next/image` + WebP for the multi-MB assets; server components for the marketing page (currently all client); trim the always-on cursor RAF; bundle budget |
+| Design | Font reconciliation; token scale for radius/colours; remove inline hex; Tailwind+shadcn design system for dashboards |
+| SEO | Per-page metadata, sitemap, robots, correct OG/domain |
+| Code quality | Remove `any` at input boundaries; validate AI output shape; add Vitest + CI; delete FastAPI dead code |
+| Infra | Own Vercel account; `GEMINI_API_KEY` set; Root Directory `only2bali-next` |
 
 ---
 
-## 11. Phased delivery
+## Phased delivery
 
-Each phase ships something usable; nothing is a big-bang.
+Each phase ships something usable. Design fixes and upgrades are woven into the phase where they
+naturally land, not saved for the end.
 
-- **Phase 0 - Stop the bleeding (days, do now).** Rotate Zoho + SMS credentials; add auth
-  to the delete endpoint; fix placeholder WhatsApp/email; add rate limiting + validation to
-  the AI planner route. Independent of everything below.
-- **Phase 1 - Foundations.** Backend decision (§2); set up Postgres + one auth layer
-  (passwordless); seed lookup tables; migrate `lib/catalog.ts` into the DB.
-- **Phase 2 - Demand side.** Anonymous planner → compliance-checked itinerary → lead
-  capture → accounts-lite → save/share/PDF. This alone fixes lead loss and the diet promise.
-- **Phase 3 - Supply side.** Vendor signup, onboarding wizard, admin verification queue,
-  listings go live and enter matching.
-- **Phase 4 - Transact.** Quotes → booking → deposit/payment → reviews.
-- **Phase 5 - Retire legacy.** Move remaining customers off Django; delete FastAPI; sunset
-  the React app.
+### Phase 0 - Security hardening (now, independent)
+Rotate Zoho (`Backend/journeys/views.py:495-537`) + SpringEdge SMS (`Backend/users/serializers.py:67`)
+credentials at the providers; add an auth + ownership check to `DeleteJourneyPreferences`
+(`Backend/journeys/views.py:467`); fix placeholder WhatsApp/email in `only2bali-next/lib/config.ts`
+and `app/layout.tsx:67`; add rate limiting + input validation to `app/api/planner/route.ts`.
+
+### Phase 1 - Take control + go live *(Tasks 1 & 2)*
+Accept the GitHub collaboration and take over the repo; move production to our own Vercel with
+Root Directory `only2bali-next` and `GEMINI_API_KEY` set; confirm the live site. Land the quick
+design drift-fixes that need no backend: remove the Montserrat override (`globals.css:102-106`),
+start image optimisation (`next/image` + WebP for `COOK.png`/`TOURGUIDE.png`/section bgs), add
+metadata/sitemap/robots.
+
+### Phase 2 - Foundations
+Stand up Postgres + ORM + passwordless auth + Vercel KV; **ADR-004** and set up Tailwind +
+shadcn/ui themed with the tokens; seed lookups **including the four circuits, POIs, and the real
+seed vendors**; migrate `lib/catalog.ts` into `package`/`service_listing`. Build the token scale
+and reconcile radius/colour drift here.
+
+### Phase 3 - Circuits + traveller side *(Tasks 4-traveller & 5)*
+Circuit picker as planning step 1 → upgraded planner → **compliance-checked, circuit-themed
+itinerary** (validate Gemini output) → server-side lead capture → traveller accounts-lite →
+save/share/PDF. Polish the marketing pages (a11y fixes on selection cards, server-component the
+static home sections).
+
+### Phase 4 - Vendor side *(Task 4-vendor)*
+Vendor accounts + onboarding + **admin verification queue** (evidence-checked veg compliance);
+curated listings go live in circuit-aware matching; vendor dashboard on shadcn/ui.
+
+### Phase 5 - Payments *(Task 3)*
+Booking → server-priced quote → traveller pays Only2Bali (start **manual/hybrid**: collect via
+gateway, record `payout`/`ledger`, pay vendors by bank/Wise; move to **Stripe Connect** later) →
+margin deducted → vendor payout + ledger → reviews. **Flag:** merchant-of-record cross-border
+money movement needs a payments/compliance/legal advisor before go-live - engineering builds it,
+but the structure is not an engineering decision. *(Still open: provider, default commission
+rate, legal structure.)*
+
+### Phase 6 - Retire legacy
+Migrate remaining users off Django; delete the FastAPI app; sunset the React frontend.
 
 ---
 
-## 12. Decisions
+## Critical files to create / modify (representative)
 
-**Answered (2026-07-16):**
-1. ✅ **Backend direction** - Next.js full-stack, delivered the bridge way (§2).
-2. ✅ **Scope of v1** - curated matcher first; Only2Bali enlists/verifies vendors, the
-   platform matches customers to them. Vendor self-onboarding (§5) is a later phase.
-4. ✅ **Accounts on Next.js** - yes; customer accounts-lite are built here (unblocks
-   retiring React).
+- **Security (Phase 0):** `Backend/journeys/views.py`, `Backend/users/views.py`,
+  `Backend/users/serializers.py`, `only2bali-next/lib/config.ts`,
+  `only2bali-next/app/layout.tsx`, `only2bali-next/app/api/planner/route.ts`.
+- **Design polish:** `only2bali-next/app/globals.css` (tokens, remove Montserrat), `app/layout.tsx`
+  (fonts, `next/image`), `app/page.tsx` (server components, `next/image`), `app/planner/page.tsx`
+  + `planner.css` (a11y selection cards).
+- **New backend (Phase 2+):** `only2bali-next/lib/db/` (ORM schema/migrations),
+  `only2bali-next/lib/auth/`, `only2bali-next/lib/recommend.ts` (wire in over DB rows),
+  `only2bali-next/app/api/**` (auth, listings, quotes, bookings, payments, webhooks),
+  `only2bali-next/app/(dashboard)/**` (vendor/traveller/admin), `docs/ADR/adr-004-tailwind.md`.
+- **Reuse:** `lib/recommend.ts` scoring, `lib/config.ts` `wa()`/`mailto()` helpers,
+  `CustomCursor.tsx`, the existing token block and component CSS.
 
-**Still open (do not block Phases 0-2):**
-3. **[DECIDE] Payments** - Razorpay vs Stripe, deposit rules, and the **commission model**
-   (§8). Needed before Phase 4 (transact), not before.
+---
 
-Phase 0 (security) starts now, independent of everything. Phase 1 (foundations) can start
-immediately given the decisions above.
+## Verification
+
+- **Phase 0:** confirm `DELETE /api/journeys/journey_preferences/delete/<id>/` returns 401/403
+  without a valid owner token; confirm the AI route rejects oversized/malformed bodies and
+  rate-limits; confirm secrets no longer appear in source and are rotated at the provider.
+- **Design:** `npm run dev` in `only2bali-next`; verify one body font (no Montserrat), consistent
+  radii, and run Lighthouse for LCP/CLS before/after image optimisation; keyboard-only pass
+  through the planner wizard.
+- **Backend/marketplace:** `npm test` (Vitest) for `recommend.ts` over DB rows and for
+  AI-output validation; drive each flow end-to-end in the browser (circuit pick → itinerary →
+  lead → account → quote → booking); check the ledger balances (charge = commission + payout).
+- **Payments:** test-mode transaction proving money-in → margin → payout, with `payout`/`ledger`
+  rows written and price server-recomputed (client-sent price ignored).
+- **CI:** Vitest runs in CI on `only2bali-next`; add a Django test step.
+
+Phase 0 starts immediately; Phases 1-2 can start given the locked decisions. Payments provider,
+commission rate, and legal structure remain open and are only needed by Phase 5.
+
+---
+---
+
+# Appendices (execution detail)
+
+## Appendix A - Full schema
+
+UUID `id`, `created_at`, `updated_at` on every table. Money is always **integer minor units**
+(paise/cents/sen), never float.
+
+### A.1 Identity
+- **`account`** - email (unique), mobile (unique, nullable), role (`traveller`|`vendor`|`admin`),
+  status, email_verified_at, last_login_at. **Passwordless** (magic link / 6-digit hashed,
+  attempt-limited OTP).
+- **`session`** - account_id, token_hash, expires_at. httpOnly cookie.
+
+### A.2 Traveller
+- **`traveller`** - account_id (unique), full_name, home_city, default_protocol, preferred_language.
+- **`trip_request`** - traveller_id (nullable = anonymous/lead), circuit_id, status
+  (`draft`|`submitted`|`quoted`|`confirmed`|`completed`|`cancelled`), protocol (hard filter),
+  tier, group_size, crew_type, from_date, to_date, departure_airport, interests[],
+  kitchen_required, cook_required (valid only when group_size ≥ 10, server-enforced).
+- **`itinerary`** - trip_request_id (unique), source (`ai`|`curated`|`hybrid`),
+  compliance_checked (bool), days (jsonb, schema-validated).
+
+### A.3 Vendor
+- **`vendor`** - account_id (unique), business_name, vendor_type
+  (`restaurant`|`accommodation`|`transport`|`guide`|`cook`|`produce`|`artisan`|`activity_operator`|`tour_agency`),
+  areas (M2M), languages (M2M), whatsapp, verification_status
+  (`pending`|`in_review`|`verified`|`rejected`), verified_at, commission_rate.
+- **`service_listing`** - vendor_id, service_type, circuits (M2M), area, capacity_min,
+  capacity_max, tier, price_amount (minor units), price_unit
+  (`per_person`|`per_day`|`per_group`|`per_night`), currency (`INR`|`USD`|`IDR`), active.
+- **`listing_compliance`** - service_listing_id, protocol, guarantee_level
+  (`certified`|`capable`|`on_request`), evidence_url, verified_by (admin).
+- **`availability`** - service_listing_id, date, status (`open`|`held`|`booked`).
+
+### A.4 Circuit spine
+- **`circuit`** - key (`ramayana`|`adventure`|`culinary`|`artistic`), name, blurb, hero_image.
+- **`point_of_interest`** - circuit_id, name, area, description, typical_duration.
+- **`package`** - name, circuits (M2M), tier, protocols, days, band, tags, kitchen, cookReady,
+  langs, blurb, outline. (Migrates `lib/catalog.ts`.)
+
+### A.5 Marketplace glue
+- **`lead`** - account_id (nullable), source (`whatsapp`|`web`|`planner`), trip_request_id
+  (nullable), contact, message, status (`new`|`contacted`|`converted`).
+- **`quote`** - trip_request_id, total_amount, currency, valid_until, status
+  (`sent`|`accepted`|`expired`), line_items (jsonb: listing_id + price snapshot + circuit).
+- **`booking`** - trip_request_id (unique), traveller_id, gross_amount (**server-recomputed**),
+  currency, status, selected_listings (M2M).
+- **`review`** - booking_id, vendor_id, rating 1-5, comment, published.
+
+### A.6 Money
+- **`payment`** - booking_id, provider, provider_ref, amount, currency, status
+  (`authorized`|`captured`|`refunded`|`failed`).
+- **`vendor_payout_account`** - vendor_id, method (`bank`|`wise`|`connect`), currency, tokenised
+  destination reference (never raw bank details).
+- **`payout`** - booking_id, vendor_id, gross_amount, commission_rate, commission_amount,
+  net_amount, currency, status (`pending`|`paid`|`failed`|`reversed`), provider_ref.
+- **`ledger_entry`** - append-only (booking_id, type `charge`|`commission`|`payout`|`refund`,
+  amount, currency).
+
+## Appendix B - Enlistment flows
+
+### B.1 Vendors (service providers) - curated in v1
+1. Recruit / land on `/vendors`. 2. Passwordless account → `vendor(status=pending)`.
+3. Onboarding: business basics → listings (service type, circuit(s), price + unit) →
+   **vegetarian capability per listing with evidence upload** → payout account (tokenised).
+4. Admin verifies evidence (especially veg) → `verified`/`rejected`.
+5. Verified listings enter circuit-aware matching and can be booked and paid.
+
+### B.2 Travellers (service seekers)
+1. Land → **pick a circuit** or browse. 2. Plan anonymously (no signup wall; `trip_request`
+   with `traveller_id=null`). 3. To save/quote: enter contact → `lead` written immediately +
+   CRM sync; passwordless verify creates `traveller` and claims the trip. 4. Save & share
+   (link + PDF). 5. Quote (circuit-aware match). 6. Pay Only2Bali → `booking` confirmed.
+   7. Travel → review.
+
+## Appendix C - Payments money flow (managed marketplace)
+
+```
+Traveller ──pays full price──► Only2Bali account (merchant of record)
+                                     ├── keeps margin (commission_rate, e.g. 10-20%)
+                                     └── pays vendors the net amount ──► Vendor payout accounts
+```
+Per booking: capture `payment` → `ledger_entry(charge)` → compute `commission_amount` → per
+vendor create `payout(gross, commission, net)` → on settlement `ledger_entry(payout)`. Refunds
+reverse the chain. **Price is always server-recomputed; the client never sends an amount.**
+
+**Provider options** (travellers global, vendors in Bali = cross-border, multi-currency):
+
+| Route | Inbound | Vendor payout | Fit |
+|---|---|---|---|
+| **Manual/hybrid (v1)** | Razorpay/Stripe checkout into Only2Bali | Manual bank / Wise, tracked in `payout`/`ledger` | Simplest; fine at low curated volume |
+| **Stripe Connect** | Global cards/wallets, multi-currency | Automated cross-border incl. Indonesia | Best long-term for worldwide diaspora |
+| **Razorpay Route** | Strong INR / UPI | India-centric splits; cross-border to Indonesia is the constraint | Good if mostly INR |
+
+**Boundaries:** engineering builds the integration, money tables, payout logic, and
+reconciliation. It will **not** enter or store live payment credentials (set in the provider
+dashboard + Vercel env), and this plan does **not** give financial or legal advice. Merchant-of-
+record cross-border money movement has licensing, tax (GST/VAT), and travel-regulation
+implications - engage a payments/compliance/legal advisor before go-live.
+
+## Appendix D - Seed supply (for the curated v1)
+
+- **Culinary vendors (pure-veg / Jain-capable, operating in Bali):** Sattvik By Nature
+  (Kuta & Ubud), Darbar (separate 100% veg kitchen, large groups), Punjabi Grill (Kuta),
+  Queen's of India (Kuta), Vinayak (Kuta).
+- **Ramayana anchors:** Uluwatu Kecak (sunset), Tanah Lot, Besakih, Tirta Empul, Lempuyang;
+  Ubud Barong / Ramayana ballet.
+- **Adventure anchors:** Ayung rafting, ATV + jungle trek, Mount Batur sunrise, Nusa Penida
+  snorkelling, glass bridge, jungle swings.
+- **Artistic anchors:** Ubud/Mas wood-carving workshops, stone/sculpture studios, painting.
+
+These populate `circuit`, `point_of_interest`, and the first `vendor`/`service_listing` rows so
+the curated matcher has real inventory on day one.
