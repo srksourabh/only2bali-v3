@@ -27,6 +27,25 @@
       `only2bali-next/lib/config.ts` ships WhatsApp `6281200000000` and
       `hello@only2bali.com`, both marked TODO. Lead capture is WhatsApp + mailto only,
       so **every lead from the Next.js site currently goes nowhere.**
+- [ ] **Get production onto Sourabh's own Vercel.** `only2bali-v3-0.vercel.app` runs
+      from caloganathan's Vercel account, not Sourabh's. Until it moves, he cannot
+      change env vars, fix the placeholders, or roll back his own production site.
+- [ ] **Add a 404 route to the React app.** The SPA catch-all returns HTTP 200 with a
+      blank page for any unmatched URL - verified live on `/food`. Google indexes those
+      as successful pages.
+- [ ] **The chat widget says "We're offline" on the live site.** It calls the FastAPI
+      service in `Backend/app/`, which is deployed nowhere. Either deploy it (with auth
+      added first), or remove the widget.
+
+## Infrastructure
+
+- [x] Migrated to own private repo `srksourabh/only2bali-v3` (2026-07-16)
+- [x] Full 229-commit history preserved
+- [x] Inherited Azure workflows disabled - see ADR-003
+- [ ] Vercel project on Sourabh's own account, linked to the private repo
+      (Root Directory must be `only2bali-next`; blank builds the legacy CRA)
+- [ ] `GEMINI_API_KEY` set in Vercel, or the planner silently serves mock itineraries
+- [ ] Decide whether to keep using caloganathan's Azure backend or stand up own
 
 ## Decisions needed from Sourabh
 

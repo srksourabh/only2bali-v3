@@ -57,6 +57,22 @@ monorepo skeleton.
 in exchange for three working deployments.
 **Link**: `docs/ADR/adr-template.md` (use this template if the decision is revisited)
 
+### ADR-003: Disable the inherited Azure deploy workflows
+**Date**: 2026-07-16
+**Status**: Accepted
+**Decision**: Disable `Azure Static Web Apps CI/CD` and `Build and deploy Python app to
+Azure Web App - pybackend` in `srksourabh/only2bali-v3`. Files left in place; disabled
+at the repository level, reversible with `gh workflow enable`.
+**Reason**: Both were inherited by copying the repo and reference Azure secrets that
+exist only in caloganathan's repository. They fail on every push. More importantly,
+supplying the secrets would be actively dangerous: `main_pybackend.yml` deploys to the
+Azure App Service that currently serves the live production site, so this repo would
+redeploy shared production on every push - two repositories firing at one live backend.
+**Trade-offs**: No CI/CD on this repo until own infrastructure exists. Acceptable
+because Vercel deploys through its own Git integration and does not use GitHub Actions.
+**Revisit when**: Sourabh has his own Azure resources, or the backend moves off Azure.
+**Link**: `docs/ADR/adr-template.md`
+
 ### Observed decisions, not yet formal ADRs
 
 | Decision | Where | Note |
@@ -110,6 +126,29 @@ in exchange for three working deployments.
 - **Next**: Sourabh to decide the fate of the orphaned FastAPI layer and the two-frontend
   split. Fix the placeholder contact details on the live site.
 
+### 2026-07-16 (later): Migrated to own private repo, disabled inherited CI
+- **Work done**: Moved the project off the public fork onto Sourabh's own private repo,
+  `srksourabh/only2bali-v3`, as he is taking the product over rather than contributing
+  upstream. Pushed the full 229-commit history (the initial clone was shallow at depth
+  50 and would have silently discarded 167 commits). Docs raised as PR #1 rather than
+  committed straight to `main`, so `main` is a faithful copy of the project.
+- **Discovered**: **The live site is not on Sourabh's Vercel account.** No Only2Bali
+  project exists among his 36 Vercel projects, yet `only2bali-v3-0.vercel.app` serves.
+  It runs from caloganathan's account, so Sourabh cannot currently change env vars or
+  roll back production.
+- **Discovered**: The live deployment is the **legacy CRA**, not the Next.js rebuild -
+  no Next.js headers, and root `vercel.json` builds `Frontend/`. Verified live that
+  `/food` returns HTTP 200 with a blank page (SPA catch-all + no 404 route), and the
+  chat widget reports "We're offline" because it calls the undeployed FastAPI service.
+- **Decisions**: ADR-003 - disabled both inherited Azure workflows. They failed on every
+  push (no secrets), and wiring the secrets would have pointed this repo at the live
+  shared backend.
+- **Blockers**: Vercel import needs Sourabh to grant the Vercel GitHub App access to the
+  new private repo - a browser permission grant that cannot be automated.
+- **State**: Git fully synced. PR #1 open. Vercel not yet set up on his account.
+- **Next**: Import to Vercel with Root Directory `only2bali-next` (leaving it blank
+  builds the legacy CRA instead). Merge PR #1. Fix the placeholder contact details.
+
 ## Known issues
 
 Verified against the codebase on 2026-07-16. Not yet fixed.
@@ -117,6 +156,8 @@ Verified against the codebase on 2026-07-16. Not yet fixed.
 | Issue | Severity | Status | Notes |
 |---|---|---|---|
 | Placeholder WhatsApp + email on live site | **High** | open | `only2bali-next/lib/config.ts` - `6281200000000`, `hello@only2bali.com`. Both marked TODO. Real customers hit these. |
+| Production site runs on someone else's Vercel | **High** | open | `only2bali-v3-0.vercel.app` is not on Sourabh's Vercel account - no matching project exists among his 36. It is deployed from caloganathan's account. He cannot change env vars or roll it back. |
+| Inherited Azure workflows disabled | Medium | mitigated | Both deploy to caloganathan's Azure using secrets this repo does not have. Disabled 2026-07-16 - see ADR-003. Re-enable only with separate Azure resources. |
 | `wsgi.py` settings check is broken | Medium | open | `if '<host>' in os.environ` tests keys, not values. `deployment.py` is dead code. |
 | Case-sensitivity landmine in `App.js` | Medium | open | Imports `./Pages/Home` and `./pages/PlanTrip`; only `Pages/` exists. Breaks on Linux CI. |
 | FastAPI is orphaned and unauthenticated | Medium | open | No auth on any route, not deployed, own SQLite DB. Decide: wire up, secure, or delete. |
