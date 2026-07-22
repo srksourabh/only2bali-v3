@@ -381,3 +381,123 @@ section { padding: clamp(3.5rem, 7vw, 6rem) 0; }
 /* live departure line on a package card */
 .next-dep{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:var(--text-2);margin-top:.2rem}
 .next-dep b{color:var(--veg-amber);font-weight:700}
+
+/* ==========================================================================
+   Auth and account
+   ========================================================================== */
+
+.navsignin {
+  font-size: .9rem; font-weight: 600; color: var(--text);
+  text-decoration: none; padding: .4rem .2rem; white-space: nowrap;
+}
+.navsignin:hover { color: var(--emerald); }
+
+/* ---------- login ---------- */
+.authpage {
+  min-height: calc(100vh - 68px);
+  display: grid; place-items: center;
+  padding: clamp(2rem, 6vw, 4rem) 1.2rem;
+  /* the sea-hills silhouette, low enough to sit behind the card */
+  background:
+    url("/brand/sea-hills.svg") bottom center / 140% auto no-repeat,
+    var(--page);
+  color: var(--emerald);
+}
+.authwrap { width: min(440px, 100%); }
+.authmark { display: flex; justify-content: center; margin-bottom: 1.4rem; }
+
+.authcard {
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-lg);
+  padding: clamp(1.6rem, 4vw, 2.4rem);
+  box-shadow: var(--shadow-lg);
+}
+.authcard h1 { font-size: clamp(1.4rem, 3.4vw, 1.85rem); font-weight: 600; }
+.authsub { font-size: .92rem; color: var(--text-2); margin-top: .6rem; line-height: 1.55; }
+.authsub b { color: var(--head); font-weight: 600; }
+
+.authtabs {
+  display: inline-flex; gap: 4px; padding: 4px; margin: 1.6rem 0 1.2rem;
+  background: var(--cream); border-radius: var(--r-pill);
+}
+.authtabs button {
+  border: 0; background: transparent; cursor: pointer; font: inherit;
+  font-size: .86rem; font-weight: 600; color: var(--text-2);
+  padding: .45rem 1.1rem; border-radius: var(--r-pill); transition: .18s;
+}
+.authtabs button[aria-selected="true"] { background: var(--emerald); color: #fff; }
+.authtabs button:focus-visible { outline: 2px solid var(--saffron); outline-offset: 2px; }
+
+.authcard label {
+  display: block; font-size: .82rem; font-weight: 600;
+  color: var(--head); margin-bottom: .4rem;
+}
+.authcard input {
+  width: 100%; font: inherit; font-size: 1rem;
+  padding: .8rem 1rem; color: var(--text);
+  background: var(--page); border: 1.5px solid var(--hair);
+  border-radius: var(--r); transition: border-color .18s;
+}
+.authcard input:focus {
+  outline: none; border-color: var(--emerald);
+  box-shadow: 0 0 0 3px rgba(14, 79, 68, .12);
+}
+.authcard input[aria-invalid="true"] { border-color: var(--veg-red); }
+
+/* Wide tracking so six digits are easy to read back against the SMS. */
+.codeinput {
+  text-align: center; font-size: 1.6rem !important; font-weight: 600;
+  letter-spacing: .45em; text-indent: .45em;
+  font-variant-numeric: tabular-nums;
+}
+
+.autherr {
+  margin-top: .7rem; font-size: .85rem; color: var(--veg-red);
+  display: flex; align-items: flex-start; gap: .4rem;
+}
+.authsubmit { width: 100%; margin-top: 1.2rem; justify-content: center; }
+.authsubmit:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+.authalt {
+  display: flex; justify-content: space-between; gap: 1rem;
+  margin-top: 1.2rem; padding-top: 1.1rem; border-top: 1px solid var(--hair);
+}
+.authalt button {
+  background: none; border: 0; cursor: pointer; font: inherit;
+  font-size: .84rem; font-weight: 600; color: var(--emerald);
+  text-decoration: underline; text-underline-offset: 3px; padding: 0;
+}
+.authalt button:disabled { color: var(--text-2); text-decoration: none; cursor: default; }
+
+/* ---------- account ---------- */
+.accountpage { padding: clamp(2rem, 5vw, 3.5rem) 0 clamp(3rem, 7vw, 5rem); }
+.accounthead {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 1.5rem; flex-wrap: wrap;
+  padding-bottom: 1.6rem; margin-bottom: 2rem; border-bottom: 1px solid var(--hair);
+}
+.accounthead h1 { font-size: clamp(1.5rem, 3.4vw, 2.1rem); font-weight: 600; margin: .35rem 0 .6rem; }
+.rolechip {
+  display: inline-block; background: var(--cream); color: var(--head);
+  font-size: .74rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  padding: .26rem .7rem; border-radius: var(--r-pill);
+}
+
+.accountgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; }
+.acard {
+  background: var(--surface); border: 1px solid var(--hair);
+  border-radius: var(--r-lg); padding: 1.5rem;
+  display: flex; flex-direction: column; gap: .7rem; align-items: flex-start;
+}
+.acard h2 { font-size: 1.1rem; font-weight: 600; }
+.acard .empty { font-size: .88rem; color: var(--text-2); line-height: 1.55; flex: 1; }
+
+.accountnote {
+  margin-top: 2rem; font-size: .86rem; color: var(--text-2);
+  padding-inline-start: .9rem; border-inline-start: 3px solid var(--saffron);
+}
+
+@media (max-width: 860px) {
+  .accountgrid { grid-template-columns: 1fr; }
+}
