@@ -1,117 +1,132 @@
-# CLAUDE.md - Only2Bali v3.0
+# CLAUDE.md — Only2Bali
 
-> Instructions for Claude Code (and Cursor/Windsurf) working in this repo.
+> Instructions for Claude Code, Cursor and Windsurf working in this repo.
 > Read `docs/memory.md` and `docs/progress.md` at the start of every session.
 >
-> A separate `AGENTS.md` at the repo root defines the @FullStackLead persona used by
-> Antigravity. It sets the target architecture and SLO budget. This file covers the
-> practical facts of the repo. Where they overlap, AGENTS.md wins on standards, this
-> file wins on what actually exists today.
+> `AGENTS.md` defines the @FullStackLead persona used by Antigravity and sets the
+> SLO budget. Where the two overlap, AGENTS.md wins on standards; this file wins
+> on what actually exists today.
+>
+> **Verify claims here against the code.** This file was itself wrong for a while,
+> and `docs/security-fixes-status.md` was wrong for longer. Both are now accurate,
+> and both should be corrected the moment they stop being.
 
 ## What this product is
 
-Only2Bali sells vegetarian / Jain / vegan group travel packages from India to Bali.
-Live site: https://only2bali-v3-0.vercel.app
+Only2Bali sells vegetarian / Jain / vegan group travel from India to Bali, and is
+being built out into a two-sided marketplace: verified Bali providers on one side,
+Indian group travellers on the other.
 
-## Critical context before you touch anything
+The moat is the **verified veg guarantee** — every meal on every itinerary carries
+a green / amber / red compliance rating before the traveller sees it — plus
+own-language guides and managed logistics.
 
-This repo contains **four separate applications**, not one. Two of them are competing
-versions of the same website. Know which one you are in before editing.
+## Repository layout
 
 | Directory | What it is | Status |
 |---|---|---|
-| `Backend/` | Django 5.1 + DRF API. Accounts, OTP, journey wizard, Zoho CRM. | **Live** on Azure |
-| `Backend/app/` | A *separate* FastAPI app (Gemini AI, SQLAlchemy). | **Not deployed** - see below |
-| `Frontend/` | Create React App. Full accounts + booking flow. | **Live**, legacy |
-| `only2bali-next/` | Next.js 15. Catalog + Gemini planner. No accounts. | **Live**, the future |
-| `only2bali-site/` | Single static `index.html`. | Design benchmark only |
+| `only2bali-next/` | **The product.** Next.js 15, 7 languages, Postgres, passwordless auth. | Active — build here |
+| `Backend/` | Django 5.1 + DRF. Accounts, OTP, journey wizard. | Live on Azure, being retired |
+| `Frontend/` | Create React App. The old site. | Legacy, do not invest |
+| `only2bali-site/` | A single static `index.html`. | Historical design benchmark |
+| `infra/` | Postgres on the VPS: compose, mTLS certs, backups, bootstrap. | Active |
+| `docs/` | Architecture, security, planning, ADRs. | Active |
 
-Read `docs/ARCHITECTURE.md` before any non-trivial change. It explains how these fit
-together and where the traps are.
-
-## The main thing to understand
-
-`Frontend/` (React) and `only2bali-next/` (Next.js) are **two versions of the same
-website**. The Next.js app is the intended destination. The React app is legacy but is
-still deployed and still maintained, because it has features Next.js does not yet have:
-user accounts, OTP login, the vendor onboarding flow, and booking.
-
-**The migration is incomplete.** Do not assume a feature exists in both. Do not delete
-from one assuming the other covers it. Check first.
+Two frontends still exist. `only2bali-next/` is the destination and now has the
+things that used to block retirement — accounts, sessions, a database. `Frontend/`
+is kept only until the Django users are migrated.
 
 ## Commands
 
-### Backend (Django)
 ```bash
-cd Backend
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py runserver          # http://localhost:8000
-```
-Requires env vars or it will not boot - see `Backend/.env.example`, but note the
-warning in `docs/ARCHITECTURE.md` about names in that file not matching `settings.py`.
+# Everything, locally, in one command: Postgres + schema + seed + dev server
+cd only2bali-next && npm run dev:local        # prints the OTP to the terminal
+cd only2bali-next && npm run dev:down         # remove the local database
 
-### Frontend (React, legacy)
-```bash
-cd Frontend
-npm install
-npm start                           # http://localhost:3000
+npm test          # Vitest, 79 tests
+npm run typecheck
+npm run build
+npm run db:verify # 38 checks against whatever DATABASE_URL points at
+npm run db:seed
 ```
 
-### Next.js (the future)
+Django, if you need it:
+
 ```bash
-cd only2bali-next
-npm install
-npm run dev                         # http://localhost:3000
-npm test                            # Vitest
+cd Backend && pip install -r requirements.txt && python manage.py runserver
 ```
+
+It hard-fails on boot without `MY_SECRET_KEY`, `AZURE_POSTGRESQL_CONNECTIONSTRING`
+and `WEBSITE_HOSTNAME`.
+
+## Architecture as it stands
+
+- **App** on Vercel. **Postgres** self-hosted on a Hostinger VPS, reached over
+  **mutual TLS** — a leaked `DATABASE_URL` alone cannot connect, because
+  `pg_hba.conf` sets `clientcert=verify-full`.
+- **Auth** is passwordless: six-digit OTP, HMAC-hashed, attempt-capped, single
+  use; opaque session tokens stored as hashes in httpOnly cookies.
+- **i18n**: every route lives under `/[lang]`. That layout *is* the root layout,
+  which is what makes `<html lang>` correct per locale. Seven languages.
+- **Money** is always integer minor units. Never float.
 
 ## Conventions
 
-- **Backend**: Django apps are `users` and `journeys`. There are no DRF viewsets or
-  routers here - every endpoint is a hand-written `APIView` subclass. Follow that
-  pattern; do not introduce routers into existing apps without an ADR.
-- **`journeys`**: uses a `BasePreferenceView` template that the nine preference views
-  subclass by setting `model` / `serializer_class`. Extend that pattern.
-- **Next.js**: App Router, server components by default. `lib/catalog.ts` is the single
-  source of truth for packages. `lib/recommend.ts` is deterministic and tested - keep it
-  pure and keep the tests passing.
-- **React (legacy)**: prefer fixing bugs over adding features. New work belongs in Next.js.
+- **Next.js**: App Router, server components by default. Route handlers never
+  touch Drizzle directly — go through `lib/repositories/`. Services never read
+  `request`. Zod at every boundary.
+- **Business rules belong in the database.** Four are check constraints, not
+  application conventions, and `npm run db:verify` proves they fire.
+- **Never use `tier` as a price boundary.** Pricing is open-ended min/max with no
+  floor and no ceiling; `tier` is a display label only.
+- **Django**: apps are `users` and `journeys`. Every endpoint is a hand-written
+  `APIView`; there are no viewsets or routers. Follow that. `journeys` uses a
+  `BasePreferenceView` template — extend it.
+- **React (legacy)**: fix bugs, add nothing.
 
 ## Rules
 
-1. **Never commit secrets** - and know that this rule is currently **broken**. Zoho
-   credentials are hardcoded at `Backend/journeys/views.py:495-497` and the SpringEdge
-   SMS key at `Backend/users/serializers.py:67`, in repos that were public. They need
-   rotating at the provider, not just deleting. See `docs/SECURITY.md`.
-   `Frontend/.env` is committed but holds only URLs - keep it that way. Real keys go in
-   Vercel / Azure environment settings.
-2. **Do not restructure the repo.** The layout is load-bearing for two Vercel projects
-   and one Azure pipeline. See ADR-001.
-3. **Do not "fix" the two-frontend duplication by deleting one.** That is a product
-   decision, not a cleanup task.
-4. **Gemini keys are server-side only.** `GEMINI_API_KEY` must never reach the client.
-5. Update `docs/memory.md` at the end of every session. Tick `docs/progress.md` as work
-   lands.
+1. **Never commit secrets.** `.env`, `certs/`, `*.key` and `*.crt` are gitignored.
+   Credentials were previously committed and the repos were public — see
+   "Outstanding" below.
+2. **Do not restructure the app directories.** `Backend/`, `Frontend/` and
+   `only2bali-next/` are load-bearing for deployment. See `docs/adr/`.
+3. **Do not delete one of the two frontends** to resolve the duplication. That is
+   a product decision.
+4. **Gemini and database credentials are server-side only.** Never in a client
+   component, never in `NEXT_PUBLIC_*`.
+5. Update `docs/memory.md` at the end of every session; tick `docs/progress.md`.
 
 ## Known traps
 
-These are real bugs found in the codebase. Do not be surprised by them, and do not
-silently "fix" them without a ticket - some are load-bearing.
+Real, verified. Do not be surprised by them, and do not silently "fix" the
+load-bearing ones.
 
-- `Backend/only2bali/wsgi.py` checks `if '<hostname>' in os.environ` - that tests
-  dictionary **keys**, not values. It always resolves to `only2bali.settings`, so
-  `deployment.py` is effectively dead code.
-- `Frontend/src/App.js` imports from both `./Pages/Home` and `./pages/PlanTrip`. Only
-  `Pages/` exists on disk. This works on Windows and breaks on case-sensitive Linux CI.
-- `Backend/.env.example` documents `DJANGO_SECRET_KEY`, but `settings.py` actually reads
-  `MY_SECRET_KEY`. Several other names diverge too.
-- CORS allows regex wildcards on all of `*.vercel.app` and `*.azurestaticapps.net`.
-- The FastAPI app under `Backend/app/` has **no auth on any route** and is not deployed.
-- **`SECURITY_FIXES.md` is factually false.** It claims the OTP was hardened to 6 digits
-  with hashing, constant-time compare, and audit logging. The live path in
-  `users/views.py` still generates 4-digit codes, caches them in plaintext, and compares
-  with `!=`. The hardened models exist in `models.py` but are never imported. Verify
-  security claims against the code, not against that file.
+- **Root `vercel.json` builds `Frontend/`, the legacy CRA.** If you connect the
+  Vercel project to Git without setting Root Directory to `only2bali-next`, you
+  will deploy the old site and wonder why nothing changed.
+- `Backend/only2bali/wsgi.py` checks `if '<hostname>' in os.environ` — that tests
+  dictionary **keys**, not values, so `deployment.py` is dead code.
+- `Frontend/src/App.js` imports both `./Pages/Home` and `./pages/PlanTrip`; only
+  `Pages/` exists. Works on Windows, breaks on case-sensitive Linux CI.
+- `Backend/.env.example` documents `DJANGO_SECRET_KEY`; `settings.py` reads
+  `MY_SECRET_KEY`. Several other names diverge.
+- **CORS allows any `*.vercel.app` and any `*.azurestaticapps.net` origin with
+  credentials enabled.** Anyone can deploy a free subdomain on either host.
+- `postgres:17-alpine` runs as **uid 70**, not 999. Getting this wrong makes
+  Postgres refuse to start with "private key file must be owned by the database
+  user or root".
+- Port 3000 is often occupied by another project on this machine. `npm run
+  dev:local` detects that and moves to 3100.
 
-Full detail and context for each: `docs/ARCHITECTURE.md` and `docs/memory.md`.
+## Outstanding, and genuinely urgent
+
+**Zoho tokens and the SpringEdge SMS key were committed to source in repos that
+were public.** They have been removed from the code and read from environment
+variables, but **they remain in git history and have not been revoked at the
+provider.** Deleting the lines does not revoke them. Until that is done, treat
+both as compromised — see `docs/security-fixes-status.md`.
+
+Login also cannot deliver codes in production until an email or SMS provider is
+configured. That refusal is deliberate: it fails loudly rather than silently
+sending nothing.

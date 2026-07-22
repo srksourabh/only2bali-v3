@@ -126,4 +126,4 @@ Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `ci`
 - [ ] Casing is correct on every new import path (Linux CI is case-sensitive)
 - [ ] `docs/memory.md` has a session note
 - [ ] `docs/progress.md` updated if a tracked item moved
-- [ ] An ADR added to `docs/ADR/` if I made an architectural decision
+- [ ] An ADR added to `docs/adr/` if I made an architectural decision

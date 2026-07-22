@@ -3,8 +3,8 @@
 > The working checklist. Sequenced, with exact file paths, commands, and a done-when for
 > every item. Written 2026-07-22, line references verified against the code that day.
 >
-> - **What to build and why** → `docs/MARKETPLACE-SPEC.md`
-> - **Full scope and phases** → `docs/MARKETPLACE-TASKS.md`
+> - **What to build and why** → `docs/planning/marketplace-spec.md`
+> - **Full scope and phases** → `docs/planning/marketplace-tasks.md`
 > - **This file** → what to do next, in order, starting now.
 
 ## How to use this
@@ -66,7 +66,7 @@ a repo that was public.
 > | S0.7 guard AI planner route | ✅ done, 28 tests |
 > | S0.8 real contact details | 🚫 **blocked** — needs the real number and inbox from you |
 > | S0.9 delete FastAPI app | ✅ done |
-> | S0.10 correct SECURITY_FIXES.md | ✅ done |
+> | S0.10 correct docs/security-fixes-status.md | ✅ done |
 >
 > Verification run: `npm test` 37 passed · `npm run build` clean · every route ≤ 113 KB gz
 > against a 170 KB budget. Django was **not** run — it is not installed locally, so S0.3 has
@@ -177,7 +177,7 @@ Fix `config.ts`, then make `layout.tsx` import from it instead of hardcoding.
 
 `Backend/app/` — no auth on any route, not deployed, its own SQLite DB. Delete it.
 
-### S0.10 💻 Correct `SECURITY_FIXES.md`
+### S0.10 💻 Correct `docs/security-fixes-status.md`
 
 It claims OTP hardening and secret removal that never reached the view layer. After S0.1-S0.6 it
 can finally say something true.

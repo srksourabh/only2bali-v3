@@ -1,0 +1,130 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A newer push supersedes an in-flight run on the same branch.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  app:
+    name: only2bali-next
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: only2bali-next
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: only2bali-next/package-lock.json
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+
+      # No DATABASE_URL is set on purpose: the build must not require a
+      # reachable database. It used to, and that would have failed on Vercel.
+      - name: Build
+        run: npm run build
+
+
+  database:
+    name: schema and seed
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: only2bali_app
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: only2bali
+        options: >-
+          --health-cmd "pg_isready -U only2bali_app -d only2bali"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: only2bali-next/package-lock.json
+
+      - run: npm ci
+        working-directory: only2bali-next
+
+      # Applies the committed migration as plain SQL, exactly as the VPS
+      # bootstrap does, so a broken migration is caught here.
+      - name: Apply schema
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f only2bali-next/lib/db/migrations/0000_initial_schema.sql
+        env:
+          DATABASE_URL: postgres://only2bali_app:ci@localhost:5432/only2bali
+
+      - name: Seed catalogue
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f infra/postgres/seed.sql
+        env:
+          DATABASE_URL: postgres://only2bali_app:ci@localhost:5432/only2bali
+
+      # 38 checks: schema shape, the four business-rule constraints, the
+      # catalogue repository, and an auth round-trip through the real tables.
+      - name: Verify
+        run: npm run db:verify
+        working-directory: only2bali-next
+        env:
+          DATABASE_URL: postgres://only2bali_app:ci@localhost:5432/only2bali
+          AUTH_SECRET: ci-only-secret-comfortably-over-thirty-two-characters
+
+  secrets:
+    name: no committed secrets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Credentials were committed to this repository once. This makes the
+      # second time a failed build rather than a breach.
+      - name: Scan for credential-shaped literals
+        run: |
+          set -e
+          FOUND=0
+          scan() {
+            if git grep -nIE "$1" -- \
+                 ':!*.md' ':!.github/workflows/ci.yml' ':!**/package-lock.json' > /tmp/hits; then
+              echo "::error::possible secret ($2):"
+              cat /tmp/hits
+              FOUND=1
+            fi
+          }
+          scan '1000\.[a-f0-9]{30,}'                'Zoho refresh/access token'
+          scan 'BEGIN (RSA |EC )?PRIVATE KEY'       'private key'
+          scan '(apikey|api_key)[=:][\"'"'"']?[A-Za-z0-9]{24,}' 'API key'
+          exit $FOUND
+
+      - name: Ensure secret files are ignored
+        run: |
+          set -e
+          for f in infra/.env only2bali-next/.env.local infra/postgres/certs/ca.key; do
+            git check-ignore -q "$f" || { echo "::error::$f is not gitignored"; exit 1; }
+          done
+          echo "secret paths are gitignored"

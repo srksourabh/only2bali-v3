@@ -1,8 +1,8 @@
 # Only2Bali - assumptions & risk map
 
 > Risk identification across 8 categories (Teresa Torres' 4 core product risks extended with
-> Ethics, Go-to-Market, Strategy, Team) for the marketplace direction in `docs/PLATFORM-PLAN.md`
-> and `docs/IDEAS.md`. Each assumption has a confidence rating and a cheap test. Generated
+> Ethics, Go-to-Market, Strategy, Team) for the marketplace direction in `docs/planning/platform-plan.md`
+> and `docs/planning/ideas.md`. Each assumption has a confidence rating and a cheap test. Generated
 > 2026-07-16. Principle: assume ~3/4 of ideas won't perform as hoped; test the riskiest first.
 
 Confidence = how sure we are the assumption holds today (High / Med / Low). The dangerous cells

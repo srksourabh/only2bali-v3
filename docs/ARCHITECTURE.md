@@ -53,7 +53,7 @@ The real backend. Serves the React app.
 
 > **Only `CustomUser` is actually used.** `users/views.py:19` imports it and nothing
 > else. The live OTP flow generates 4-digit codes, caches them in plaintext, and
-> compares with `!=`. `SECURITY_FIXES.md` claims otherwise and is wrong. See
+> compares with `!=`. `docs/security-fixes-status.md` claims otherwise and is wrong. See
 > `docs/SECURITY.md`.
 
 `journeys` - a hub-and-spoke schema around one root record:
@@ -176,7 +176,7 @@ touched on the same day (2026-07-14).
 | FastAPI | **None.** No auth on any route. Mitigated only by not being deployed. |
 | React routes | **None.** Auth is enforced per-component, not by the router. |
 
-See `docs/SECURITY.md`. Do **not** rely on `SECURITY_FIXES.md` - it asserts hardening
+See `docs/SECURITY.md`. Do **not** rely on `docs/security-fixes-status.md` - it asserts hardening
 that never reached the running code.
 
 ## Known architectural defects
@@ -186,7 +186,7 @@ Real, verified, and currently live. Recorded here so nobody rediscovers them.
 0. **Credentials are hardcoded in source, and the OTP is weak.** Zoho refresh token,
    client id, client secret and an access token sit in `journeys/views.py:495-497,537`;
    the SpringEdge SMS key in `users/serializers.py:67`. The OTP flow is 4-digit
-   plaintext. `SECURITY_FIXES.md` claims both were fixed - it is wrong. These outrank
+   plaintext. `docs/security-fixes-status.md` claims both were fixed - it is wrong. These outrank
    everything below. See `docs/SECURITY.md`.
 1. **`wsgi.py` settings selection is broken.** It does
    `if 'pybackend-….azurewebsites.net' in os.environ` - which tests dict **keys**, not

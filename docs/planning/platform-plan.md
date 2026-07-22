@@ -194,7 +194,7 @@ Migrate remaining users off Django; delete the FastAPI app; sunset the React fro
 - **New backend (Phase 2+):** `only2bali-next/lib/db/` (ORM schema/migrations),
   `only2bali-next/lib/auth/`, `only2bali-next/lib/recommend.ts` (wire in over DB rows),
   `only2bali-next/app/api/**` (auth, listings, quotes, bookings, payments, webhooks),
-  `only2bali-next/app/(dashboard)/**` (vendor/traveller/admin), `docs/ADR/adr-004-tailwind.md`.
+  `only2bali-next/app/(dashboard)/**` (vendor/traveller/admin), `docs/adr/adr-004-tailwind.md`.
 - **Reuse:** `lib/recommend.ts` scoring, `lib/config.ts` `wa()`/`mailto()` helpers,
   `CustomCursor.tsx`, the existing token block and component CSS.
 
@@ -349,7 +349,7 @@ Synthesised from four parallel research streams - tour/activity marketplaces (Vi
 GetYourGuide, Klook, TourRadar, Rezdy); AI planners + group travel (Wanderlog, Mindtrip, Layla,
 Troupe, SquadTrip); dietary/faith niche travel (HalalBooking, CrescentRating, Kosherica, Indian
 Jain operators); India-outbound OTAs + payment mechanics (TravelTriangle, Thrillophilia, MMT,
-Stripe Connect, Razorpay Route) - plus the product-trio brainstorm (`docs/IDEAS.md`). `[P#]` =
+Stripe Connect, Razorpay Route) - plus the product-trio brainstorm (`docs/planning/ideas.md`). `[P#]` =
 target phase. **★** = surfaced independently from multiple streams (strong signal).
 
 ### Three category "whitespace" differentiators (no competitor - halal, kosher, or Jain - does these)
@@ -412,7 +412,7 @@ target phase. **★** = surfaced independently from multiple streams (strong sig
 Reseller / channel-manager distribution network, self-serve global vendor onboarding, AI dynamic
 pricing, native mobile app. Revisit after traction.
 
-### Brainstorm top 5 (from `docs/IDEAS.md`, folded in above)
+### Brainstorm top 5 (from `docs/planning/ideas.md`, folded in above)
 WhatsApp two-way concierge (C) · Community Trust Engine (A + the 3 whitespace items) · Group
 organizer toolkit + community-leader referral (C/D) · Collaborative shareable itinerary (B) ·
 Fixed-date festival departures (A/D - dated `availability` + `package`).

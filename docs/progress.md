@@ -23,8 +23,8 @@
 
 ## Decision reserved (2026-07-16)
 
-Full planning is complete (see `docs/PLATFORM-PLAN.md`, `docs/IDEAS.md`, `docs/ASSUMPTIONS.md`,
-`plans/2026-07-16-only2bali-upgrade-v1.md`, `tasks/plan.md`, `tasks/todo.md`) and UI/UX uplift
+Full planning is complete (see `docs/planning/platform-plan.md`, `docs/planning/ideas.md`, `docs/planning/assumptions.md`,
+`docs/planning/upgrade-plan-v1.md`, `docs/planning/task-breakdown.md`, `docs/planning/task-todo.md`) and UI/UX uplift
 previews were produced (links in `docs/memory.md` session log). **No application code has been
 changed.** Sourabh has **reserved the decision** on:
 - adopting the shown UI direction,
@@ -53,7 +53,7 @@ Phase 0 Task 0.1 (delete-endpoint auth).
       plaintext, and compares with `!=`. The hardened `OTP` / `OTPAuditLog` /
       `RateLimitLog` models already exist in `models.py` and are never imported. Wire
       them in - the hard part is written.
-- [ ] **Correct or remove `SECURITY_FIXES.md`.** It asserts both of the above were fixed.
+- [ ] **Correct or remove `docs/security-fixes-status.md`.** It asserts both of the above were fixed.
       They were not. It is actively misleading.
 
 ## Urgent

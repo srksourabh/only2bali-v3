@@ -2,8 +2,8 @@
 
 ## Overview
 
-Decomposition of the approved upgrade programme (`plans/2026-07-16-only2bali-upgrade-v1.md`,
-`docs/PLATFORM-PLAN.md`) into small, verifiable tasks. The work that is ready to build now - a
+Decomposition of the approved upgrade programme (`docs/planning/upgrade-plan-v1.md`,
+`docs/planning/platform-plan.md`) into small, verifiable tasks. The work that is ready to build now - a
 parallel discovery track, Phase 0 security, and Phase 1 go-live/design fixes - is broken down to
 task level with acceptance and verification criteria. Phases 2-6 remain epics here and are broken
 into tasks at their own phase gate, because task-level detail depends on decisions not yet made
@@ -12,7 +12,7 @@ into tasks at their own phase gate, because task-level detail depends on decisio
 ## Architecture Decisions
 
 - Backend is Next.js full-stack (Postgres + ORM on Vercel), migrated off Django gradually; the
-  dead FastAPI app is deleted. (Locked in `docs/PLATFORM-PLAN.md`.)
+  dead FastAPI app is deleted. (Locked in `docs/planning/platform-plan.md`.)
 - v1 is a curated matcher; the platform holds money and pays vendors net of margin; four circuits
   are first-class; traveller accounts are passwordless.
 - Design is preserve-and-polish; new marketplace surfaces use Tailwind + shadcn/ui themed with the
@@ -49,7 +49,7 @@ compliance gate) are surfaced early.
 
 ## Task List
 
-### Track V: Discovery validation (parallel, non-code, from `docs/ASSUMPTIONS.md`)
+### Track V: Discovery validation (parallel, non-code, from `docs/planning/assumptions.md`)
 
 ## Task V1: Concierge willingness-to-pay + trust test
 **Description:** Run ~10 real trip enquiries through a manual concierge (Wizard-of-Oz) flow at target
@@ -184,7 +184,7 @@ existing pattern.
 **Estimated scope:** Small
 
 ## Task 0.7: Correct the misleading security doc
-**Description:** Fix or delete `SECURITY_FIXES.md`, which falsely claims the OTP and secrets were already
+**Description:** Fix or delete `docs/security-fixes-status.md`, which falsely claims the OTP and secrets were already
 hardened.
 **Acceptance criteria:**
 - [ ] The doc no longer asserts fixes that are not in the code
@@ -192,7 +192,7 @@ hardened.
 - [ ] Manual check: doc reflects reality
 **Dependencies:** Tasks 0.4, 0.6 (so the doc can state what was actually done)
 **Files likely touched:**
-- `SECURITY_FIXES.md`
+- `docs/security-fixes-status.md`
 **Estimated scope:** XS
 
 ### Checkpoint: Phase 0

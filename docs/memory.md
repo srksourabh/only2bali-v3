@@ -41,7 +41,7 @@ architecture, driven by performance budgets the CRA cannot meet (TTFB ≤ 200ms,
 LCP ≤ 2.5s, ≤ 170 KB JS per route).
 **Trade-offs**: Two frontends must be maintained in parallel until parity is reached.
 The Next.js app still has no accounts, so the CRA cannot be retired yet.
-**Link**: `docs/ADR/adr-001-nextjs-migration.md`
+**Link**: `docs/adr/adr-001-nextjs-migration.md`
 
 ### ADR-002: Keep the repository structure as-is
 **Date**: 2026-07-16
@@ -55,7 +55,7 @@ three pipelines at once. The Django and CRA stacks also do not fit a TypeScript
 monorepo skeleton.
 **Trade-offs**: The repo stays visibly untidy - four apps, no shared tooling. Accepted
 in exchange for three working deployments.
-**Link**: `docs/ADR/adr-template.md` (use this template if the decision is revisited)
+**Link**: `docs/adr/adr-template.md` (use this template if the decision is revisited)
 
 ### ADR-003: Disable the inherited Azure deploy workflows
 **Date**: 2026-07-16
@@ -71,7 +71,7 @@ redeploy shared production on every push - two repositories firing at one live b
 **Trade-offs**: No CI/CD on this repo until own infrastructure exists. Acceptable
 because Vercel deploys through its own Git integration and does not use GitHub Actions.
 **Revisit when**: Sourabh has his own Azure resources, or the backend moves off Azure.
-**Link**: `docs/ADR/adr-template.md`
+**Link**: `docs/adr/adr-template.md`
 
 ### Observed decisions, not yet formal ADRs
 
@@ -112,7 +112,7 @@ because Vercel deploys through its own Git integration and does not use GitHub A
   documented the real architecture.
 - **Files touched**: Added `CLAUDE.md`, `docs/ARCHITECTURE.md`, `docs/memory.md`,
   `docs/progress.md`, `docs/DESIGN.md`, `docs/SECURITY.md`, `docs/CONTRIBUTING.md`,
-  `docs/ADR/adr-template.md`, `docs/ADR/adr-001-nextjs-migration.md`.
+  `docs/adr/adr-template.md`, `docs/adr/adr-001-nextjs-migration.md`.
   **No existing file was modified. No code was moved.**
 - **Decisions**: ADR-002 - keep the repo structure as-is. A proposal to restructure the
   repo into a SaaS-foundation monorepo layout was considered and rejected: it would
@@ -156,8 +156,8 @@ Verified against the codebase on 2026-07-16. Not yet fixed.
 | Issue | Severity | Status | Notes |
 |---|---|---|---|
 | **Zoho + SpringEdge credentials committed to source** | **CRITICAL** | open | `journeys/views.py:495-497,537` (Zoho refresh token, client id, client secret, access token) and `users/serializers.py:67` (SMS API key). Both repos were public. **Rotate at the provider - deleting the lines does not revoke them.** |
-| **OTP is 4-digit plaintext, not hardened** | **CRITICAL** | open | `users/views.py:54,56,106`. The `OTP`/`OTPAuditLog`/`RateLimitLog` models exist but are never imported. `SECURITY_FIXES.md` claims this was fixed - it was not. |
-| `SECURITY_FIXES.md` is factually false | **High** | open | Claims secret removal and OTP hardening that never reached the view layer. Actively misleads. See `docs/SECURITY.md`. |
+| **OTP is 4-digit plaintext, not hardened** | **CRITICAL** | open | `users/views.py:54,56,106`. The `OTP`/`OTPAuditLog`/`RateLimitLog` models exist but are never imported. `docs/security-fixes-status.md` claims this was fixed - it was not. |
+| `docs/security-fixes-status.md` is factually false | **High** | open | Claims secret removal and OTP hardening that never reached the view layer. Actively misleads. See `docs/SECURITY.md`. |
 | Placeholder WhatsApp + email on live site | **High** | open | `only2bali-next/lib/config.ts` - `6281200000000`, `hello@only2bali.com`. Both marked TODO. Real customers hit these. |
 | Production site runs on someone else's Vercel | **High** | open | `only2bali-v3-0.vercel.app` is not on Sourabh's Vercel account - no matching project exists among his 36. It is deployed from caloganathan's account. He cannot change env vars or roll it back. |
 | Inherited Azure workflows disabled | Medium | mitigated | Both deploy to caloganathan's Azure using secrets this repo does not have. Disabled 2026-07-16 - see ADR-003. Re-enable only with separate Azure resources. |
@@ -198,15 +198,15 @@ A full planning cycle was completed. **No application code was changed** - all o
 documents and design previews.
 
 **Produced (committed to `main`):**
-- `docs/PLATFORM-PLAN.md` - approved phased master plan: managed two-sided marketplace,
+- `docs/planning/platform-plan.md` - approved phased master plan: managed two-sided marketplace,
   four circuits (Ramayana/Adventure/Culinary/Artistic), Next.js full-stack backend,
   curated-matcher v1, accounts-lite, preserve-and-polish design, Tailwind+shadcn (ADR-004).
   Appendix E = competitive feature backlog; Appendix C + Phase 5 = the RBI PA-CB cross-border
   payout compliance gate.
-- `docs/IDEAS.md` - product-trio brainstorm, top 5 ideas.
-- `docs/ASSUMPTIONS.md` - 8-category risk map; 5 leap-of-faith assumptions to test first.
-- `plans/2026-07-16-only2bali-upgrade-v1.md` - step-by-step implementation strategy.
-- `tasks/plan.md` + `tasks/todo.md` - task breakdown (Track V + Phase 0-1 fully decomposed
+- `docs/planning/ideas.md` - product-trio brainstorm, top 5 ideas.
+- `docs/planning/assumptions.md` - 8-category risk map; 5 leap-of-faith assumptions to test first.
+- `docs/planning/upgrade-plan-v1.md` - step-by-step implementation strategy.
+- `docs/planning/task-breakdown.md` + `docs/planning/task-todo.md` - task breakdown (Track V + Phase 0-1 fully decomposed
   with acceptance criteria; Phases 2-6 as epics).
 
 **UI/UX uplift preview (design direction: preserve & polish; not committed to repo - private

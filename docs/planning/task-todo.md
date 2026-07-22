@@ -1,7 +1,7 @@
 # Only2Bali upgrade - task checklist
 
 > Flat checklist for the ready-to-build work. Full detail (acceptance criteria, verification,
-> dependencies, files, scope) in `tasks/plan.md`. Phases 2-6 are epics, decomposed at their gate.
+> dependencies, files, scope) in `docs/planning/task-breakdown.md`. Phases 2-6 are epics, decomposed at their gate.
 
 ## Track V - Discovery (parallel, non-code)
 - [ ] V1 - Concierge willingness-to-pay + trust test (~10 real enquiries → deposit)  [M]
@@ -16,7 +16,7 @@
 - [ ] 0.4 - Harden OTP flow (hash, attempt cap, single-use)  [M]
 - [ ] 0.5 - Rate-limit auth endpoints  [S] · do with 0.4
 - [ ] 0.6 - Rotate + env-migrate Zoho + SMS secrets (owner rotates)  [S]
-- [ ] 0.7 - Correct/delete misleading SECURITY_FIXES.md  [XS] · after 0.4, 0.6
+- [ ] 0.7 - Correct/delete misleading docs/security-fixes-status.md  [XS] · after 0.4, 0.6
 - [ ] **Checkpoint:** delete rejected, route guarded, OTP hardened, no secrets in source, build clean
 
 ## Phase 1 - Take control + go live

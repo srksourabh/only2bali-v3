@@ -9,11 +9,11 @@ step-by-step, execution-ready strategy, and pairs the build with cheap discovery
 riskiest assumptions are validated before large investment.
 
 Source documents (all on `main`):
-- `docs/PLATFORM-PLAN.md` - the approved phased plan: locked decisions, four circuits, design
+- `docs/planning/platform-plan.md` - the approved phased plan: locked decisions, four circuits, design
   "preserve & polish", condensed architecture, and Appendices A-E (full schema, enlistment flows,
   payment flow, seed supply, and the competitive feature backlog).
-- `docs/IDEAS.md` - product-trio brainstorm with the top five prioritized ideas.
-- `docs/ASSUMPTIONS.md` - eight-category risk map and the five leap-of-faith assumptions to test first.
+- `docs/planning/ideas.md` - product-trio brainstorm with the top five prioritized ideas.
+- `docs/planning/assumptions.md` - eight-category risk map and the five leap-of-faith assumptions to test first.
 
 Expected outcomes: the urgent security risks are closed; production runs on the owner's own
 hosting; the marketplace ships incrementally on the Next.js stack; the verified-vegetarian promise
@@ -22,7 +22,7 @@ compliance rail.
 
 ## Assumptions Made
 
-- The engineering direction locked in `docs/PLATFORM-PLAN.md` stands: Next.js full-stack backend,
+- The engineering direction locked in `docs/planning/platform-plan.md` stands: Next.js full-stack backend,
   curated-matcher v1, managed-marketplace payments, four first-class circuits, traveller
   accounts-lite, preserve-and-polish design, and Tailwind + shadcn/ui for new surfaces.
 - Credential rotation and hosting/account moves that require provider dashboards or account access
@@ -34,11 +34,11 @@ compliance rail.
 
 ## Implementation Plan
 
-### Track V - Discovery validation (run in parallel with Phase 0-2, from `docs/ASSUMPTIONS.md`)
+### Track V - Discovery validation (run in parallel with Phase 0-2, from `docs/planning/assumptions.md`)
 
 - [ ] V1. Run a trust/willingness-to-pay test: take ~10 real trip enquiries through a concierge
       (Wizard-of-Oz) flow at target margin and measure enquiry-to-deposit, to validate assumptions
-      G1, V1, and V2 in `docs/ASSUMPTIONS.md`. Rationale: everything downstream depends on an unknown
+      G1, V1, and V2 in `docs/planning/assumptions.md`. Rationale: everything downstream depends on an unknown
       brand winning trust and a premium; this doubles as the curated-matcher v1 motion.
 - [ ] V2. Obtain a written quote and onboarding requirements from an RBI PA-CB-licensed provider
       (e.g. Razorpay) or an AD Category-I bank for India→Indonesia payouts, validating assumption B2.
@@ -79,7 +79,7 @@ compliance rail.
       hardcoded copies in the footer at `only2bali-next/app/layout.tsx:67`, so every lead reaches a real
       destination. Owner supplies the real contact details. Rationale: every lead from the new site currently
       goes nowhere.
-- [ ] 8. Correct or delete `SECURITY_FIXES.md`, which falsely claims the OTP and secrets were already fixed.
+- [ ] 8. Correct or delete `docs/security-fixes-status.md`, which falsely claims the OTP and secrets were already fixed.
       Rationale: it actively misleads future work.
 
 ### Phase 1 - Take control and go live (Tasks 1 & 2 from the founder's list)
@@ -106,16 +106,16 @@ compliance rail.
 
 - [ ] 14. Stand up Postgres with a chosen ORM and passwordless authentication with server-side httpOnly
       sessions, plus a key/value store for rate-limit and session state, creating the identity tables described
-      in `docs/PLATFORM-PLAN.md` Appendix A.1. Rationale: one auth layer replaces the JWT-in-localStorage pattern
+      in `docs/planning/platform-plan.md` Appendix A.1. Rationale: one auth layer replaces the JWT-in-localStorage pattern
       and the auth logic duplicated across many legacy files.
 - [ ] 15. Write ADR-004 authorising Tailwind + shadcn/ui (the design doc currently forbids Tailwind without an
-      ADR) in `docs/ADR/`, then set up Tailwind and shadcn themed with the existing tokens from
+      ADR) in `docs/adr/`, then set up Tailwind and shadcn themed with the existing tokens from
       `only2bali-next/app/globals.css:1`. Rationale: gives a consistent component base for dashboards, listings,
       and checkout without hand-rolling each one.
 - [ ] 16. Introduce the token scale and reconcile the radius and inline-colour drift (the 14px-vs-20px card radii
       and the hardcoded hex values scattered in inline styles) into `only2bali-next/app/globals.css`. Rationale:
       makes the preserve-and-polish design consistent and maintainable.
-- [ ] 17. Create the circuit spine and lookup tables from `docs/PLATFORM-PLAN.md` Appendix A.4, and seed them with
+- [ ] 17. Create the circuit spine and lookup tables from `docs/planning/platform-plan.md` Appendix A.4, and seed them with
       the four circuits, the real points of interest, and the real seed vendors listed in Appendix D. Rationale:
       gives the curated matcher real inventory on day one.
 - [ ] 18. Migrate the hardcoded package catalog in `only2bali-next/lib/catalog.ts` into the database package and
@@ -133,16 +133,16 @@ compliance rail.
       rather than as an unbacked claim.
 - [ ] 21. Implement server-side lead capture that writes a lead record on every serious intent and syncs to CRM,
       then traveller accounts-lite that claims an anonymous trip on verification, per the flow in
-      `docs/PLATFORM-PLAN.md` Appendix B.2. Rationale: no lead is lost, and plans persist across the multi-week
+      `docs/planning/platform-plan.md` Appendix B.2. Rationale: no lead is lost, and plans persist across the multi-week
       family decision cycle.
 - [ ] 22. Add save, shareable no-login itinerary link, and PDF export, and the group collaboration features from
-      the backlog (voting/polling on circuit and dates, item-level comments) prioritised in `docs/PLATFORM-PLAN.md`
-      Appendix E-B and `docs/IDEAS.md`. Rationale: the family/committee approval step is the real conversion bottleneck.
+      the backlog (voting/polling on circuit and dates, item-level comments) prioritised in `docs/planning/platform-plan.md`
+      Appendix E-B and `docs/planning/ideas.md`. Rationale: the family/committee approval step is the real conversion bottleneck.
 - [ ] 23. Fix the planner accessibility gaps by giving the click-only selection cards near
       `only2bali-next/app/planner/page.tsx:455` real button semantics and keyboard support, and convert the static
       home sections in `only2bali-next/app/page.tsx` to server components. Rationale: keyboard/screen-reader users
       currently cannot complete the wizard, and the whole home page ships as client JS for one filter.
-- [ ] 24. Stand up the verified-veg trust surface from `docs/PLATFORM-PLAN.md` Appendix E: a public "how we verify"
+- [ ] 24. Stand up the verified-veg trust surface from `docs/planning/platform-plan.md` Appendix E: a public "how we verify"
       methodology page, the per-listing/per-meal colour-coded compliance rating, and verified-booking-gated dietary
       reviews. Rationale: these are the category-whitespace differentiators that make the moat credible.
 
@@ -161,7 +161,7 @@ compliance rail.
 
 - [ ] 28. Resolve the cross-border compliance rail before any payout: select an RBI PA-CB-licensed provider or an
       AD Category-I bank, and add an RBI purpose-code field to the payout record, per the compliance gate in
-      `docs/PLATFORM-PLAN.md` Phase 5 and Appendix C. Depends on Track V2. Rationale: Only2Bali cannot legally
+      `docs/planning/platform-plan.md` Phase 5 and Appendix C. Depends on Track V2. Rationale: Only2Bali cannot legally
       self-build a "pay Bali vendors from India" rail.
 - [ ] 29. Build the money chain from Appendix A.6: capture a traveller payment, deduct margin, hold the vendor
       payout until confirmation vouchers are issued, and record every movement in an append-only ledger with
@@ -228,7 +228,7 @@ compliance rail.
 
 1. Keep the Django backend as the API and add marketplace models to it, with Next.js as a thin frontend. Trade-off:
    reuses live accounts and data and is faster short-term, but carries the existing security debt and runs two stacks
-   indefinitely; rejected in `docs/PLATFORM-PLAN.md` in favour of the Next.js full-stack bridge.
+   indefinitely; rejected in `docs/planning/platform-plan.md` in favour of the Next.js full-stack bridge.
 
 2. Ship a simpler managed tour operator (buy from vendors, sell to travellers) with no self-serve marketplace and no
    platform-held payments. Trade-off: much less to build and avoids the cross-border payout gate initially, but

@@ -2,9 +2,9 @@
 
 > The real security posture as of 2026-07-16, verified against the code that runs.
 >
-> **Do not trust `SECURITY_FIXES.md` at the repo root.** It claims OTP hardening and
+> **Do not trust `docs/security-fixes-status.md` at the repo root.** It claims OTP hardening and
 > secret removal that were **never wired into the running code**. See "The
-> SECURITY_FIXES.md problem" below. This file supersedes it.
+> docs/security-fixes-status.md problem" below. This file supersedes it.
 
 ## Read this first
 
@@ -63,7 +63,7 @@ credentials are read correctly with `os.getenv` in `Backend/users/views.py:332-3
 The correct pattern already exists in this codebase - `journeys` just does not use it.
 That makes the code fix cheap once the credentials are rotated.
 
-## 2. OTP - weak, despite what SECURITY_FIXES.md claims
+## 2. OTP - weak, despite what docs/security-fixes-status.md claims
 
 The **live** registration and login flow in `Backend/users/views.py`:
 
@@ -86,9 +86,9 @@ progressive lockout.
 **To fix**: wire the existing models into `users/views.py`. The hard part is already
 written; it was never connected.
 
-## The SECURITY_FIXES.md problem
+## The docs/security-fixes-status.md problem
 
-`SECURITY_FIXES.md` at the repo root states, with ✅ FIXED markers:
+`docs/security-fixes-status.md` at the repo root states, with ✅ FIXED markers:
 
 - *"Hardcoded Secrets Removed ... No more credential exposure in GitHub"* - **false.**
   Zoho and SpringEdge credentials remain committed.
@@ -106,7 +106,7 @@ updated to use them. The document records intent, not outcome.
 **This is worse than having no security documentation**, because it moves a live weak
 auth path off the risk register. The first version of this very file repeated those
 claims as fact, having trusted the document instead of reading the code. Do not delete
-`SECURITY_FIXES.md` - leave it, with this correction on record, until the work is
+`docs/security-fixes-status.md` - leave it, with this correction on record, until the work is
 genuinely done.
 
 ## Authentication

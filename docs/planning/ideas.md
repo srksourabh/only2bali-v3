@@ -2,7 +2,7 @@
 
 > Multi-perspective ideation (PM / Designer / Engineer) for the new platform, per the
 > product-trio discovery method. Generated 2026-07-16 from the approved plan
-> (`docs/PLATFORM-PLAN.md`). A parallel competitor-feature research pass is being folded
+> (`docs/planning/platform-plan.md`). A parallel competitor-feature research pass is being folded
 > into the plan separately; this doc is the first-principles ideation.
 
 ## Objective
@@ -47,4 +47,4 @@ Itinerary → PDF + mobile voucher + offline pack.
 - Ideas 1-4 pair tightly with the plan's Phase 3 (traveller side) and Phase 5 (payments/booking);
   #5 is a packaging/ops idea layered on the same schema (dated `availability` + `package`).
 - The competitor research pass will add externally-validated features (marketplace mechanics,
-  AI-planner UX, dietary-niche trust patterns, payment/payout patterns) into `docs/PLATFORM-PLAN.md`.
+  AI-planner UX, dietary-niche trust patterns, payment/payout patterns) into `docs/planning/platform-plan.md`.

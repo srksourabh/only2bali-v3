@@ -1,7 +1,7 @@
 # Only2Bali — marketplace build task list
 
-> Phase-level scope of record, decomposed from `docs/MARKETPLACE-SPEC.md`. Written 2026-07-22.
-> **To actually start work, use `docs/TODO.md`** — the sequenced execution list with commands,
+> Phase-level scope of record, decomposed from `docs/planning/marketplace-spec.md`. Written 2026-07-22.
+> **To actually start work, use `docs/planning/todo.md`** — the sequenced execution list with commands,
 > file paths and done-when criteria. This file is the scope; that file is the order.
 > Scope estimates: **XS** < 2h · **S** ~half day · **M** ~1–2 days · **L** ~3–5 days · **XL** > 1 week.
 > Every phase ends with a checkpoint that must pass before the next phase starts.
@@ -37,7 +37,7 @@ Runs first, independently, on the live apps. Nothing else ships until this is do
 - [ ] **0.6 🧑 Replace the placeholder lead destinations** — `only2bali-next/lib/config.ts`
       (`6281200000000`, `hello@only2bali.com`) and the hardcoded copies in `app/layout.tsx:67`.
       *Accept:* a test enquiry reaches a real inbox and a real WhatsApp number. **XS**
-- [ ] **0.7 Correct `SECURITY_FIXES.md`** — it currently claims OTP hardening and secret removal
+- [ ] **0.7 Correct `docs/security-fixes-status.md`** — it currently claims OTP hardening and secret removal
       that never reached the view layer. Fix or delete. **XS**
 - [ ] **0.8 🧑 Take control of hosting** — own GitHub ownership; production on the owner's own
       Vercel with Root Directory `only2bali-next` and `GEMINI_API_KEY` set.

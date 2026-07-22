@@ -8,7 +8,7 @@
 > It was rewritten on 2026-07-22 to state what is actually true. Verify claims here against the
 > code before trusting them — that is the lesson this file exists to teach.
 
-Related: `docs/SECURITY.md` (threat model), `docs/TODO.md` Sprint 0 (the remaining work).
+Related: `docs/SECURITY.md` (threat model), `docs/planning/todo.md` Sprint 0 (the remaining work).
 
 ---
 
@@ -60,7 +60,7 @@ plan, 20-second abort, and sanitised error responses. Covered by 28 tests.
 `Backend/app/` had no authentication on any route and its own SQLite database. Its vendor seed
 data listed non-vegetarian restaurants — including a suckling-pig specialist recommended for
 day-one lunch in an itinerary template — on a platform whose entire promise is 100% vegetarian.
-Never deployed, so no customer saw it. Salvageable entries were extracted to `docs/SEED-DATA.md`
+Never deployed, so no customer saw it. Salvageable entries were extracted to `docs/reference/seed-data.md`
 before deletion.
 
 ---

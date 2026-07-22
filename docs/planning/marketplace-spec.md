@@ -1,12 +1,12 @@
 # Only2Bali — marketplace design specification
 
 > Complete design document for the revamped Only2Bali: frontend, backend, database, and PWA.
-> Written 2026-07-22. Supersedes nothing that is live; extends `docs/PLATFORM-PLAN.md`
+> Written 2026-07-22. Supersedes nothing that is live; extends `docs/planning/platform-plan.md`
 > (currently on branch `claude/codebase-review-architecture-8d3bb1`, not merged to `main`).
 >
 > Companion documents:
-> - `docs/MARKETPLACE-TASKS.md` — phase-level scope of record
-> - `docs/TODO.md` — the sequenced execution list. **Start there.**
+> - `docs/planning/marketplace-tasks.md` — phase-level scope of record
+> - `docs/planning/todo.md` — the sequenced execution list. **Start there.**
 
 ---
 
