@@ -108,73 +108,38 @@ git clone https://github.com/srksourabh/only2bali-v3.git .
 git checkout fix/sprint-0-security      # until it is merged
 ```
 
-## 5. Certificates
+## 5-7. One script does the rest
 
 ```bash
 cd /opt/only2bali/infra/postgres
-chmod +x generate-certs.sh
-./generate-certs.sh db.only2bali.com    # must match the hostname exactly
+sudo bash bootstrap.sh db.only2bali.com     # must match the DNS name exactly
 ```
 
-This creates `certs/` containing the CA, the server pair and the client pair.
-The client certificate's CN is `only2bali_app`, which **must** equal the Postgres
-role name.
+It generates the CA and the server/client certificates, writes a 40-character
+password into `infra/.env` (chmod 600), starts Postgres with mutual TLS, applies
+the schema, seeds the catalogue, verifies the result, and prints the four values
+to paste into Vercel.
 
-The script prints the base64 blobs for Vercel. Print the private key when you are
-ready to paste it:
+Everything runs on the server. **No password or key passes through anyone
+else's hands.** The script is safe to re-run: it skips work already done rather
+than repeating it.
+
+The schema and seed are plain SQL (`only2bali-next/lib/db/migrations/` and
+`infra/postgres/seed.sql`), so the VPS needs no Node toolchain. This path was
+tested end to end: a fresh Postgres 17 built from those two files alone gives
+41 tables, 29 enums, 4 constraints, 4 circuits, 3 packages, 72 upcoming
+departures and 48 rated meals — and the app's own verifier reports 38/38
+against it.
+
+When it finishes, do the two things it tells you to:
 
 ```bash
-base64 -w0 certs/client.key
-```
-
-Then remove the client material from the server — only Vercel needs it, and a
-client key sitting next to the database defeats the purpose:
-
-```bash
+# the client key belongs in Vercel, not next to the database
 shred -u certs/client.key certs/client.crt
 ```
 
-> Keep `certs/ca.key` safe and offline. It is what lets you issue a replacement
-> client certificate. If it leaks, anyone can mint a client and your mTLS is
-> worthless — regenerate everything.
-
-## 6. Start Postgres
-
-```bash
-cd /opt/only2bali/infra
-cp .env.example .env
-openssl rand -base64 36 | tr -d '/+=' | cut -c1-40    # → POSTGRES_PASSWORD
-nano .env
-chmod 600 .env
-mkdir -p postgres/backups && chmod 700 postgres/backups
-chmod +x postgres/backup.sh
-
-docker compose --env-file .env up -d
-docker compose ps
-docker compose logs --tail=40 postgres
-```
-
-Confirm TLS is actually on:
-
-```bash
-docker compose exec postgres psql -U only2bali_app -d only2bali -c 'show ssl;'
-# ssl | on
-```
-
-## 7. Apply the schema
-
-From your laptop, through an SSH tunnel so the migration never crosses the
-public internet:
-
-```bash
-ssh -L 5433:127.0.0.1:5432 deploy@YOUR_VPS_IP
-# leave open; in another terminal:
-cd only2bali-next
-DATABASE_URL="postgres://only2bali_app:PASSWORD@127.0.0.1:5433/only2bali" \
-  npx drizzle-kit migrate
-```
-
-41 tables, 29 enums, 86 indexes, four business rules as database constraints.
+Keep `certs/ca.key` offline. It issues replacement client certificates; if it
+leaks, anyone can mint a client and the mTLS is worthless.
 
 ## 8. Vercel
 
