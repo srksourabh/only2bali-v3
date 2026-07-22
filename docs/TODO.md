@@ -53,6 +53,25 @@ and let them run in the background.
 **Nothing else starts until this sprint is closed.** Two of these are live, exploitable, and in
 a repo that was public.
 
+> **Progress 2026-07-22** — branch `fix/sprint-0-security`, 3 commits, not merged, not deployed.
+>
+> | Task | State |
+> |---|---|
+> | S0.1 revoke Zoho | ⏳ **yours** — browser action |
+> | S0.2 rotate SMS key | ⏳ **yours** — browser action (code side done) |
+> | S0.3 delete endpoint + fail-closed permissions | ✅ done |
+> | S0.4 secrets to env | ✅ done |
+> | S0.5 harden OTP | ⏳ not started |
+> | S0.6 rate-limit auth | ⏳ not started |
+> | S0.7 guard AI planner route | ✅ done, 28 tests |
+> | S0.8 real contact details | 🚫 **blocked** — needs the real number and inbox from you |
+> | S0.9 delete FastAPI app | ✅ done |
+> | S0.10 correct SECURITY_FIXES.md | ✅ done |
+>
+> Verification run: `npm test` 37 passed · `npm run build` clean · every route ≤ 113 KB gz
+> against a 170 KB budget. Django was **not** run — it is not installed locally, so S0.3 has
+> syntax and review verification only. Run `python manage.py check` before deploying it.
+
 ### S0.1 🧑🔴 Revoke the leaked Zoho credentials
 
 `Backend/journeys/views.py:492-496` contains a live Zoho refresh token, client ID and client
