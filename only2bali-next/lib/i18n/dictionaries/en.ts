@@ -132,6 +132,8 @@ export const en = {
     days: "days",
     items: [
       {
+        slug: "sattvik-serenity",
+
         tag: "Ramayana",
         name: "Sattvik Serenity",
         meta: "6 days · 5 nights · Ubud, Tirta Empul, Uluwatu, Nusa Dua",
@@ -144,6 +146,8 @@ export const en = {
         chips: ["Jain", "Vegetarian", "Private villa"],
       },
       {
+        slug: "bali-veg-explorer",
+
         tag: "Mixed",
         name: "Bali Veg Explorer",
         meta: "5 days · 4 nights · Kuta, Ubud, Uluwatu",
@@ -156,6 +160,8 @@ export const en = {
         chips: ["Vegetarian", "Jain", "Group"],
       },
       {
+        slug: "active-bali",
+
         tag: "Adventure",
         name: "Active Bali",
         meta: "5 days · 4 nights · Ayung, Mount Batur, Nusa Penida",

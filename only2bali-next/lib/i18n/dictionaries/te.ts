@@ -129,6 +129,8 @@ export const te: Dictionary = {
     days: "రోజులు",
     items: [
       {
+        slug: "sattvik-serenity",
+
         tag: "రామాయణ",
         name: "సాత్విక్ సెరెనిటీ",
         meta: "6 రోజులు · 5 రాత్రులు · ఉబుద్, తీర్థ ఎంపుల్, ఉలువాటు, నుసా దువా",
@@ -141,6 +143,8 @@ export const te: Dictionary = {
         chips: ["జైన", "శాకాహారం", "ప్రైవేట్ విల్లా"],
       },
       {
+        slug: "bali-veg-explorer",
+
         tag: "మిశ్రమం",
         name: "బాలి వెజ్ ఎక్స్‌ప్లోరర్",
         meta: "5 రోజులు · 4 రాత్రులు · కుటా, ఉబుద్, ఉలువాటు",
@@ -153,6 +157,8 @@ export const te: Dictionary = {
         chips: ["శాకాహారం", "జైన", "గ్రూప్"],
       },
       {
+        slug: "active-bali",
+
         tag: "సాహసం",
         name: "యాక్టివ్ బాలి",
         meta: "5 రోజులు · 4 రాత్రులు · అయుంగ్, మౌంట్ బాతూర్, నుసా పెనిదా",

@@ -129,6 +129,8 @@ export const gu: Dictionary = {
     days: "દિવસ",
     items: [
       {
+        slug: "sattvik-serenity",
+
         tag: "રામાયણ",
         name: "સાત્ત્વિક સેરેનિટી",
         meta: "6 દિવસ · 5 રાત · ઉબુદ, તીર્થ એમ્પુલ, ઉલુવાતુ, નુસા દુઆ",
@@ -141,6 +143,8 @@ export const gu: Dictionary = {
         chips: ["જૈન", "શાકાહારી", "ખાનગી વિલા"],
       },
       {
+        slug: "bali-veg-explorer",
+
         tag: "મિશ્ર",
         name: "બાલી વેજ એક્સપ્લોરર",
         meta: "5 દિવસ · 4 રાત · કુટા, ઉબુદ, ઉલુવાતુ",
@@ -153,6 +157,8 @@ export const gu: Dictionary = {
         chips: ["શાકાહારી", "જૈન", "ગ્રુપ"],
       },
       {
+        slug: "active-bali",
+
         tag: "એડવેન્ચર",
         name: "એક્ટિવ બાલી",
         meta: "5 દિવસ · 4 રાત · અયુંગ, માઉન્ટ બાતુર, નુસા પેનિદા",

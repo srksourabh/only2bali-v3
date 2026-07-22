@@ -129,6 +129,8 @@ export const kn: Dictionary = {
     days: "ದಿನಗಳು",
     items: [
       {
+        slug: "sattvik-serenity",
+
         tag: "ರಾಮಾಯಣ",
         name: "ಸಾತ್ವಿಕ್ ಸೆರೆನಿಟಿ",
         meta: "6 ದಿನ · 5 ರಾತ್ರಿ · ಉಬುದ್, ತೀರ್ಥ ಎಂಪುಲ್, ಉಲುವಾಟು, ನುಸಾ ದುವಾ",
@@ -141,6 +143,8 @@ export const kn: Dictionary = {
         chips: ["ಜೈನ", "ಸಸ್ಯಾಹಾರಿ", "ಖಾಸಗಿ ವಿಲ್ಲಾ"],
       },
       {
+        slug: "bali-veg-explorer",
+
         tag: "ಮಿಶ್ರ",
         name: "ಬಾಲಿ ವೆಜ್ ಎಕ್ಸ್‌ಪ್ಲೋರರ್",
         meta: "5 ದಿನ · 4 ರಾತ್ರಿ · ಕುಟಾ, ಉಬುದ್, ಉಲುವಾಟು",
@@ -153,6 +157,8 @@ export const kn: Dictionary = {
         chips: ["ಸಸ್ಯಾಹಾರಿ", "ಜೈನ", "ಗುಂಪು"],
       },
       {
+        slug: "active-bali",
+
         tag: "ಸಾಹಸ",
         name: "ಆಕ್ಟಿವ್ ಬಾಲಿ",
         meta: "5 ದಿನ · 4 ರಾತ್ರಿ · ಅಯುಂಗ್, ಮೌಂಟ್ ಬಾತೂರ್, ನುಸಾ ಪೆನಿದಾ",

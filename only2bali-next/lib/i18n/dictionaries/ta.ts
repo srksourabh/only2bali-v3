@@ -129,6 +129,8 @@ export const ta: Dictionary = {
     days: "நாட்கள்",
     items: [
       {
+        slug: "sattvik-serenity",
+
         tag: "ராமாயணம்",
         name: "சாத்விக் செரனிட்டி",
         meta: "6 நாட்கள் · 5 இரவுகள் · உபுத், தீர்த்த எம்புல், உலுவாட்டு, நுசா துவா",
@@ -141,6 +143,8 @@ export const ta: Dictionary = {
         chips: ["ஜைன", "சைவம்", "தனி வில்லா"],
       },
       {
+        slug: "bali-veg-explorer",
+
         tag: "கலவை",
         name: "பாலி வெஜ் எக்ஸ்ப்ளோரர்",
         meta: "5 நாட்கள் · 4 இரவுகள் · குடா, உபுத், உலுவாட்டு",
@@ -153,6 +157,8 @@ export const ta: Dictionary = {
         chips: ["சைவம்", "ஜைன", "குழு"],
       },
       {
+        slug: "active-bali",
+
         tag: "சாகசம்",
         name: "ஆக்டிவ் பாலி",
         meta: "5 நாட்கள் · 4 இரவுகள் · அயுங், மவுண்ட் பாதுர், நுசா பெனிடா",

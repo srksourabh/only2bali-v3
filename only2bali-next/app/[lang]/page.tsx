@@ -2,7 +2,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { getDictionary } from "@/lib/i18n";
 import { locales, localeNames, type Locale } from "@/lib/i18n/config";
+import { getHomePackages, formatDeparture } from "@/lib/repositories/homepage";
 import GuaranteeDemo from "./components/GuaranteeDemo";
+
+// Departures and seat counts change, so this page revalidates rather than being
+// baked at build time.
+export const revalidate = 300;
 
 const CIRCUIT_ART = {
   ramayana: { src: "/Asset/D-card-img2.png", span: 2, num: "01" },
@@ -18,6 +23,7 @@ const PKG_ART = ["/Asset/D-card-img2.png", "/Asset/beaches.png", "/Asset/adventu
 export default async function Home({ params }: { params: Promise<{ lang: string }> }) {
   const lang = (await params).lang as Locale;
   const dict = await getDictionary(lang);
+  const { packages, source } = await getHomePackages(dict, lang);
 
   return (
     <main>
@@ -148,8 +154,8 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
             <p>{dict.packages.sub}</p>
           </div>
           <div className="pkgs">
-            {dict.packages.items.map((p, i) => (
-              <article className="pkg" key={p.name}>
+            {packages.map((p, i) => (
+              <article className="pkg" key={p.slug}>
                 <div className="pkg-img">
                   <Image src={PKG_ART[i]} alt="" fill sizes="(max-width: 960px) 100vw, 33vw"
                          style={{ objectFit: "cover" }} />
@@ -174,12 +180,21 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
                       <span className="chip" key={c}>{c}</span>
                     ))}
                   </div>
+                  {p.live?.nextDeparture && (
+                    <div className="next-dep">
+                      <span className="dot dot-green" aria-hidden="true" />
+                      {formatDeparture(p.live.nextDeparture.startDate, lang)}
+                      {p.live.nextDeparture.seatsAvailable <= 5 && (
+                        <b>· {p.live.nextDeparture.seatsAvailable}</b>
+                      )}
+                    </div>
+                  )}
                   <div className="pkg-foot">
                     <div className="price">
                       {p.price}
                       <small>{dict.packages.perPerson}</small>
                     </div>
-                    <Link className="btn btn-solid btn-sm" href={`/${lang}/planner`}>
+                    <Link className="btn btn-solid btn-sm" href={`/${lang}/planner?package=${p.slug}`}>
                       {dict.packages.checkDates}
                     </Link>
                   </div>
@@ -189,6 +204,14 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
           </div>
         </div>
       </section>
+
+      {process.env.NODE_ENV !== "production" && source === "fallback" && (
+        <div className="o2b-wrap" style={{ paddingBottom: "1rem" }}>
+          <p style={{ fontSize: ".78rem", color: "var(--veg-amber)" }}>
+            Catalogue unavailable — showing dictionary content. Check DATABASE_URL.
+          </p>
+        </div>
+      )}
 
       {/* ── languages: every locale we actually serve ── */}
       <section id="languages">

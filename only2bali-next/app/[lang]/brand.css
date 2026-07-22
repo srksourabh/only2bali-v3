@@ -377,3 +377,7 @@ section { padding: clamp(3.5rem, 7vw, 6rem) 0; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* live departure line on a package card */
+.next-dep{display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:var(--text-2);margin-top:.2rem}
+.next-dep b{color:var(--veg-amber);font-weight:700}

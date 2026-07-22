@@ -129,6 +129,8 @@ export const mr: Dictionary = {
     days: "दिवस",
     items: [
       {
+        slug: "sattvik-serenity",
+
         tag: "रामायण",
         name: "सात्त्विक सेरेनिटी",
         meta: "6 दिवस · 5 रात्री · उबुद, तीर्थ एम्पुल, उलुवातु, नुसा दुआ",
@@ -141,6 +143,8 @@ export const mr: Dictionary = {
         chips: ["जैन", "शाकाहारी", "खाजगी व्हिला"],
       },
       {
+        slug: "bali-veg-explorer",
+
         tag: "मिश्र",
         name: "बाली व्हेज एक्सप्लोरर",
         meta: "5 दिवस · 4 रात्री · कुटा, उबुद, उलुवातु",
@@ -153,6 +157,8 @@ export const mr: Dictionary = {
         chips: ["शाकाहारी", "जैन", "गट"],
       },
       {
+        slug: "active-bali",
+
         tag: "साहस",
         name: "अ‍ॅक्टिव्ह बाली",
         meta: "5 दिवस · 4 रात्री · अयुंग, माउंट बातुर, नुसा पेनिदा",
