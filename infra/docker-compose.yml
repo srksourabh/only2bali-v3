@@ -1,0 +1,108 @@
+# Only2Bali — Postgres on the Hostinger VPS, app on Vercel
+#
+#   Vercel ──TLS + client certificate──► VPS:5432 ──► postgres
+#
+# The port is reachable from the internet because Vercel's outbound addresses
+# are dynamic and cannot be allowlisted. It is protected by mutual TLS: Postgres
+# refuses any connection that cannot present a certificate signed by your CA
+# (see postgres/pg_hba.conf). A leaked password alone does not get in.
+#
+# Deploy:  docker compose --env-file .env up -d
+# See DEPLOY.md.
+
+name: only2bali
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: o2b-postgres
+    restart: unless-stopped
+    ports:
+      # Published deliberately. Everything that makes this safe is below and in
+      # pg_hba.conf. Do not remove the TLS flags and leave the port open.
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-only2bali}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+      TZ: UTC
+    command:
+      - postgres
+      # --- TLS, and client certificates ---
+      - -c
+      - ssl=on
+      - -c
+      - ssl_cert_file=/certs/server.crt
+      - -c
+      - ssl_key_file=/certs/server.key
+      - -c
+      - ssl_ca_file=/certs/ca.crt
+      - -c
+      - ssl_min_protocol_version=TLSv1.3
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+      # --- resource shape for a small VPS ---
+      - -c
+      - max_connections=100
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - work_mem=8MB
+      # --- observability: you want to see who is knocking ---
+      - -c
+      - log_min_duration_statement=500
+      - -c
+      - log_connections=on
+      - -c
+      - log_disconnections=on
+      - -c
+      - log_hostname=off
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/certs/server.crt:/certs/server.crt:ro
+      - ./postgres/certs/server.key:/certs/server.key:ro
+      - ./postgres/certs/ca.crt:/certs/ca.crt:ro
+      - ./postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ./postgres/backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    security_opt:
+      - no-new-privileges:true
+
+  backup:
+    image: postgres:17-alpine
+    container_name: o2b-pg-backup
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER:?}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?}
+      PGDATABASE: ${POSTGRES_DB:-only2bali}
+      RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    volumes:
+      - ./postgres/backups:/backups
+      - ./postgres/backup.sh:/usr/local/bin/backup.sh:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          sh /usr/local/bin/backup.sh || echo "[backup] FAILED at $$(date -u +%FT%TZ)"
+          sleep 86400
+        done
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "3" }
+
+volumes:
+  pgdata:

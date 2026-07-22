@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-hidden="true">
+  <!--
+    Tedung - the fringed ceremonial parasol that shades a shrine. The one in the
+    Besakih photograph on the circuits row. Canopy inherits currentColor, fringe
+    and finial in saffron.
+  -->
+  <path fill="currentColor" d="M48 12c19 0 34 14 36 30H12c2-16 17-30 36-30z"/>
+  <path fill="#e8941a" d="M12 42h72v5H12z"/>
+  <!-- fringe -->
+  <g fill="#e8941a">
+    <path d="M14 47h10l-5 9zM30 47h10l-5 9zM46 47h10l-5 9zM62 47h10l-5 9zM78 47h6l-3 9z"/>
+  </g>
+  <!-- pole -->
+  <path fill="currentColor" d="M46 42h4v46h-4z"/>
+  <!-- finial -->
+  <circle cx="48" cy="9" r="4" fill="#e8941a"/>
+</svg>

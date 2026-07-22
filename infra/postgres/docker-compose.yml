@@ -1,0 +1,88 @@
+# Only2Bali — PostgreSQL on the Hostinger VPS
+#
+# Run:  docker compose --env-file .env up -d
+#
+# The database port is deliberately bound to 127.0.0.1 only. Nothing reaches
+# Postgres from the internet unless you explicitly tunnel or proxy to it — see
+# README.md, "Letting the app reach the database".
+
+name: only2bali
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: o2b-postgres
+    restart: unless-stopped
+    # Loopback only. Changing this to "5432:5432" publishes your database to
+    # the entire internet — do not, even briefly.
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-only2bali}
+      # scram-sha-256 rather than md5; refuse unauthenticated local connections.
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      TZ: UTC
+    command:
+      - postgres
+      - -c
+      - max_connections=100
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - work_mem=8MB
+      - -c
+      - log_min_duration_statement=500   # log anything slower than 500ms
+      - -c
+      - log_connections=on
+      - -c
+      - log_disconnections=on
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    security_opt:
+      - no-new-privileges:true
+
+  # Nightly pg_dump, 14 days retained. Same image so the client version matches
+  # the server — a newer pg_dump against an older server is a restore hazard.
+  backup:
+    image: postgres:17-alpine
+    container_name: o2b-pg-backup
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER:?}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?}
+      PGDATABASE: ${POSTGRES_DB:-only2bali}
+      RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    volumes:
+      - ./backups:/backups
+      - ./backup.sh:/usr/local/bin/backup.sh:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          sh /usr/local/bin/backup.sh || echo "[backup] FAILED at $$(date -u +%FT%TZ)"
+          sleep 86400
+        done
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "3" }
+
+volumes:
+  pgdata:
+    driver: local

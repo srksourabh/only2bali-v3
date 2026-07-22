@@ -9,7 +9,11 @@ from django.core.exceptions import ValidationError
 from twilio.rest import Client
 from django.core.mail import send_mail
 from django.conf import settings
+import logging
+import os
 import requests
+
+logger = logging.getLogger(__name__)
 
 CustomUser  = get_user_model()
 
@@ -28,44 +32,20 @@ def send_email(email, otp):
         print(f"Error sending email: {e}")
 
 
-# def send_sms(mobile_number, message):
-#     """Sends an SMS using SpringEdge."""
-#     try:
-#         # API endpoint provided by SpringEdge
-#         API_URL = "https://instantalerts.co/api/web/send"
-
-#         # Your SpringEdge API credentials and parameters
-#         API_KEY = "146344s491u7fk8c23o6a32ie293inio1255"  # Your provided API key
-#         SENDER_ID = "STRPAT"  # Your provided sender ID
-
-#         # Encoding the message properly (percent-encoded)
-#         message_encoded = requests.utils.quote(message)
-
-#         # Construct the full URL with query parameters
-#         url = f"{API_URL}?apikey={API_KEY}&sender={SENDER_ID}&to={mobile_number}&message=Hello%2C+this+is+a+test+message+from+spring+edge"
-
-#         # Send the request to SpringEdge
-#         response = requests.post(url)
-
-#         # Check if the request was successful
-#         if response.status_code == 200:
-#             print(f"SMS sent successfully to {mobile_number}: {message}")
-#         else:
-#             print(f"Failed to send SMS. Response: {response.status_code} - {response.text}")
-#     except Exception as e:
-#         print(f"Error sending SMS: {e}")
-
-import requests
-
 def send_sms(mobile_number, otp, message_type="signup"):
     """Sends an SMS using SpringEdge."""
     try:
         # API endpoint provided by SpringEdge
         API_URL = "https://instantalerts.co/api/web/send"
 
-        # Your SpringEdge API credentials and parameters
-        API_KEY = "146344s491u7fk8c23o6a32ie293inio1255"  # Your provided API key
-        SENDER_ID = "STRPAT"  # Your provided sender ID
+        # SpringEdge credentials come from the environment. The previous hardcoded key was
+        # committed to a public repository and has been rotated - do not reintroduce it here.
+        API_KEY = os.environ.get("SPRINGEDGE_API_KEY")
+        SENDER_ID = os.environ.get("SPRINGEDGE_SENDER_ID", "STRPAT")
+
+        if not API_KEY:
+            logger.error("SPRINGEDGE_API_KEY is not set; cannot send OTP SMS")
+            return False
 
         # Template messages
         templates = {

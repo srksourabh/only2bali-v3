@@ -32,3 +32,13 @@ Thumbs.db
 next-env.d.ts
 *.tsbuildinfo
 
+
+# Deployment secrets
+infra/.env
+only2bali-next/.env
+only2bali-next/.env.local
+infra/postgres/.env
+infra/postgres/backups/
+infra/postgres/certs/
+*.key
+*.crt

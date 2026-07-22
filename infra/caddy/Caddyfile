@@ -1,0 +1,49 @@
+{
+	email {$ACME_EMAIL}
+	# Certificates are issued and renewed automatically by Let's Encrypt.
+	# Nothing to do but keep ports 80 and 443 open.
+}
+
+{$SITE_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		# HSTS. Once a browser sees this it refuses plain HTTP for a year, so
+		# make sure TLS is working before you add preload.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+		X-Content-Type-Options   "nosniff"
+		X-Frame-Options          "DENY"
+		Referrer-Policy          "strict-origin-when-cross-origin"
+		Permissions-Policy       "camera=(), microphone=(), geolocation=(), payment=()"
+		Cross-Origin-Opener-Policy "same-origin"
+
+		# Next.js needs inline styles, and 'unsafe-eval' only in development.
+		# Tighten script-src to a nonce once there is no inline bootstrap left.
+		Content-Security-Policy "default-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+
+		-Server
+		-X-Powered-By
+	}
+
+	# Immutable build output can be cached hard; the hash in the filename is
+	# what invalidates it.
+	@static path /_next/static/* /brand/* /Asset/*
+	header @static Cache-Control "public, max-age=31536000, immutable"
+
+	reverse_proxy app:3000 {
+		health_uri      /api/health
+		health_interval 30s
+		health_timeout  5s
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}
+
+# Bare domain to www, or the reverse — delete whichever you do not want.
+www.{$SITE_DOMAIN} {
+	redir https://{$SITE_DOMAIN}{uri} permanent
+}

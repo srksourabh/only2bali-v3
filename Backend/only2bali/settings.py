@@ -99,6 +99,12 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    # Fail closed: any view that does not declare its own permission requires
+    # authentication. Public endpoints (registration, OTP, login, password reset)
+    # opt out explicitly with permission_classes = [AllowAny].
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
 }
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

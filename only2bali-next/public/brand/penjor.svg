@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 220" role="img" aria-hidden="true">
+  <!--
+    Penjor - the tall decorated bamboo pole raised outside every Balinese house
+    at Galungan, its tip bowed toward the earth in thanks. Used as a section
+    ornament; mirror it on the opposite edge with transform="scale(-1,1)".
+  -->
+  <g fill="none" stroke="currentColor" stroke-linecap="round">
+    <!-- shaft, thick at the base and tapering into the bow -->
+    <path stroke-width="7" d="M24 220V104"/>
+    <path stroke-width="5" d="M24 104c0-46 20-76 74-86"/>
+    <path stroke-width="3.5" d="M98 18c-16 3-25 12-28 26"/>
+  </g>
+  <!-- sampian: the woven palm ornament hanging from the bowed tip -->
+  <g fill="currentColor">
+    <path d="M64 42h12l-6 12z"/>
+    <path d="M66 56h8l-4 16z" opacity=".8"/>
+  </g>
+  <circle cx="70" cy="42" r="3.5" fill="#e8941a"/>
+  <!-- young palm fronds bound along the shaft -->
+  <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity=".7">
+    <path d="M26 74c16-3 27-14 32-30"/>
+    <path d="M25 104c19-4 32-16 38-33"/>
+    <path d="M24 134c14-3 24-12 29-25"/>
+    <path d="M24 164c10-2 17-9 21-18"/>
+  </g>
+  <!-- offering base -->
+  <path fill="currentColor" d="M8 212h32v8H8z"/>
+  <path fill="#e8941a" d="M14 204h20v8H14z"/>
+</svg>
