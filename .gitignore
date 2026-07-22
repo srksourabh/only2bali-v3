@@ -42,3 +42,7 @@ infra/postgres/backups/
 infra/postgres/certs/
 *.key
 *.crt
+
+# Vercel CLI link (contains project/org ids)
+.vercel
+only2bali-next/.vercel
