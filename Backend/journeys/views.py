@@ -12,6 +12,7 @@ import logging
 from datetime import datetime
 from datetime import date
 from rest_framework.decorators import api_view, permission_classes
+import os
 import requests
 
 logger = logging.getLogger(__name__)
@@ -465,10 +466,16 @@ class ItineraryDatesView(APIView):
     
 
 class DeleteJourneyPreferences(APIView):
+    permission_classes = [IsAuthenticated]
+
     def delete(self, request, journey_preferences_id):
         try:
-            # Find the JourneyPreferences object based on the journey_preferences_id
-            journey_preference = JourneyPreferences.objects.get(id=journey_preferences_id)
+            # Scope the lookup to the caller so one user cannot delete another's journey.
+            # A non-owner gets the same 404 as a missing id, which avoids confirming that
+            # the id exists.
+            journey_preference = JourneyPreferences.objects.get(
+                id=journey_preferences_id, user=request.user
+            )
             journey_preference.delete()
 
             return Response({"message": "Journey Preferences and related data deleted successfully"}, status=status.HTTP_200_OK)
@@ -492,10 +499,21 @@ class DeleteJourneyPreferences(APIView):
 #         return Response({"error": "Journey not found"}, status=status.HTTP_404_NOT_FOUND)
 
 ZOHO_CRM_API_URL = "https://www.zohoapis.com/crm/v2/Leads"  # The Zoho API endpoint for Leads
-ZOHO_REFRESH_TOKEN = "1000.3d849d7904bf0a6c46b3ef160f7d481b.62d171a52defcd4d6ad7c95b429eaa0d"  # Store this securely (e.g., in environment variables)
-ZOHO_CLIENT_ID = "1000.XC1IMB2L2FDB2C6EBUDGTATH5YE4CI"
-ZOHO_CLIENT_SECRET = "de9880e8d14f422eb3c76ce2f5962e306eda740936"
-ZOHO_REDIRECT_URI = "www.google.com"
+
+# Credentials come from the environment. The previous hardcoded values were committed to a
+# public repository and have been revoked at the provider - do not reintroduce literals here.
+# Zoho is being retired as an integration: when these are unset the push is skipped and the
+# journey still saves normally.
+ZOHO_REFRESH_TOKEN = os.environ.get("ZOHO_REFRESH_TOKEN")
+ZOHO_CLIENT_ID = os.environ.get("ZOHO_CLIENT_ID")
+ZOHO_CLIENT_SECRET = os.environ.get("ZOHO_CLIENT_SECRET")
+ZOHO_ACCESS_TOKEN = os.environ.get("ZOHO_ACCESS_TOKEN")
+ZOHO_REDIRECT_URI = os.environ.get("ZOHO_REDIRECT_URI", "")
+
+
+def zoho_is_configured() -> bool:
+    """True only when every Zoho credential is present in the environment."""
+    return all([ZOHO_REFRESH_TOKEN, ZOHO_CLIENT_ID, ZOHO_CLIENT_SECRET, ZOHO_ACCESS_TOKEN])
 
 
 def refresh_zoho_access_token(refresh_token):
@@ -532,10 +550,12 @@ def send_to_zoho_crm(journey):
     This handles refreshing the token if expired.
     """
 
-    # Get the stored access token (ensure you fetch it securely)
-    # access_token = "1000.88a1145ab37602435faded4bc5ac4847.4b997f447ba1327827c6aff18920ae06"  # Replace with your logic to fetch the stored access token
-    access_token = "1000.8602381d742d4cbc724a7484c9ad04a1.60e1fa103cacbb10665acc54dd49dbba"
-    refresh_token = ZOHO_REFRESH_TOKEN  # Replace with the logic to fetch the stored refresh token
+    if not zoho_is_configured():
+        logger.info("Zoho CRM is not configured; skipping lead push for journey %s", journey.id)
+        return None
+
+    access_token = ZOHO_ACCESS_TOKEN
+    refresh_token = ZOHO_REFRESH_TOKEN
 
     try:
         # Prepare the data to send to Zoho CRM as a lead
@@ -812,6 +832,14 @@ def confirm_journey(request, journey_id):
 
         zoho_response = send_to_zoho_crm(journey)
         logger.info("Zoho Response: %s", zoho_response)  # 👈 Add this line
+
+        if zoho_response is None:
+            # Zoho is not configured (the integration is being retired). The journey is
+            # confirmed and saved regardless - the CRM push is not part of the contract.
+            return Response(
+                {"message": "Journey confirmed successfully."},
+                status=status.HTTP_200_OK
+            )
 
         if zoho_response.get("data") and zoho_response["data"][0].get("status") == "success":
             return Response(

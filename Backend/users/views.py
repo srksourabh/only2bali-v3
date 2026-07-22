@@ -1,5 +1,5 @@
 import os
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -32,7 +32,9 @@ OTP_RATE_LIMIT = {
 #TO send otp to both email and mobile number
 class RegistrationView(APIView):
     """Handles user registration and OTP generation and verification."""
-    
+
+    permission_classes = [AllowAny]  # public by design — signup
+
     def post(self, request):
         registration_serializer = RegistrationSerializer(data=request.data)
         
@@ -83,6 +85,9 @@ class RegistrationView(APIView):
 
 class OTPVerificationView(APIView):
     """Handles OTP verification and user creation."""
+
+    permission_classes = [AllowAny]  # public by design — completes signup
+
     def post(self, request,mobile_number):
         # otp_serializer = OTPVerificationSerializer(data=request.data, context={'view': self})
         otp_serializer = OTPVerificationSerializer(
@@ -123,6 +128,8 @@ class OTPVerificationView(APIView):
 class PasswordResetRequestView(APIView):
     """Handle password reset request by sending a reset email with a token."""
 
+    permission_classes = [AllowAny]  # public by design — user is locked out
+
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
         
@@ -154,6 +161,8 @@ class PasswordResetRequestView(APIView):
 
 class PasswordResetVerifyView(APIView):
     """Handle password reset using the token in the reset URL."""
+
+    permission_classes = [AllowAny]  # public by design — user is locked out
 
     def post(self, request):
         serializer = PasswordResetVerifySerializer(data=request.data)
@@ -221,6 +230,11 @@ class LogoutView(APIView):
     """
     Handles logout by blacklisting the refresh token (for JWT authentication).
     """
+
+    # AllowAny: the refresh token in the body is the credential. An expired access
+    # token must still be able to log out, or the refresh token is left live.
+    permission_classes = [AllowAny]
+
     def post(self, request):
         try:
             # Get the refresh token from the request data (sent in the request body)
@@ -253,6 +267,9 @@ class LoginView(APIView):
     Handles login via password or OTP.
     Returns JWT tokens upon successful authentication.
     """
+
+    permission_classes = [AllowAny]  # public by design — this is how you authenticate
+
     def post(self, request):
         login_type = request.data.get('login_type', 'password')  # Default to password login
         identifier = request.data.get('identifier')  # Email or mobile number
@@ -336,6 +353,8 @@ ZOHO_ACCESS_TOKEN = os.getenv("ZOHO_ACCESS_TOKEN")
 ZOHO_DEPARTMENT_ID = os.getenv("ZOHO_DEPARTMENT_ID")
 
 class SendToZohoAPIView(APIView):
+    permission_classes = [AllowAny]  # public by design — FAQ / contact form
+
     def get_access_token(self):
         """
         Function to get a new access token using the refresh token.
