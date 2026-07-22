@@ -1,57 +1,123 @@
-# Security Fixes - OTP Production Hardening
+# Security status
 
-## Critical Issues Fixed (January 2026)
+> **This file previously claimed five security fixes that were never applied to the running
+> code.** It listed OTP hashing, 6-digit codes, constant-time comparison, audit logging and
+> secret removal as "✅ FIXED" while the live views still generated 4-digit plaintext codes and
+> compared them with `!=`, and live credentials sat in source.
+>
+> It was rewritten on 2026-07-22 to state what is actually true. Verify claims here against the
+> code before trusting them — that is the lesson this file exists to teach.
 
-### 1. ✅ Hardcoded Secrets Removed
-**Status:** FIXED
-- **Problem:** API keys, passwords hardcoded in views.py and settings.py
-- **Fix:** All secrets now require environment variables
-- **Impact:** No more credential exposure in GitHub
+Related: `docs/SECURITY.md` (threat model), `docs/TODO.md` Sprint 0 (the remaining work).
 
-### 2. ✅ OTP Security Enhanced
-**Status:** FIXED
-- **Problem:** OTP stored in cache only, no audit trail, timing attack vulnerability
-- **Fixes:**
-  - Added OTP database model with SHA256 hashing
-  - Changed from 4-digit to 6-digit OTP (1M combinations)
-  - Implemented constant-time comparison (secrets.compare_digest)
-  - Added complete audit trail with OTPAuditLog
-  - OTP now verified against hash, never plaintext comparison
+---
 
-### 3. ✅ Rate Limiting Enhanced
-**Status:** FIXED
-- **Problem:** Only 5 requests/2 min, no progressive backoff
-- **Fixes:**
-  - Added RateLimitLog model with IP tracking
-  - Progressive lockout: 30-minute account lock after threshold
-  - Per-mobile and per-IP rate limiting
-  - Audit logging of all rate limit violations
+## Actually done (2026-07-22)
 
-### 4. ✅ CORS Security Fixed
-**Status:** FIXED
-- **Problem:** CORS_ALLOW_ALL_ORIGINS = True (dangerous)
-- **Fix:** Now whitelist only specific domains via environment variables
-- **Impact:** Eliminates CSRF attacks from arbitrary origins
+### 1. Unauthenticated delete endpoint closed
 
-### 5. ✅ OTP Audit Trail Added
-**Status:** FIXED
-- **New:** OTPAuditLog tracks all OTP operations with:
-  - Timestamp
-  - IP address & user agent
-  - Success/failure reason
-  - Mobile number & email
-  - Useful for fraud detection
+**Was:** `DeleteJourneyPreferences` (`Backend/journeys/views.py`) declared no
+`permission_classes` and looked the record up by ID alone. Any unauthenticated caller could
+delete any user's journey by guessing an integer.
 
-## Database Migrations Required
+**Now:** requires authentication and scopes the lookup to `request.user`. A non-owner receives
+the same 404 as a missing ID, so the endpoint does not confirm that a given ID exists.
 
-### Before Deploying to Production:
+### 2. Permissions fail closed
+
+**Was:** `REST_FRAMEWORK` set only `DEFAULT_AUTHENTICATION_CLASSES`. A view that forgot
+`permission_classes` was silently public — which is exactly how defect 1 happened.
+
+**Now:** `DEFAULT_PERMISSION_CLASSES = IsAuthenticated`. The endpoints that are public by design
+(registration, OTP verification, login, logout, password reset, FAQ) declare
+`permission_classes = [AllowAny]` explicitly, so being public is now a visible decision rather
+than an omission.
+
+### 3. Hardcoded credentials removed from source
+
+**Was:** a live Zoho refresh token, client ID, client secret and access token in
+`Backend/journeys/views.py`, and a live SpringEdge SMS API key in
+`Backend/users/serializers.py` — including a second copy inside a commented-out function.
+
+**Now:** all read from environment variables. Zoho is being retired: when its variables are
+unset the CRM push is skipped and the journey still confirms normally.
+
+> ⚠️ **Removing them from source does not revoke them.** They remain in git history and both
+> repositories were public. They must be revoked/rotated at Zoho and SpringEdge — see Sprint 0
+> tasks S0.1 and S0.2. Until that is done, treat both as compromised.
+
+### 4. Public AI planner route guarded
+
+**Was:** unauthenticated, unvalidated, no size limit, no timeout, no rate limit, called a paid
+model with whatever the caller sent, and returned raw internal error text.
+
+**Now:** rate-limited per IP, 8 KB body cap, Zod-validated input, Zod-validated *model output*
+so a malformed response falls back to the curated itinerary instead of being served as a real
+plan, 20-second abort, and sanitised error responses. Covered by 28 tests.
+
+### 5. Undeployed FastAPI app deleted
+
+`Backend/app/` had no authentication on any route and its own SQLite database. Its vendor seed
+data listed non-vegetarian restaurants — including a suckling-pig specialist recommended for
+day-one lunch in an itinerary template — on a platform whose entire promise is 100% vegetarian.
+Never deployed, so no customer saw it. Salvageable entries were extracted to `docs/SEED-DATA.md`
+before deletion.
+
+---
+
+## Still outstanding
+
+### OTP is still weak — the original claim remains false
+
+`Backend/users/views.py` still generates **4-digit** codes with `get_random_string`, stores them
+in cache as **plaintext**, and compares with `!=`. That is 10,000 combinations, no attempt cap
+on the compare path, and a non-constant-time comparison.
+
+The hardened `OTP`, `OTPAuditLog` and `RateLimitLog` models **do exist** in
+`Backend/users/models.py`, fully implemented with SHA-256 hashing, `compare_digest`, attempt
+counting and lockout. **They are never imported by any view.** The work is wiring them in, not
+writing them.
+
+Tracked as Sprint 0 tasks S0.5 and S0.6.
+
+### Auth rate limiting is minimal
+
+`RegistrationView` has a 5-request / 2-minute cache counter keyed on mobile number only. There
+is no IP-based limit and no limit at all on the login path, so OTP-triggered SMS can be flooded
+by rotating the identifier. The `RateLimitLog` model that would fix this is unused.
+
+### CORS is effectively open to two public domains
+
+`CORS_ALLOW_ALL_ORIGINS` is not set — that part of the old claim was fair. But
+`CORS_ALLOWED_ORIGIN_REGEXES` permits **any** `*.vercel.app` and **any**
+`*.azurestaticapps.net` origin, while `CORS_ALLOW_CREDENTIALS = True`. Anyone can deploy a free
+subdomain on either host and make credentialed cross-origin requests. The old claim that this
+"eliminates CSRF attacks from arbitrary origins" was false.
+
+Narrow the regexes to the specific deployment hostnames.
+
+### JWT in localStorage
+
+The legacy React frontend stores tokens in `localStorage` rather than httpOnly cookies, and
+enforces auth per-component across 16+ files with no route guard. The Next.js rebuild uses
+httpOnly server sessions instead; this is resolved by retiring the CRA (Sprint 14), not by
+patching it.
+
+### Placeholder contact details
+
+`only2bali-next/lib/config.ts` and `app/layout.tsx` still point at `6281200000000` and
+`hello@only2bali.com`. Real enquiries are going nowhere. Blocked on the real values — Sprint 0
+task S0.8.
+
+---
+
+## Migrations
+
+The hardened OTP models are defined but check whether their migration has been applied before
+relying on them:
 
 ```bash
-# 1. Create migration (run locally first)
+cd Backend
 python manage.py makemigrations users
-
-# 2. Apply migration to database
 python manage.py migrate users
-
-# 3. Create superuser (if needed)
-python manage.py createsuperuser
+```
