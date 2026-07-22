@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-hidden="true">
+  <!--
+    Jepun - frangipani. Bali's flower, worn behind the ear and laid in the daily
+    canang sari offering. Five broad petals overlapping in a pinwheel: each is
+    rotated about its own axis as well as about the centre, which is what gives
+    plumeria its characteristic swirl.
+  -->
+  <g fill="currentColor" opacity=".92">
+    <g transform="rotate(0 32 32)"><ellipse cx="32" cy="21" rx="11.5" ry="16" transform="rotate(20 32 21)"/></g>
+    <g transform="rotate(72 32 32)"><ellipse cx="32" cy="21" rx="11.5" ry="16" transform="rotate(20 32 21)"/></g>
+    <g transform="rotate(144 32 32)"><ellipse cx="32" cy="21" rx="11.5" ry="16" transform="rotate(20 32 21)"/></g>
+    <g transform="rotate(216 32 32)"><ellipse cx="32" cy="21" rx="11.5" ry="16" transform="rotate(20 32 21)"/></g>
+    <g transform="rotate(288 32 32)"><ellipse cx="32" cy="21" rx="11.5" ry="16" transform="rotate(20 32 21)"/></g>
+  </g>
+  <circle cx="32" cy="32" r="7" fill="#e8941a"/>
+</svg>

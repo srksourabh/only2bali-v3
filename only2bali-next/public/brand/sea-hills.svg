@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 340" preserveAspectRatio="xMidYMax slice"
+     role="img" aria-hidden="true" fill="currentColor">
+  <!--
+    Bali in silhouette: two volcanic cones (Agung and Batur), terraced sawah
+    below them, and the sea. Drawn as flat layers so it works as a watermark at
+    any opacity. Inherits currentColor - set the colour on the parent.
+  -->
+  <!-- far cone: Agung -->
+  <path opacity=".16" d="M120 340 385 78l34 30 44-38 262 270z"/>
+  <!-- second cone: Batur -->
+  <path opacity=".13" d="M628 340 812 142l30 26 26-22 196 194z"/>
+  <!-- ridge behind the terraces -->
+  <path opacity=".18" d="M0 340v-96q142-46 292-14t312 4 300-30 296 26v110z"/>
+  <!-- terraced rice fields: stepped contour lines -->
+  <g opacity=".26">
+    <path d="M0 268q150-34 300-10t300 2 300-24 300 18v6q-150-30-300-12t-300 24-300-2T0 274z"/>
+    <path d="M0 292q150-28 300-8t300 2 300-20 300 16v6q-150-26-300-10t-300 20-300-2T0 298z"/>
+  </g>
+  <!-- sea -->
+  <path opacity=".34" d="M0 340v-26q150-16 300-4t300 6 300-12 300 12v24z"/>
+  <!-- swell lines -->
+  <g opacity=".2">
+    <path d="M96 326q40-8 80 0t80 0v5q-40 8-80 0t-80 0z"/>
+    <path d="M760 322q44-8 88 0t88 0v5q-44 8-88 0t-88 0z"/>
+  </g>
+</svg>
