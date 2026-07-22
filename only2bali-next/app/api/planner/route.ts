@@ -1,34 +1,90 @@
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import {
+  MAX_BODY_BYTES,
+  MODEL_TIMEOUT_MS,
+  dayCountBetween,
+  parseItinerary,
+  plannerInputSchema,
+} from "@/lib/planner-schema";
+import { clientKey, rateLimit } from "@/lib/rate-limit";
+
+/** 10 generations per IP per 10 minutes. This route calls a paid model. */
+const RATE_LIMIT = 10;
+const RATE_WINDOW_MS = 10 * 60 * 1000;
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const limit = rateLimit(`planner:${clientKey(req)}`, RATE_LIMIT, RATE_WINDOW_MS);
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { success: false, error: "Too many itinerary requests. Please try again shortly." },
+        { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } }
+      );
+    }
+
+    const rawBody = await req.text();
+    if (rawBody.length > MAX_BODY_BYTES) {
+      return NextResponse.json(
+        { success: false, error: "Request body too large." },
+        { status: 413 }
+      );
+    }
+
+    let json: unknown;
+    try {
+      json = JSON.parse(rawBody);
+    } catch {
+      return NextResponse.json(
+        { success: false, error: "Request body must be valid JSON." },
+        { status: 400 }
+      );
+    }
+
+    const parsed = plannerInputSchema.safeParse(json);
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid trip details.",
+          fields: parsed.error.issues.map((i) => ({
+            path: i.path.join("."),
+            message: i.message,
+          })),
+        },
+        { status: 400 }
+      );
+    }
+
+    const body = parsed.data;
     const {
-      name = "Traveler",
-      age = "",
-      crew_type = "friends_get_together",
-      number_of_people = 2,
-      times_visited_bali = "first_time",
-      from_date = "",
-      to_date = "",
-      international_airport = "",
-      flight_class = "Economy",
-      budget = "comfort",
-      food = "vegetarian",
-      diet_choices = [],
-      kitchen = false,
-      cook = false,
-      interests = [],
-      vehicle_type = "car",
-      rent_period = "1-2 Days",
-      include_driver = "Yes",
-      preferred_languages = ["English"]
+      name,
+      age,
+      crew_type,
+      number_of_people,
+      from_date,
+      to_date,
+      international_airport,
+      flight_class,
+      budget,
+      food,
+      diet_choices,
+      kitchen,
+      cook,
+      interests,
+      vehicle_type,
+      rent_period,
+      include_driver,
+      preferred_languages,
     } = body;
 
-    const start = from_date ? new Date(from_date) : new Date();
-    const end = to_date ? new Date(to_date) : new Date(start.getTime() + 4 * 24 * 60 * 60 * 1000);
-    const dayCount = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1);
+    const parsedStart = from_date ? new Date(from_date) : new Date();
+    const start = Number.isNaN(parsedStart.getTime()) ? new Date() : parsedStart;
+    const parsedEnd = to_date ? new Date(to_date) : new Date(start.getTime() + 4 * 24 * 60 * 60 * 1000);
+    const end = Number.isNaN(parsedEnd.getTime())
+      ? new Date(start.getTime() + 4 * 24 * 60 * 60 * 1000)
+      : parsedEnd;
+    const dayCount = dayCountBetween(start, end);
 
     const apiKey = process.env.GEMINI_API_KEY;
 
@@ -87,36 +143,52 @@ Each day object in the array must look exactly like this:
 
 Start dates from ${from_date || start.toISOString().split("T")[0]}. Make it realistic and stunning.`;
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    
-    // Clean potential markdown codeblock formatting in text
-    let cleanText = text.trim();
-    if (cleanText.startsWith("```")) {
-      const firstLineBreak = cleanText.indexOf("\n");
-      const lastCodeBlock = cleanText.lastIndexOf("```");
-      cleanText = cleanText.substring(firstLineBreak + 1, lastCodeBlock).trim();
-    }
-    
+    // Abandon the model rather than hanging the request. The curated itinerary is
+    // a genuine product, not an error state, so a timeout degrades cleanly.
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), MODEL_TIMEOUT_MS);
+
+    let text: string;
     try {
-      const itinerary = JSON.parse(cleanText);
+      const result = await model.generateContent(
+        { contents: [{ role: "user", parts: [{ text: prompt }] }] },
+        { signal: abort.signal }
+      );
+      text = result.response.text();
+    } catch (modelErr) {
+      console.error("Gemini generation failed or timed out:", modelErr);
       return NextResponse.json({
         success: true,
-        isMock: false,
-        itinerary
+        isMock: true,
+        itinerary: generateMockItinerary(start, dayCount, body)
       });
-    } catch (e) {
-      console.error("Failed to parse Gemini response as JSON. Raw text:", text, e);
+    } finally {
+      clearTimeout(timer);
+    }
+
+    // Validate the shape before it is presented as a real plan. An unparseable or
+    // malformed response must fail closed to the curated itinerary.
+    const itinerary = parseItinerary(text);
+
+    if (!itinerary) {
+      console.error("Gemini response failed schema validation. Raw text:", text);
       return NextResponse.json({
         success: true,
         isMock: true,
         itinerary: generateMockItinerary(start, dayCount, body)
       });
     }
-  } catch (err: any) {
+
+    return NextResponse.json({
+      success: true,
+      isMock: false,
+      itinerary
+    });
+  } catch (err: unknown) {
+    // Do not leak internal error text to the client.
     console.error("Error generating itinerary:", err);
     return NextResponse.json(
-      { success: false, error: err.message || "Internal server error" },
+      { success: false, error: "Could not generate an itinerary. Please try again." },
       { status: 500 }
     );
   }
