@@ -7,7 +7,8 @@ import {
   parseItinerary,
   plannerInputSchema,
 } from "@/lib/planner-schema";
-import { clientKey, rateLimit } from "@/lib/rate-limit";
+import { clientKey } from "@/lib/rate-limit";
+import { rateLimitShared } from "@/lib/rate-limit-db";
 
 /** 10 generations per IP per 10 minutes. This route calls a paid model. */
 const RATE_LIMIT = 10;
@@ -15,7 +16,7 @@ const RATE_WINDOW_MS = 10 * 60 * 1000;
 
 export async function POST(req: Request) {
   try {
-    const limit = rateLimit(`planner:${clientKey(req)}`, RATE_LIMIT, RATE_WINDOW_MS);
+    const limit = await rateLimitShared(`planner:${clientKey(req)}`, RATE_LIMIT, RATE_WINDOW_MS);
     if (!limit.allowed) {
       return NextResponse.json(
         { success: false, error: "Too many itinerary requests. Please try again shortly." },
