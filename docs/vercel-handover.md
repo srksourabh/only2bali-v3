@@ -1,12 +1,34 @@
-# Taking production onto your own Vercel account
+# Getting the right app deployed on your own Vercel account
 
-> Written 2026-07-23. Everything here is a human action — it cannot be done from
-> the codebase, which is why it has stayed open.
+> Written 2026-07-23, corrected the same day after checking the live site.
+> Everything here is a human action — it cannot be done from the codebase, which
+> is why it has stayed open.
+
+## What is actually deployed today
+
+Verified 2026-07-23 against the running site, not assumed:
+
+- A project called **`only2bali` already exists on your own team**
+  (`srksourabhs-projects`, `prj_Qny5SmpF064e9jXmhezZcHiasK3J`). The repo is
+  linked to it through `only2bali-next/.vercel/project.json`.
+- **It is serving the legacy React app, not the Next.js app.**
+  `https://only2bali.vercel.app/api/health` returns the CRA's `index.html` via
+  its SPA catch-all instead of JSON. That is the Root Directory trap below:
+  with the field blank, Vercel reads the root `vercel.json`, which builds
+  `Frontend/`.
+- **The project is not connected to GitHub.** Both of its deployments were
+  pushed from a local machine by the Vercel CLI (`gitDirty: 1`), so a push to
+  `main` deploys nothing. Its last *production* deploy was 2026-07-11.
+- `only2bali-v3-0.vercel.app` — the site the docs used to call production — is
+  a separate deployment on **caloganathan's** account.
+
+So there are two jobs here: point this project at the right directory and at
+GitHub, and fill in the environment variables.
 
 ## Why this blocks other work
 
-`only2bali-v3-0.vercel.app` is deployed from **caloganathan's** Vercel account.
-While that is true you cannot:
+Until the project builds `only2bali-next/` with real environment variables, you
+cannot:
 
 - set `NEXT_PUBLIC_WHATSAPP_NUMBER` or `NEXT_PUBLIC_CONTACT_EMAIL`, so the site
   keeps rendering with no contact buttons,
@@ -18,13 +40,16 @@ Everything else that is still open depends on this one step.
 
 ## Steps
 
-1. **Create the project.** vercel.com → Add New → Project → import
-   `srksourabh/only2bali-v3`.
+1. **Connect the existing `only2bali` project to GitHub.**
+   vercel.com → `only2bali` → Settings → Git → Connect Git Repository →
+   `srksourabh/only2bali-v3`, production branch `main`. Until this is done,
+   pushing to `main` deploys nothing and every release needs someone's laptop.
 
-2. **Set Root Directory to `only2bali-next`.** This is the single most important
-   setting on the page. Left blank, Vercel reads the root `vercel.json`, which
-   builds `Frontend/` — the legacy React app. You will deploy the old site and
-   spend an afternoon wondering why nothing changed.
+2. **Set Root Directory to `only2bali-next`.** Settings → Build and Deployment →
+   Root Directory. This is the single most important field, and it is the one
+   currently wrong: left blank, Vercel reads the root `vercel.json`, which builds
+   `Frontend/` — the legacy React app. That is what `only2bali.vercel.app` is
+   serving right now.
 
 3. **Add the environment variables** (Settings → Environment Variables), for
    Production and Preview. Names and meanings are in
@@ -59,6 +84,9 @@ Everything else that is still open depends on this one step.
    `"otpDelivery": ["none"]` means nobody can sign in. `"contact"` false means
    the WhatsApp and email buttons are not rendering. Both are deliberate: the
    site would rather show less than pretend.
+
+   If you get HTML back instead of JSON, step 2 did not take effect — you are
+   still looking at the legacy React app.
 
 5. **Point the domain** at the new project, and only then remove the old one.
 
