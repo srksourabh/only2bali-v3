@@ -32,7 +32,7 @@ Verified 2026-07-23 against the running site, not assumed:
 
 | Works | Does not |
 |---|---|
-| Homepage, all seven locales, correct `<html lang>` | Package pages — they 404, because the catalogue lives in Postgres |
+| Homepage, all seven locales, correct `<html lang>` | Package pages — they 500, because the catalogue lives in Postgres |
 | Static pages: about, food, faq, privacy, terms | Sign-in — `/api/auth/request-otp` answers 503 |
 | Unknown URLs return a real 404 | Enquiry and vendor forms — the save fails, so the form says so |
 | `/api/health` reporting all of the above honestly | WhatsApp and email buttons — hidden, no number configured |

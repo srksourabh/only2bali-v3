@@ -295,3 +295,27 @@ clean, both builds green.
 break on case-sensitive CI because "only `Pages/` exists" was wrong — git tracked both
 `Pages/Home.js` and `pages/*`, so every import resolved. The real hazard was two
 directories differing only by case. Now consolidated.
+
+### Later the same day: the 404 that was really a 500
+
+The first production deploy surfaced a defect in code written that morning.
+Every package page returned 404 while `DATABASE_URL` was unset — and Vercel's
+error tracker showed **nothing**, because the page did
+`getPackageBySlug(slug).catch(() => null)` and then `notFound()`. A completely
+broken catalogue was indistinguishable, from the outside and from monitoring,
+from three slugs that do not exist.
+
+The lesson worth keeping: **404 must mean "there is no such thing", never "we
+could not ask".** A catch that turns a failed query into an empty result does not
+make the system more robust, it makes the failure invisible. The homepage does
+the opposite deliberately — marketing must render from the dictionary when
+Postgres is down — and that contrast is the point: the fallback is right where
+there is something honest to fall back to, and wrong where there is not.
+
+Guarded by `lib/repositories/catalog.test.ts`, which renders the page against a
+dead port and asserts the error does not carry Next's 404 digest. Confirmed to
+fail with the catch restored.
+
+Also added `vitest.config.ts` — the first test to import a module using `@/lib/db`
+failed with "Cannot find package", because Vitest had never needed the tsconfig
+alias while every test imported relatively.
