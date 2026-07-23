@@ -1,0 +1,79 @@
+/* Package detail. Tokens (--ink, --veg-*, .dot-*) come from brand.css. */
+
+.pkgpage { padding: 5rem 0 6rem; }
+.pkgpage h2 { margin: 2.6rem 0 1rem; font-size: 1.35rem; }
+.pkgpage section { border-top: 1px solid rgba(127, 127, 127, .18); }
+.pkgpage section:first-of-type { border-top: 0; }
+
+.crumbs { font-size: .82rem; opacity: .7; margin-bottom: 1.2rem; }
+.crumbs a { text-decoration: none; }
+.crumbs a:hover { text-decoration: underline; }
+
+.pkghead {
+  display: grid; gap: 2rem; align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 20rem);
+  padding-bottom: 2.4rem;
+}
+.pkghead h1 { margin: .5rem 0 .4rem; font-size: clamp(1.7rem, 4vw, 2.6rem); line-height: 1.15; }
+.pkgmeta { opacity: .78; font-size: .95rem; }
+.pkgblurb { margin-top: .9rem; max-width: 46ch; }
+
+.pkgbuy {
+  border: 1px solid rgba(127, 127, 127, .25);
+  border-radius: 14px; padding: 1.4rem; position: sticky; top: 5.5rem;
+}
+.pkgbuy .price { font-size: 1.9rem; font-weight: 700; line-height: 1.1; }
+.pkgbuy .price small { display: block; font-size: .74rem; font-weight: 400; opacity: .7; margin-top: .3rem; }
+.grouprange { font-size: .85rem; opacity: .75; margin: .7rem 0 1.1rem; }
+.pkgbuy .btn { width: 100%; text-align: center; }
+
+.compbar { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 1.4rem; margin: 0 0 .9rem; }
+.compbar li { display: flex; align-items: center; gap: .45rem; font-size: .92rem; }
+.compbar b { font-size: 1.15rem; }
+
+.fineprint { font-size: .82rem; opacity: .72; max-width: 62ch; }
+
+.why { list-style: none; padding: 0; display: grid; gap: .55rem; }
+.why li { position: relative; padding-left: 1.4rem; }
+.why li::before { content: "✓"; position: absolute; left: 0; color: var(--veg-green); font-weight: 700; }
+
+.days { list-style: none; padding: 0; display: grid; gap: 1.6rem; }
+.day { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: 1rem; }
+.daynum { font-weight: 700; opacity: .55; font-size: .85rem; padding-top: .25rem; letter-spacing: .04em; text-transform: uppercase; }
+.daybody h3 { margin: 0 0 .35rem; font-size: 1.05rem; }
+.dayfacts { display: flex; flex-wrap: wrap; gap: 1rem; font-size: .8rem; opacity: .7; margin: .4rem 0; }
+
+.meals { list-style: none; padding: 0; margin: .8rem 0 0; display: grid; gap: .5rem; }
+.meal {
+  display: grid; align-items: baseline; gap: .1rem .6rem;
+  grid-template-columns: auto 5.5rem minmax(0, 1fr) auto;
+  padding: .55rem .75rem; border-radius: 10px;
+  background: rgba(127, 127, 127, .07); font-size: .88rem;
+}
+.mealslot { text-transform: capitalize; opacity: .7; font-size: .8rem; }
+.mealrating { font-size: .74rem; white-space: nowrap; }
+.meal-green .mealrating { color: var(--veg-green); }
+.meal-amber .mealrating { color: var(--veg-amber); }
+.meal-red   .mealrating { color: var(--veg-red); }
+.mealnote { grid-column: 3 / -1; font-size: .78rem; opacity: .7; }
+
+.departures { list-style: none; padding: 0; display: grid; gap: .6rem; }
+.departures li {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 1rem;
+  padding: .8rem 1rem; border: 1px solid rgba(127, 127, 127, .2); border-radius: 10px;
+}
+.departures .seats { font-size: .82rem; opacity: .75; }
+.departures .seats.low { color: var(--veg-amber); opacity: 1; font-weight: 600; }
+.departures .btn { margin-left: auto; }
+
+.incgrid { display: grid; gap: 2rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+.incgrid h3 { font-size: .95rem; margin: 0 0 .6rem; }
+.incgrid ul { margin: 0; padding-left: 1.1rem; display: grid; gap: .35rem; font-size: .9rem; }
+
+@media (max-width: 720px) {
+  .pkghead { grid-template-columns: 1fr; }
+  .pkgbuy { position: static; }
+  .day { grid-template-columns: 1fr; gap: .3rem; }
+  .meal { grid-template-columns: auto minmax(0, 1fr); }
+  .mealrating, .mealnote { grid-column: 2 / -1; }
+}

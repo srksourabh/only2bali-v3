@@ -779,9 +779,19 @@ function PlannerWizardComponent() {
                       <p className="whatsapp-cta-subtitle">
                         Send this AI-calculated layout to our WhatsApp team. We will confirm hotel vacancies, check live flight prices, and finalize pricing.
                       </p>
-                      <a href={getWhatsAppLink()} target="_blank" rel="noopener noreferrer" className="btn-whatsapp-deep">
-                        💬 Customize & Confirm via WhatsApp
-                      </a>
+                      {/* The planner never asks for a phone number, so it cannot
+                          record a lead by itself. With no WhatsApp number
+                          configured, send the visitor to the enquiry form,
+                          which does store what they tell it. */}
+                      {getWhatsAppLink() ? (
+                        <a href={getWhatsAppLink()!} target="_blank" rel="noopener noreferrer" className="btn-whatsapp-deep">
+                          💬 Customize & Confirm via WhatsApp
+                        </a>
+                      ) : (
+                        <a href="../inquiry" className="btn-whatsapp-deep">
+                          Send this to our travel designer
+                        </a>
+                      )}
                     </div>
                   </div>
                 )}

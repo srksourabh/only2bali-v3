@@ -144,6 +144,15 @@ export const lead = pgTable(
     mobile: text("mobile"),
     whatsappOptin: boolean("whatsapp_optin").notNull().default(false),
     message: text("message"),
+    // The enquiry form asks these four of every visitor, so they are columns
+    // rather than prose inside `message`. A lead you cannot filter by protocol
+    // or group size is a lead you cannot route.
+    departureCity: text("departure_city"),
+    groupSize: integer("group_size"),
+    protocol: protocol("protocol"),
+    travelMonth: text("travel_month"),
+    ip: text("ip"),
+    userAgent: text("user_agent"),
     status: leadStatus("status").notNull().default("new"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

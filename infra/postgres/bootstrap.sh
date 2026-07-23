@@ -117,20 +117,63 @@ say "Schema"
 
 psql_run() { $COMPOSE exec -T postgres psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" "$@"; }
 
-TABLES="$(psql_run -tAc "select count(*) from information_schema.tables where table_schema='public'" | tr -d '\r')"
-if [ "$TABLES" -ge 41 ]; then
-  ok "schema already applied ($TABLES tables)"
-else
-  # The migration is plain SQL, so no Node toolchain is needed on this box.
-  MIGRATION="$INFRA/../only2bali-next/lib/db/migrations/0000_initial_schema.sql"
-  [ -f "$MIGRATION" ] || die "migration not found at $MIGRATION"
+MIGRATIONS="$INFRA/../only2bali-next/lib/db/migrations"
+JOURNAL="$MIGRATIONS/meta/_journal.json"
+[ -f "$JOURNAL" ] || die "migration journal not found at $JOURNAL"
+
+# Every migration is plain SQL, so this box needs no Node toolchain — but it
+# must track what it has applied, or a second migration would never run and a
+# first one would run twice. It writes the same ledger drizzle-kit uses (hash
+# of the file, and the journal's own timestamp), so either tool can be pointed
+# at this database afterwards and will agree about what is already applied.
+psql_run -q -c "create schema if not exists drizzle" \
+  -c "create table if not exists drizzle.__drizzle_migrations (
+        id serial primary key, hash text not null, created_at bigint)" \
+  || die "could not create the migration ledger"
+
+# `tag<TAB>when` per journal entry, in order. Plain awk so no jq is required.
+ENTRIES="$(awk '
+  /"when"/ { gsub(/[^0-9]/, "", $0); w = $0 }
+  /"tag"/  { gsub(/.*"tag"[^"]*"|",?$/, "", $0); print $0 "\t" w }
+' "$JOURNAL")"
+
+APPLIED_ANY=0
+PRE_EXISTING="$(psql_run -tAc "select to_regclass('public.account') is not null" | tr -d '\r')"
+LEDGER_ROWS="$(psql_run -tAc "select count(*) from drizzle.__drizzle_migrations" | tr -d '\r')"
+
+while IFS="$(printf '\t')" read -r TAG WHEN; do
+  [ -n "$TAG" ] || continue
+  FILE="$MIGRATIONS/$TAG.sql"
+  [ -f "$FILE" ] || die "migration $TAG named in the journal but missing on disk"
+  HASH="$(sha256sum "$FILE" | cut -d' ' -f1)"
+
+  SEEN="$(psql_run -tAc "select count(*) from drizzle.__drizzle_migrations where hash = '$HASH'" | tr -d '\r')"
+  if [ "${SEEN:-0}" -gt 0 ]; then
+    ok "$TAG already applied"
+    continue
+  fi
+
+  # A database bootstrapped before this ledger existed already has the initial
+  # schema. Record it rather than replaying it onto live tables.
+  if [ "$PRE_EXISTING" = "t" ] && [ "${LEDGER_ROWS:-0}" -eq 0 ] && [ "$TAG" = "0000_initial_schema" ]; then
+    psql_run -q -c "insert into drizzle.__drizzle_migrations (hash, created_at) values ('$HASH', $WHEN)"
+    ok "$TAG adopted (schema was already present)"
+    continue
+  fi
+
   # Drizzle separates statements with --> statement-breakpoint; psql does not
   # care, but strip it so the file reads cleanly in the logs.
-  sed 's|^--> statement-breakpoint$||' "$MIGRATION" | psql_run -q -f - \
-    || die "schema failed to apply"
-  TABLES="$(psql_run -tAc "select count(*) from information_schema.tables where table_schema='public'" | tr -d '\r')"
-  ok "schema applied ($TABLES tables)"
-fi
+  sed 's|^--> statement-breakpoint$||' "$FILE" | psql_run -q -f - \
+    || die "$TAG failed to apply"
+  psql_run -q -c "insert into drizzle.__drizzle_migrations (hash, created_at) values ('$HASH', $WHEN)"
+  ok "$TAG applied"
+  APPLIED_ANY=1
+done <<EOF
+$ENTRIES
+EOF
+
+TABLES="$(psql_run -tAc "select count(*) from information_schema.tables where table_schema='public'" | tr -d '\r')"
+[ "$APPLIED_ANY" -eq 1 ] && ok "schema now at $TABLES tables" || ok "schema up to date ($TABLES tables)"
 
 # --------------------------------------------------------------------- seed --
 say "Catalogue"

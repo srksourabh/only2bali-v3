@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { verifyOtpSchema, toIdentifier } from "@/lib/validators/auth";
 import { verifyOtp } from "@/lib/auth/service";
 import { SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth";
-import { clientKey, rateLimit } from "@/lib/rate-limit";
+import { clientKey } from "@/lib/rate-limit";
+import { rateLimitShared } from "@/lib/rate-limit-db";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
     }
 
     const ip = clientKey(req);
-    const limit = rateLimit(`verify:ip:${ip}`, PER_IP.limit, PER_IP.windowMs);
+    const limit = await rateLimitShared(`verify:ip:${ip}`, PER_IP.limit, PER_IP.windowMs);
     if (!limit.allowed) {
       return NextResponse.json(
         { success: false, error: "Too many attempts. Please wait." },

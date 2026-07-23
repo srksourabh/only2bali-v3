@@ -75,26 +75,73 @@ jobs:
       - run: npm ci
         working-directory: only2bali-next
 
-      # Applies the committed migration as plain SQL, exactly as the VPS
-      # bootstrap does, so a broken migration is caught here.
-      - name: Apply schema
-        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f only2bali-next/lib/db/migrations/0000_initial_schema.sql
+      # Every committed migration in order, through the same tool that runs
+      # them anywhere else. Applying only 0000 by hand meant a later migration
+      # was never exercised here.
+      - name: Apply migrations
+        run: npx drizzle-kit migrate
+        working-directory: only2bali-next
         env:
           DATABASE_URL: postgres://only2bali_app:ci@localhost:5432/only2bali
 
       - name: Seed catalogue
-        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f infra/postgres/seed.sql
+        run: npm run db:seed
+        working-directory: only2bali-next
         env:
           DATABASE_URL: postgres://only2bali_app:ci@localhost:5432/only2bali
 
-      # 38 checks: schema shape, the four business-rule constraints, the
-      # catalogue repository, and an auth round-trip through the real tables.
+      # Schema shape, the four business-rule constraints, the catalogue
+      # repository, and an auth round-trip through the real tables.
       - name: Verify
         run: npm run db:verify
         working-directory: only2bali-next
         env:
           DATABASE_URL: postgres://only2bali_app:ci@localhost:5432/only2bali
           AUTH_SECRET: ci-only-secret-comfortably-over-thirty-two-characters
+
+  e2e:
+    name: end-to-end
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: only2bali_app
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: only2bali
+        options: >-
+          --health-cmd "pg_isready -U only2bali_app -d only2bali"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: only2bali-next/package-lock.json
+
+      - run: npm ci
+        working-directory: only2bali-next
+
+      # Drives the running app over HTTP: routing, the package page, enquiry and
+      # vendor persistence, the whole sign-in round trip, and the shared rate
+      # limit. O2B_DB_URL points it at the service container instead of Docker.
+      - name: End-to-end
+        run: npm run test:e2e
+        working-directory: only2bali-next
+        env:
+          O2B_DB_URL: postgres://only2bali_app:ci@localhost:5432/only2bali
+          AUTH_SECRET: ci-only-secret-comfortably-over-thirty-two-characters
+
+      - name: Server log on failure
+        if: failure()
+        run: tail -100 only2bali-next/.e2e/server.err.log || true
 
   secrets:
     name: no committed secrets

@@ -10,5 +10,8 @@ urlpatterns = [
     path('profile/update/', UserProfileUpdateView.as_view(), name='profile_update'),
     path('user-profile/', UserProfileView.as_view(), name='user-profile'),
     path('logout/', LogoutView.as_view(), name='logout'),
-    path('faq/', SendToZohoAPIView.as_view(), name='send_to_zoho'),
+    # 'faq/' pushed straight into Zoho Desk with credentials that had been
+    # committed publicly. Removed 2026-07-23. Its only caller — the contact form
+    # in Frontend/src/FaqPage.js — was already commented out, so nothing broke.
+    # Re-add it against a table we own, not a third party, before re-enabling.
 ]

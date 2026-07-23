@@ -194,7 +194,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
                       {p.price}
                       <small>{dict.packages.perPerson}</small>
                     </div>
-                    <Link className="btn btn-solid btn-sm" href={`/${lang}/planner?package=${p.slug}`}>
+                    <Link className="btn btn-solid btn-sm" href={`/${lang}/packages/${p.slug}`}>
                       {dict.packages.checkDates}
                     </Link>
                   </div>

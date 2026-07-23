@@ -498,164 +498,6 @@ class DeleteJourneyPreferences(APIView):
 #     except JourneyPreferences.DoesNotExist:
 #         return Response({"error": "Journey not found"}, status=status.HTTP_404_NOT_FOUND)
 
-ZOHO_CRM_API_URL = "https://www.zohoapis.com/crm/v2/Leads"  # The Zoho API endpoint for Leads
-
-# Credentials come from the environment. The previous hardcoded values were committed to a
-# public repository and have been revoked at the provider - do not reintroduce literals here.
-# Zoho is being retired as an integration: when these are unset the push is skipped and the
-# journey still saves normally.
-ZOHO_REFRESH_TOKEN = os.environ.get("ZOHO_REFRESH_TOKEN")
-ZOHO_CLIENT_ID = os.environ.get("ZOHO_CLIENT_ID")
-ZOHO_CLIENT_SECRET = os.environ.get("ZOHO_CLIENT_SECRET")
-ZOHO_ACCESS_TOKEN = os.environ.get("ZOHO_ACCESS_TOKEN")
-ZOHO_REDIRECT_URI = os.environ.get("ZOHO_REDIRECT_URI", "")
-
-
-def zoho_is_configured() -> bool:
-    """True only when every Zoho credential is present in the environment."""
-    return all([ZOHO_REFRESH_TOKEN, ZOHO_CLIENT_ID, ZOHO_CLIENT_SECRET, ZOHO_ACCESS_TOKEN])
-
-
-def refresh_zoho_access_token(refresh_token):
-    """
-    Refreshes the Zoho CRM access token using the refresh token.
-    """
-    token_url = "https://accounts.zoho.com/oauth/v2/token"
-
-    # Data to refresh the access token
-    data = {
-        "grant_type": "refresh_token",
-        "client_id": ZOHO_CLIENT_ID,
-        "client_secret": ZOHO_CLIENT_SECRET,
-        "refresh_token": refresh_token  # Use the passed refresh_token here
-    }
-
-    response = requests.post(token_url, data=data)
-    
-    if response.status_code == 200:
-        token_data = response.json()
-        # Log the response to inspect token data
-        print(f"Token refresh successful: {token_data}")
-
-        # Return the new access token
-        return token_data["access_token"]
-    else:
-        # Log the response and any errors for better debugging
-        print(f"Failed to refresh access token. Response: {response.status_code} - {response.text}")
-        raise Exception(f"Failed to refresh access token: {response.text}")
-
-def send_to_zoho_crm(journey):
-    """
-    Function to create a lead in Zoho CRM using journey data.
-    This handles refreshing the token if expired.
-    """
-
-    if not zoho_is_configured():
-        logger.info("Zoho CRM is not configured; skipping lead push for journey %s", journey.id)
-        return None
-
-    access_token = ZOHO_ACCESS_TOKEN
-    refresh_token = ZOHO_REFRESH_TOKEN
-
-    try:
-        # Prepare the data to send to Zoho CRM as a lead
-        data = {
-            "data": [
-                { 
-                    # "User_Name": journey.user.username,  # User Name
-                    # "Email_ID": journey.user.email,  # Email ID
-                    # "Mobile_No": journey.user.mobile_number,  # Mobile Number
-                    # "Date_Of_Birth": journey.user.dob.strftime("%Y-%m-%d") if journey.user.dob else None,
-                    # "Genders": journey.user.gender if journey.user.gender else "Not specified",
-                    # "Single_Line_2":journey.name, #for name
-                    # "Last_Name": journey.name, 
-                    # "Age": journey.age,  # Age field
-                    # "No_of_people": journey.number_of_people,  # Number of People
-                    # "Times_Visited_Bali": journey.times_visited_bali,  # Times Visited Bali
-                    # "Crew_Type": journey.get_crew_type_display(),  # Crew Type # Example field to send to Zoho
-                    # "Places_To_Visit": ", ".join([place.get_place_name_display() for place in journey.placestovisit_set.first().place.all()]) if journey.placestovisit_set.exists() else "Not specified",  # Places to Visit
-                    # "Flight_Class": journey.traveldetails.flight_class if journey.traveldetails else "Not specified",  # Flight Class
-                    # "From": journey.traveldetails.from_date.strftime("%Y-%m-%d") if journey.traveldetails.from_date else None,  # Convert to string
-                    # "To": journey.traveldetails.to_date.strftime("%Y-%m-%d") if journey.traveldetails.to_date else None,  # Convert to string
-                    # "International_Airport":journey.traveldetails.international_airport,
-                    # "Vehicle_Type": ", ".join([vehicle.vehicle_type_name for vehicle in journey.vehiclepreferences.vehicle.all()]) if journey.vehiclepreferences and journey.vehiclepreferences.vehicle.exists() else "Not specified",
-                    # "Include_Driver": journey.vehiclepreferences.include_driver if journey.vehiclepreferences and journey.vehiclepreferences.include_driver is not None else "Not specified",  # Include Driver
-                    # "Rent_Period": journey.vehiclepreferences.rent_period if journey.vehiclepreferences else "Not specified",
-                    # "Stay_Type": ", ".join([stay.stay_type_name for stay in journey.staypreferences.stay_type.all()]) if journey.staypreferences else "Not specified",
-                    # "Extra_Requests": journey.extrarequests.requests if journey.extrarequests else "Not specified",
-                    # "Language_Choice": ", ".join([lang.language_name for lang in journey.tourguidepreferences.preferred_languages.all()]) if journey.tourguidepreferences else "Not specified",
-                    # "Food_Preferences": ", ".join([
-                    #     *([choice.choice_name for choice in journey.foodpreferences.vegetarian_choice.all()] if journey.foodpreferences.vegetarian_choice.exists() else []),
-                    #     *([choice.choice_name for choice in journey.foodpreferences.non_vegetarian_choice.all()] if journey.foodpreferences.non_vegetarian_choice.exists() else []),
-                    #     *([choice.choice_name for choice in journey.foodpreferences.dietary_choice.all()] if journey.foodpreferences.dietary_choice.exists() else []),
-                    #     *([choice.choice_name for choice in journey.foodpreferences.balinese_choice.all()] if journey.foodpreferences.balinese_choice.exists() else []),
-                    # ]) if journey.foodpreferences else "Not specified",
-                    # "Food_Service_Type": journey.cateringorchef.service_type if journey.cateringorchef else "Not specified",
-                    # "Vendor": ", ".join([vendor.name for vendor in journey.vendor.vendor_type.all()]) if journey.vendor else "Not specified",	
-                    "Layout": {
-                        "name":"Only2Bali",
-                        "id": "3625640000050082039"
-                    },
-                    "Multi_Select_2": ["null"],
-                    "Username": journey.user.username,  # User Name
-                    "Email_ID": journey.user.email,  # Email ID
-                    "Mobile_No": journey.user.mobile_number,  # Mobile Number
-                    "Date_of_Birth": journey.user.dob.strftime("%Y-%m-%d") if journey.user.dob else None,
-                    "Genders": journey.user.gender if journey.user.gender else "Not specified",
-                    "Name1":journey.name, #for name
-                    "Last_Name": journey.name, 
-                    "Age": journey.age,  # Age field
-                    "No_of_people": str(journey.number_of_people),  # Number of People
-                    "Times_Visited_Bali": str(journey.times_visited_bali),  # Times Visited Bali
-                    "Crew_Type": journey.get_crew_type_display(),  # Crew Type # Example field to send to Zoho
-                    "Places_To_Visit": ", ".join([place.get_place_name_display() for place in journey.placestovisit_set.first().place.all()]) if journey.placestovisit_set.exists() else "Not specified",  # Places to Visit
-                    "Flight_Class": journey.traveldetails.flight_class if journey.traveldetails else "Not specified",  # Flight Class
-                    "From": journey.traveldetails.from_date.strftime("%Y-%m-%d") if journey.traveldetails.from_date else None,  # Convert to string
-                    "To": journey.traveldetails.to_date.strftime("%Y-%m-%d") if journey.traveldetails.to_date else None,  # Convert to string
-                    "International_Airport":journey.traveldetails.international_airport,
-                    "Vehicle_Type": ", ".join([vehicle.vehicle_type_name for vehicle in journey.vehiclepreferences.vehicle.all()]) if journey.vehiclepreferences and journey.vehiclepreferences.vehicle.exists() else "Not specified",
-                    "Include_Driver": journey.vehiclepreferences.include_driver if journey.vehiclepreferences and journey.vehiclepreferences.include_driver is not None else "Not specified",  # Include Driver
-                    "Rent_Period": journey.vehiclepreferences.rent_period if journey.vehiclepreferences else "Not specified",
-                    "Stay_Type": ", ".join([stay.stay_type_name for stay in journey.staypreferences.stay_type.all()]) if journey.staypreferences else "Not specified",
-                    "Extra_Requests": journey.extrarequests.requests if journey.extrarequests else "Not specified",
-                    "Language_Choice": ", ".join([lang.language_name for lang in journey.tourguidepreferences.preferred_languages.all()]) if journey.tourguidepreferences else "Not specified",
-                    "Food_Preferences": ", ".join([
-                        *([choice.choice_name for choice in journey.foodpreferences.vegetarian_choice.all()] if journey.foodpreferences.vegetarian_choice.exists() else []),
-                        *([choice.choice_name for choice in journey.foodpreferences.non_vegetarian_choice.all()] if journey.foodpreferences.non_vegetarian_choice.exists() else []),
-                        *([choice.choice_name for choice in journey.foodpreferences.dietary_choice.all()] if journey.foodpreferences.dietary_choice.exists() else []),
-                        *([choice.choice_name for choice in journey.foodpreferences.balinese_choice.all()] if journey.foodpreferences.balinese_choice.exists() else []),
-                    ]) if journey.foodpreferences else "Not specified",
-                    "Food_Service_Type": journey.cateringorchef.service_type if journey.cateringorchef else "Not specified",
-                    "Vendor": ", ".join([vendor.name for vendor in journey.vendor.vendor_type.all()]) if journey.vendor else "Not specified",	
-
-                }
-            ]
-        }
-
-        headers = {
-            "Authorization": f"Zoho-oauthtoken {access_token}",
-            "Content-Type": "application/json"
-        }
-
-        # Send data to Zoho CRM as a new Lead
-        response = requests.post(ZOHO_CRM_API_URL, json=data, headers=headers)
-
-        if response.status_code == 401:  # If access token is expired, refresh it
-            print("Access token expired, refreshing token...")
-            new_access_token = refresh_zoho_access_token(refresh_token)  # Only refresh access token
-
-            # Update the stored access token (ensure to store securely)
-            access_token = new_access_token
-
-            # Retry sending the data with the new access token
-            headers["Authorization"] = f"Zoho-oauthtoken {access_token}"
-            response = requests.post(ZOHO_CRM_API_URL, json=data, headers=headers)
-
-        return response.json()
-
-    except Exception as e:
-        print(f"Error creating lead in Zoho CRM: {e}")
-        return {"error": str(e)}
 
 # from io import BytesIO
 # from reportlab.pdfgen import canvas
@@ -830,30 +672,16 @@ def confirm_journey(request, journey_id):
         journey.confirmed = True
         journey.save()
 
-        zoho_response = send_to_zoho_crm(journey)
-        logger.info("Zoho Response: %s", zoho_response)  # 👈 Add this line
+        # The Zoho CRM push was removed on 2026-07-23 along with its credentials,
+        # which had been committed to a public repository. Confirmation is a
+        # database write and nothing else; re-add an outbound integration here
+        # only with credentials that live in the environment.
+        logger.info("Journey %s confirmed by user %s", journey.id, request.user.id)
 
-        if zoho_response is None:
-            # Zoho is not configured (the integration is being retired). The journey is
-            # confirmed and saved regardless - the CRM push is not part of the contract.
-            return Response(
-                {"message": "Journey confirmed successfully."},
-                status=status.HTTP_200_OK
-            )
-
-        if zoho_response.get("data") and zoho_response["data"][0].get("status") == "success":
-            return Response(
-                {"message": "Journey confirmed successfully and sent to Zoho CRM."},
-                status=status.HTTP_200_OK
-            )
-        else:
-            return Response(
-                {
-                    "error": "Journey confirmed but failed to send to Zoho CRM.",
-                    "zoho_response": zoho_response  # 👈 Return the actual response for debugging
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        return Response(
+            {"message": "Journey confirmed successfully."},
+            status=status.HTTP_200_OK
+        )
 
     except JourneyPreferences.DoesNotExist:
         return Response({"error": "Journey not found."}, status=status.HTTP_404_NOT_FOUND)

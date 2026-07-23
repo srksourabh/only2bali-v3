@@ -1,11 +1,14 @@
 /**
- * Minimal in-process rate limiter.
+ * In-process rate limiter.
  *
- * Deliberately simple: it holds counters in module memory, so on serverless it
- * limits per warm instance rather than globally. That is weaker than a shared
- * store but strictly better than the nothing that was here before, and it costs
- * no infrastructure. Replace with Vercel KV when that is provisioned (Sprint 3)
- * — this module's interface is what the KV version should implement.
+ * Counters live in module memory, so on serverless this limits per warm
+ * instance rather than globally — an attacker spreading requests across
+ * instances gets a multiple of the intended limit.
+ *
+ * It is therefore no longer the primary limiter. `rateLimitShared` in
+ * `lib/rate-limit-db.ts` counts in Postgres, which every instance shares, and
+ * falls back to this when the database cannot be reached. Keeping this one
+ * means a database blip degrades the limit rather than removing it.
  */
 
 interface Bucket {

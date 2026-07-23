@@ -63,6 +63,32 @@ day-one lunch in an itinerary template — on a platform whose entire promise is
 Never deployed, so no customer saw it. Salvageable entries were extracted to `docs/reference/seed-data.md`
 before deletion.
 
+### 6. Zoho removed outright (2026-07-23)
+
+**Was:** a Zoho CRM lead push in `Backend/journeys/views.py` and a Zoho Desk ticket endpoint at
+`POST /api/users/faq/`. Both had carried hardcoded credentials in a public repository; both had
+since been moved to environment variables but left in place.
+
+**Now:** deleted — the CRM push, the token-refresh helpers, the `SendToZohoAPIView` class, its
+URL route, and the `ZOHO_*` entries in `Backend/.env.example`. Confirming a journey is a
+database write and nothing else. The FAQ endpoint's only caller, the contact form in
+`Frontend/src/FaqPage.js`, had already been commented out, so nothing broke.
+
+> ⚠️ Deleting the code still does not revoke the credentials. The Zoho tokens and the SpringEdge
+> SMS key remain in git history and must be revoked at the providers — Sprint 0 tasks S0.1 and
+> S0.2, both still open.
+
+### 7. Rate limiting no longer resets per instance (2026-07-23)
+
+**Was:** counters in module memory. On Vercel that is one bucket per warm lambda, so spreading
+requests across instances multiplied every limit — and each OTP costs money to send.
+
+**Now:** `lib/rate-limit-db.ts` counts in Postgres with a single upsert that advances the window
+and increments in the same statement, so concurrent requests cannot both believe they are first.
+The in-memory limiter remains as the fallback when the database is unreachable, so an outage
+degrades the limit rather than removing it. Covered by the end-to-end test, which asserts the
+counter row exists in `rate_limit`.
+
 ---
 
 ## Still outstanding
@@ -103,11 +129,17 @@ enforces auth per-component across 16+ files with no route guard. The Next.js re
 httpOnly server sessions instead; this is resolved by retiring the CRA (Sprint 14), not by
 patching it.
 
-### Placeholder contact details
+### Contact details are not yet set — but enquiries are no longer lost
 
-`only2bali-next/lib/config.ts` and `app/layout.tsx` still point at `6281200000000` and
-`hello@only2bali.com`. Real enquiries are going nowhere. Blocked on the real values — Sprint 0
-task S0.8.
+Fixed on 2026-07-23. `only2bali-next/lib/config.ts` now reads
+`NEXT_PUBLIC_WHATSAPP_NUMBER` and `NEXT_PUBLIC_CONTACT_EMAIL`, rejects the old placeholders
+explicitly, and hides the WhatsApp and email buttons when neither is configured.
+
+More importantly, the enquiry and vendor forms write to Postgres (`lead`, `vendor_application`)
+*before* opening any external app, so a lead survives the visitor closing the tab and survives
+having no WhatsApp number at all.
+
+Still needs the real values pasted into Vercel — see `docs/vercel-handover.md`.
 
 ---
 

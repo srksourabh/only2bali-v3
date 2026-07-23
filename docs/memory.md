@@ -224,3 +224,74 @@ Claude artifacts):**
 curated-matcher v1) and Phase 0 Task 0.1 (lock down the unauthenticated delete-journey
 endpoint at `Backend/journeys/views.py:467`). See [[platform-direction]] and
 [[security-fixes-outstanding]] in auto-memory.
+
+---
+
+## Session log - 2026-07-23 (Sprint 0 closed out, end-to-end suite)
+
+**Asked for**: verify the database connection, describe the schema, analyse the project
+end to end, list what is pending, and build an end-to-end test. Then: remove Zoho, and
+implement everything on the pending list.
+
+**Verified, not assumed**: local Postgres 17.10 in Docker (`o2b-local-db`, port 55432),
+`npm run db:verify` 38/38 green, 1 ms round trip. Production/VPS mTLS untested from here
+— `.env.local` points at localhost.
+
+**Found while verifying**: `db:verify` and `db:seed` never loaded `.env.local`, so both
+crashed with `Invalid URL` unless the environment was set by hand. The documented command
+did not work. Fixed with `tsx --env-file-if-exists=.env.local`.
+
+**The gap that mattered**: 30 of 41 tables had no code touching them. The vendor and
+marketplace halves of the schema were a design, not a product. Most visibly, the enquiry
+and vendor forms only opened a WhatsApp draft — a visitor who closed the tab was a lead
+the business never knew existed, and with a placeholder WhatsApp number that was every
+visitor.
+
+**Shipped**:
+- Zoho deleted outright — CRM push, token refresh, `SendToZohoAPIView`, its URL, and the
+  `ZOHO_*` block in `Backend/.env.example`. Confirming a journey is now a database write
+  and nothing else.
+- `lead` gained `departure_city`, `group_size`, `protocol`, `travel_month`, `ip`,
+  `user_agent`; new `vendor_application` table (an application cannot be a `vendor` row —
+  `vendor.account_id` is NOT NULL and an anonymous form must not mint accounts).
+- `POST /api/leads` and `POST /api/vendor-applications`; both forms save first and open
+  WhatsApp second.
+- Contact details read from `NEXT_PUBLIC_WHATSAPP_NUMBER` / `NEXT_PUBLIC_CONTACT_EMAIL`,
+  reject the old placeholders, and hide the buttons when unset.
+- `/[lang]/packages/[slug]` — the page the product rests on. Every meal, every day, with
+  its own green/amber/red rating. The homepage card now links here, not to the planner.
+- Rate limiting moved into Postgres (`lib/rate-limit-db.ts`). In-memory is the fallback
+  for a database outage, not the primary. New `rate_limit` table.
+- `/api/health` reports `otpDelivery` and `contact`, so "login is quietly broken" and
+  "contact details are still placeholders" are monitorable rather than discovered by a
+  customer. `request-otp` answers 503 instead of a generic 500 when nothing can deliver.
+- Legacy CRA: 404 catch-all with `noindex`; `Pages/` and `pages/` (two directories
+  differing only by case) consolidated into `pages/`; the always-offline chat widget
+  removed.
+- `infra/postgres/bootstrap.sh` now applies *every* migration and records them in the
+  same ledger drizzle-kit uses, adopting an already-bootstrapped database rather than
+  replaying 0000 onto live tables. It previously applied only 0000 and skipped on a table
+  count, so migration 0001 would never have reached the VPS.
+- CI: `drizzle-kit migrate` instead of applying one SQL file by hand, plus a new `e2e`
+  job.
+- `scripts/e2e.sh` + `scripts/e2e.ts` — `npm run test:e2e`. Boots Postgres and the app,
+  drives it over real HTTP, checks Postgres afterwards, deletes everything it created.
+  60 checks. The OTP is read from the server's own log, which is also why it cannot run
+  against production and must not.
+
+**Counts after**: 93 unit tests, 60 end-to-end checks, 38 database checks. Typecheck
+clean, both builds green.
+
+**Deliberately not done**:
+- Revoking the Zoho and SpringEdge credentials at the providers. Only Sourabh can, and
+  deleting the code revokes nothing — see [[security-fixes-outstanding]].
+- Real contact values and an OTP provider key: both need the Vercel move first, written
+  up in `docs/vercel-handover.md`.
+- The four legacy React routes that call the deleted FastAPI service
+  (`/vendor-onboarding`, `/plan`, `/itinerary`, `/booking`). They fail live, but deleting
+  live routes is a product decision.
+
+**Correction to earlier docs**: the long-standing claim that `Frontend/src/App.js` would
+break on case-sensitive CI because "only `Pages/` exists" was wrong — git tracked both
+`Pages/Home.js` and `pages/*`, so every import resolved. The real hazard was two
+directories differing only by case. Now consolidated.

@@ -1,4 +1,3 @@
-import os
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
 from rest_framework.response import Response
@@ -340,93 +339,5 @@ class LoginView(APIView):
 
         return Response({"error": "Invalid login type."}, status=status.HTTP_400_BAD_REQUEST)
 
-
-
-# FAQ for zoho desk
-
-# ZOHO API Configuration - Credentials from environment variables
-ZOHO_API_URL = "https://desk.zoho.com/api/v1/tickets"
-ZOHO_CLIENT_ID = os.getenv("ZOHO_CLIENT_ID")
-ZOHO_CLIENT_SECRET = os.getenv("ZOHO_CLIENT_SECRET")
-ZOHO_REFRESH_TOKEN = os.getenv("ZOHO_REFRESH_TOKEN")
-ZOHO_ACCESS_TOKEN = os.getenv("ZOHO_ACCESS_TOKEN")
-ZOHO_DEPARTMENT_ID = os.getenv("ZOHO_DEPARTMENT_ID")
-
-class SendToZohoAPIView(APIView):
-    permission_classes = [AllowAny]  # public by design — FAQ / contact form
-
-    def get_access_token(self):
-        """
-        Function to get a new access token using the refresh token.
-        """
-        refresh_url = "https://accounts.zoho.com/oauth/v2/token"
-        data = {
-            "client_id": ZOHO_CLIENT_ID,
-            "client_secret": ZOHO_CLIENT_SECRET,
-            "refresh_token": ZOHO_REFRESH_TOKEN,
-            "grant_type": "refresh_token"
-        }
-
-        try:
-            response = requests.post(refresh_url, data=data)
-            response_data = response.json()
-            if response.status_code == 200:
-                return response_data["access_token"]
-            else:
-                raise Exception("Failed to refresh the access token")
-        except Exception as e:
-            raise Exception(f"Error refreshing access token: {e}")
-
-    def post(self, request):
-        # Retrieve the form data from the request
-        name = request.data.get('name')
-        email = request.data.get('email')
-        subject = request.data.get('subject')
-        message = request.data.get('message')
-
-        # Ensure the 'name' parameter is provided and valid
-        if not name:
-            return Response({"error": "'name' parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Handle splitting of the name safely (first_name only)
-        name_parts = name.split() if name else []
-        first_name = name_parts[0] if len(name_parts) > 0 else ""
-
-        # Get access token (if expired, refresh it)
-        access_token = ZOHO_ACCESS_TOKEN
-        try:
-            # Send the data to Zoho Desk
-            zoho_data = {
-                "subject": subject,
-                "description": message,
-                "contact": {
-                    # "first_name": first_name,
-                    "email": email
-                },
-                "departmentId": ZOHO_DEPARTMENT_ID  # Add the departmentId here
-            }
-
-            headers = {
-                'Authorization': f'Zoho-oauthtoken {access_token}',
-                'Content-Type': 'application/json'
-            }
-
-            # Attempt to send data to Zoho Desk
-            response = requests.post(ZOHO_API_URL, json=zoho_data, headers=headers)
-
-            if response.status_code == 401:  # Unauthorized, token may have expired
-                access_token = self.get_access_token()  # Refresh token
-                headers['Authorization'] = f'Zoho-oauthtoken {access_token}'  # Update the headers with the new access token
-
-                # Retry the request after refreshing the token
-                response = requests.post(ZOHO_API_URL, json=zoho_data, headers=headers)
-
-            if response.status_code in [200, 201]:
-                return Response({"success": True}, status=status.HTTP_201_CREATED)
-            else:
-                return Response({"error": "Failed to create ticket in Zoho Desk", "details": response.json()}, status=status.HTTP_400_BAD_REQUEST)
-
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

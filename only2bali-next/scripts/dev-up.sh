@@ -96,15 +96,12 @@ docker exec "$CONTAINER" pg_isready -U only2bali_app -d only2bali >/dev/null 2>&
 }
 
 say "Schema and catalogue"
+# Always run it. drizzle-kit tracks what it has applied, so this is idempotent —
+# and counting tables to decide got it wrong the moment a migration added one.
+DATABASE_URL="$URL" npx --yes drizzle-kit migrate >/dev/null 2>/dev/null
 TABLES=$(docker exec "$CONTAINER" psql -U only2bali_app -d only2bali -tAc \
   "select count(*) from information_schema.tables where table_schema='public'" | tr -d '\r')
-
-if [ "${TABLES:-0}" -ge 41 ]; then
-  ok "schema already applied ($TABLES tables)"
-else
-  DATABASE_URL="$URL" npx --yes drizzle-kit migrate >/dev/null 2>&1
-  ok "schema applied"
-fi
+ok "schema up to date ($TABLES tables)"
 
 CIRCUITS=$(docker exec "$CONTAINER" psql -U only2bali_app -d only2bali -tAc \
   "select count(*) from circuit" | tr -d '\r')
