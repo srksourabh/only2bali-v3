@@ -1,0 +1,17 @@
+# Line endings.
+#
+# This machine has core.autocrlf=true, so anything not pinned here is checked
+# out with CRLF. That is harmless for source files and fatal for anything the
+# Linux VPS executes: on 2026-07-23 a CRLF bootstrap.sh died on its own shebang
+# line with `$'\r': command not found`, before doing anything at all.
+#
+# Files that run on a server, or that a server parses, stay LF everywhere.
+
+* text=auto
+
+*.sh        text eol=lf
+*.sql       text eol=lf
+*.conf      text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+Dockerfile  text eol=lf

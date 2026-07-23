@@ -74,6 +74,12 @@ fi
 # shellcheck disable=SC1090
 set -a; . "$ENV_FILE"; set +a
 
+# pg_hba.conf requires scram-sha-256 even on the container's own unix socket —
+# there is deliberately no `trust` line. So every psql call below needs the
+# password. Exported rather than passed as `-e PGPASSWORD=value`, so that it is
+# handed to the container through the environment and never appears in `ps`.
+export PGPASSWORD="$POSTGRES_PASSWORD"
+
 mkdir -p "$HERE/backups" && chmod 700 "$HERE/backups"
 chmod +x "$HERE/backup.sh" 2>/dev/null || true
 
@@ -109,13 +115,13 @@ done
 $COMPOSE exec -T postgres pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" >/dev/null 2>&1 \
   || { $COMPOSE logs --tail=30 postgres; die "postgres did not become ready"; }
 
-SSL_ON="$($COMPOSE exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc 'show ssl' | tr -d '\r')"
+SSL_ON="$($COMPOSE exec -T -e PGPASSWORD postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc 'show ssl' | tr -d '\r')"
 [ "$SSL_ON" = "on" ] && ok "TLS is enabled" || die "TLS is NOT enabled — check certs/ and pg_hba.conf"
 
 # ------------------------------------------------------------------- schema --
 say "Schema"
 
-psql_run() { $COMPOSE exec -T postgres psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" "$@"; }
+psql_run() { $COMPOSE exec -T -e PGPASSWORD postgres psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" "$@"; }
 
 MIGRATIONS="$INFRA/../only2bali-next/lib/db/migrations"
 JOURNAL="$MIGRATIONS/meta/_journal.json"
@@ -141,7 +147,14 @@ APPLIED_ANY=0
 PRE_EXISTING="$(psql_run -tAc "select to_regclass('public.account') is not null" | tr -d '\r')"
 LEDGER_ROWS="$(psql_run -tAc "select count(*) from drizzle.__drizzle_migrations" | tr -d '\r')"
 
-while IFS="$(printf '\t')" read -r TAG WHEN; do
+# Read the journal on fd 3, not on stdin.
+#
+# `docker compose exec -T` consumes its own stdin. With the loop reading from
+# stdin, the very first psql call swallowed the rest of the heredoc, so the
+# loop ran exactly once: 0000 applied, 0001 silently never seen, and the script
+# still exited 0. Observed on the VPS on 2026-07-23 — 41 tables where 43 were
+# expected, with no error anywhere.
+while IFS="$(printf '\t')" read -r TAG WHEN <&3; do
   [ -n "$TAG" ] || continue
   FILE="$MIGRATIONS/$TAG.sql"
   [ -f "$FILE" ] || die "migration $TAG named in the journal but missing on disk"
@@ -168,12 +181,21 @@ while IFS="$(printf '\t')" read -r TAG WHEN; do
   psql_run -q -c "insert into drizzle.__drizzle_migrations (hash, created_at) values ('$HASH', $WHEN)"
   ok "$TAG applied"
   APPLIED_ANY=1
-done <<EOF
+done 3<<EOF
 $ENTRIES
 EOF
 
 TABLES="$(psql_run -tAc "select count(*) from information_schema.tables where table_schema='public'" | tr -d '\r')"
 [ "$APPLIED_ANY" -eq 1 ] && ok "schema now at $TABLES tables" || ok "schema up to date ($TABLES tables)"
+
+# The loop above failing quietly is the failure mode that cost us a run, so
+# assert rather than trust it: every migration named in the journal must now
+# have a row in the ledger.
+JOURNAL_COUNT="$(printf '%s\n' "$ENTRIES" | grep -c . || true)"
+LEDGER_COUNT="$(psql_run -tAc "select count(*) from drizzle.__drizzle_migrations" | tr -d '\r')"
+[ "${LEDGER_COUNT:-0}" -eq "${JOURNAL_COUNT:-0}" ] \
+  || die "journal lists $JOURNAL_COUNT migrations but only $LEDGER_COUNT are applied"
+ok "$LEDGER_COUNT of $JOURNAL_COUNT migrations applied"
 
 # --------------------------------------------------------------------- seed --
 say "Catalogue"
