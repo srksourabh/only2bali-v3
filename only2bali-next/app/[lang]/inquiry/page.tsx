@@ -1,12 +1,15 @@
 "use client";
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { wa, mailto } from "@/lib/config";
+import { wa, mailto, CFG } from "@/lib/config";
+import { toProtocol } from "@/lib/validators/leads";
 
 function InquiryComponent() {
   const [f, setF] = useState({ name: "", phone: "", city: "", size: "", food: "", when: "", msg: "" });
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [sending, setSending] = useState(false);
 
   const searchParams = useSearchParams();
 
@@ -39,12 +42,70 @@ function InquiryComponent() {
     setErr(null); return true;
   };
 
+  /**
+   * Store the enquiry before doing anything else.
+   *
+   * This form previously only opened a WhatsApp draft, so a visitor who closed
+   * the tab — or a site with no WhatsApp number configured — produced a lead
+   * nobody ever saw. The row in Postgres is now the record; WhatsApp is a
+   * convenience on top of it.
+   */
+  const save = async (): Promise<boolean> => {
+    setSending(true);
+    try {
+      const res = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          name: f.name,
+          mobile: f.phone,
+          departureCity: f.city,
+          groupSize: Number(f.size),
+          protocol: toProtocol(f.food),
+          protocolLabel: f.food,
+          travelMonth: f.when,
+          message: f.msg,
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success) {
+        setErr(json?.error ?? "We could not save that just now. Please try again.");
+        return false;
+      }
+      setSaved(true);
+      setErr(null);
+      return true;
+    } catch {
+      setErr("Network problem — your enquiry was not sent. Please try again.");
+      return false;
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!valid()) return;
+    if (!(await save())) return;
+    const link = wa(body());
+    if (link) window.open(link, "_blank");
+    setOk(true);
+  };
+
+  const sendByEmail = async () => {
+    if (!valid()) return;
+    if (!(await save())) return;
+    const link = mailto("Group Inquiry — Only2Bali", body());
+    if (link) window.location.href = link;
+    setOk(true);
+  };
+
   return (
     <main><section><div className="wrap">
       <span className="tag">Group Inquiry</span>
       <h2>Ready to plan? Tell us about your group.</h2>
       <p className="sub">Share the basics and our travel designer will call you back with a customized plan — no payment, no obligation.</p>
-      <form onSubmit={(e) => { e.preventDefault(); if (valid()) { window.open(wa(body()), "_blank"); setOk(true); } }} noValidate>
+      <form onSubmit={submit} noValidate>
         <div className="row">
           <div><label htmlFor="ln">Your name *</label><input id="ln" value={f.name} onChange={set("name")} required /></div>
           <div><label htmlFor="lp">WhatsApp number *</label><input id="lp" type="tel" value={f.phone} onChange={set("phone")} placeholder="+91…" required /></div>
@@ -65,11 +126,20 @@ function InquiryComponent() {
           <textarea id="lm" rows={3} value={f.msg} onChange={set("msg")} placeholder="Cook needed, kitchen stay, temple visits, special occasions…" />
         </div>
         {err && <p className="errmsg" role="alert">{err}</p>}
-        <button className="btn btn-g" type="submit">Send Inquiry via WhatsApp</button>{" "}
-        <button className="btn btn-o" type="button" onClick={() => { if (valid()) { window.location.href = mailto("Group Inquiry — Only2Bali", body()); setOk(true); } }}>
-          Send by Email Instead
-        </button>
-        {ok && <div className="okbox">✅ Inquiry prepared! Complete sending it — we reply within 24 hours.</div>}
+        <button className="btn btn-g" type="submit" disabled={sending}>
+          {sending ? "Sending…" : CFG.whatsapp ? "Send Inquiry via WhatsApp" : "Send Inquiry"}
+        </button>{" "}
+        {CFG.email && (
+          <button className="btn btn-o" type="button" onClick={sendByEmail} disabled={sending}>
+            Send by Email Instead
+          </button>
+        )}
+        {ok && (
+          <div className="okbox">
+            {saved && "✅ Inquiry received — we reply within 24 hours."}
+            {saved && CFG.configured && " Your message is also open in WhatsApp or email; sending it is optional."}
+          </div>
+        )}
       </form>
     </div></section></main>
   );

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { wa } from "@/lib/config";
+import { wa, CFG } from "@/lib/config";
 
 const TYPES = ["Vegetarian restaurant","Vegan café","Jain-capable kitchen","Villa with kitchen","Hotel with veg meal support","Transport provider","Guide (Indian language)","Chef / cook","Activity partner"];
 const CAPS = ["Vegetarian", "Jain", "Vegan", "Kitchen available"];
@@ -10,18 +10,57 @@ export default function Vendors() {
   const [caps, setCaps] = useState<string[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
+  const [sending, setSending] = useState(false);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setF((s) => ({ ...s, [k]: e.target.value }));
 
-  const submit = (e: React.FormEvent) => {
+  /**
+   * The application is stored before WhatsApp is opened. Onboarding a provider
+   * is the whole point of the marketplace; losing the submission because the
+   * visitor never sent the draft is not acceptable.
+   */
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!f.name || !f.type || !f.loc || !f.phone || caps.length === 0) {
       setErr("Please complete: name, business type, location, WhatsApp/phone, and at least one dietary capability."); return;
     }
     if (f.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email)) { setErr("Please enter a valid email address (or leave it blank)."); return; }
     setErr(null);
+
+    setSending(true);
+    try {
+      const res = await fetch("/api/vendor-applications", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          businessName: f.name,
+          businessType: f.type,
+          baseArea: f.loc,
+          cuisine: f.cuisine,
+          capabilities: caps,
+          languages: f.langs,
+          priceBand: f.price,
+          whatsapp: f.phone,
+          email: f.email,
+          availability: f.avail,
+          notes: f.notes,
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success) {
+        setErr(json?.error ?? "We could not save that just now. Please try again.");
+        return;
+      }
+    } catch {
+      setErr("Network problem — your application was not sent. Please try again.");
+      return;
+    } finally {
+      setSending(false);
+    }
+
     const body = `VENDOR APPLICATION — Only2Bali\n• Business: ${f.name}\n• Type: ${f.type}\n• Location/areas: ${f.loc}${f.cuisine ? `\n• Cuisine/service: ${f.cuisine}` : ""}\n• Capability: ${caps.join(", ")}${f.langs ? `\n• Languages: ${f.langs}` : ""}${f.price ? `\n• Pricing band: ${f.price}` : ""}\n• Phone/WA: ${f.phone}${f.email ? `\n• Email: ${f.email}` : ""}${f.avail ? `\n• Availability: ${f.avail}` : ""}${f.notes ? `\n• Notes: ${f.notes}` : ""}`;
-    window.open(wa(body), "_blank");
+    const link = wa(body);
+    if (link) window.open(link, "_blank");
     setOk(true);
   };
 
@@ -67,9 +106,15 @@ export default function Vendors() {
           <div><label htmlFor="vno">Special notes</label><input id="vno" value={f.notes} onChange={set("notes")} /></div>
         </div>
         {err && <p className="errmsg" role="alert">{err}</p>}
-        <button className="btn btn-p" type="submit">Apply to Join</button>
-        <p className="fineprint">Submitting opens WhatsApp with your application pre-filled — nothing is sent without your confirmation.</p>
-        {ok && <div className="okbox">✅ Application prepared! Complete sending it in WhatsApp. We typically respond within 2 business days.</div>}
+        <button className="btn btn-p" type="submit" disabled={sending}>
+          {sending ? "Sending…" : "Apply to Join"}
+        </button>
+        <p className="fineprint">
+          {CFG.whatsapp
+            ? "Your application is recorded when you submit, and WhatsApp opens with a copy so you can add anything else."
+            : "Your application is recorded when you submit."}
+        </p>
+        {ok && <div className="okbox">✅ Application received. We typically respond within 2 business days.</div>}
       </form>
     </div></section></main>
   );

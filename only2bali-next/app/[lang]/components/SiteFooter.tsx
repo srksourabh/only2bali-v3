@@ -15,8 +15,13 @@ export default function SiteFooter({ dict }: { dict: Dictionary }) {
         </div>
         <p className="foottag">{dict.footer.tagline}</p>
         <p className="footnote">
-          © {new Date().getFullYear()} Only2Bali · {dict.footer.note} ·{" "}
-          <a href={`mailto:${CFG.email}`}>{CFG.email}</a>
+          © {new Date().getFullYear()} Only2Bali · {dict.footer.note}
+          {CFG.email && (
+            <>
+              {" · "}
+              <a href={`mailto:${CFG.email}`}>{CFG.email}</a>
+            </>
+          )}
         </p>
       </div>
     </footer>
