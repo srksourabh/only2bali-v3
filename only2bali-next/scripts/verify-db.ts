@@ -56,7 +56,7 @@ async function mustReject(name: string, statement: string, expectConstraint?: st
   } catch (e) {
     const msg = errorText(e);
     const isConstraint =
-      /violates check constraint|violates foreign key|violates not-null|invalid input value/i.test(msg);
+      /violates check constraint|violates foreign key|violates not-null|invalid input value|duplicate key value violates unique constraint/i.test(msg);
     const named = !expectConstraint || msg.includes(expectConstraint);
     check(
       name,
@@ -91,16 +91,16 @@ async function main() {
       (select count(*) from pg_constraint where contype='c' and connamespace='public'::regnamespace) as checks
   `)) as unknown as [{ tables: string; enums: string; indexes: string; checks: string }];
   const c = counts[0];
-  check("all tables present", Number(c.tables) >= 43, `${c.tables} tables`);
-  check("enums present", Number(c.enums) >= 29, `${c.enums} enums`);
+  check("all tables present", Number(c.tables) >= 45, `${c.tables} tables`);
+  check("enums present", Number(c.enums) >= 32, `${c.enums} enums`);
   check("indexes present", Number(c.indexes) >= 80, `${c.indexes} indexes`);
-  check("check constraints present", Number(c.checks) >= 4, `${c.checks} constraints`);
+  check("check constraints present", Number(c.checks) >= 6, `${c.checks} constraints`);
 
   const missing: string[] = [];
   for (const t of ["account", "session", "otp_code", "audit_log", "circuit", "package",
                    "departure", "trip_request", "offer", "booking", "vendor",
                    "service_listing", "listing_compliance", "lead", "vendor_application",
-                   "rate_limit"]) {
+                   "rate_limit", "payment", "payment_event"]) {
     const r = (await db.execute(
       sql`select to_regclass(${"public." + t}) is not null as ok`
     )) as unknown as [{ ok: boolean }];
@@ -135,6 +135,42 @@ async function main() {
     "an unknown food protocol is not a valid value",
     `insert into trip_request (protocol, group_size) values ('non_vegetarian', 2)`
   );
+
+  // ---------- payments: the rules that must hold before real money moves ----------
+  console.log("\nPayment guards (no gateway wired up yet, but the rows must be safe)");
+  await mustReject(
+    "a payment amount cannot be zero or negative",
+    `insert into payment (booking_id, provider, amount, idempotency_key)
+     select id, 'razorpay', -100, 'verify-negative-${Date.now()}' from booking limit 1`,
+    "payment_amount_positive"
+  );
+  await mustReject(
+    "a refund cannot exceed what was captured",
+    `insert into payment (booking_id, provider, amount, refunded_amount, idempotency_key)
+     select id, 'razorpay', 1000, 2000, 'verify-overrefund-${Date.now()}' from booking limit 1`,
+    "payment_refund_within_amount"
+  );
+  {
+    const key = `verify-dup-${Date.now()}`;
+    const [{ id: bookingId } = {}] = (await db.execute(
+      sql`select id from booking limit 1`
+    )) as unknown as [{ id: string } | undefined];
+    if (bookingId) {
+      await db.execute(sql`
+        insert into payment (booking_id, provider, amount, idempotency_key)
+        values (${bookingId}, 'razorpay', 100, ${key})
+      `);
+      await mustReject(
+        "a retried checkout cannot create a second charge (idempotency key is unique)",
+        `insert into payment (booking_id, provider, amount, idempotency_key)
+         values ('${bookingId}', 'razorpay', 100, '${key}')`,
+        "payment_idempotency_key_unique"
+      );
+      await db.execute(sql`delete from payment where idempotency_key = ${key}`);
+    } else {
+      check("a retried checkout cannot create a second charge", false, "no booking exists to attach a payment to — seed the database first");
+    }
+  }
 
   // ---------- catalogue ----------
   console.log("\nCatalogue");

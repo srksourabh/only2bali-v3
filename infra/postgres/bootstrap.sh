@@ -208,6 +208,28 @@ else
   ok "catalogue seeded"
 fi
 
+# --------------------------------------------------------------- demo data --
+#
+# Opt-in, because fake providers and fake bookings in a live database are worse
+# than an empty one: they get quoted in a report, or sold to.
+#
+#     O2B_SEED_DEMO=1 bash bootstrap.sh <hostname>
+#
+# It depends on the catalogue ids in seed.sql, so it can only be loaded on a
+# database seeded from that same file.
+if [ "${O2B_SEED_DEMO:-0}" = "1" ] && [ -f "$HERE/seed-demo.sql" ]; then
+  say "Demo data"
+  DEMO="$(psql_run -tAc "select count(*) from vendor where slug like 'demo-%'" | tr -d '\r')"
+  if [ "${DEMO:-0}" -gt 0 ]; then
+    ok "demo data already present ($DEMO providers), skipping"
+  else
+    psql_run -q -f - < "$HERE/seed-demo.sql" || die "demo seed failed"
+    ok "demo providers, bookings and reviews loaded"
+    warn "remove before real traffic: delete from booking where reference like 'O2B-DEMO-%';"
+    warn "                            delete from account where email like '%@demo.only2bali.com';"
+  fi
+fi
+
 # ------------------------------------------------------------------- verify --
 say "Verification"
 

@@ -62,6 +62,8 @@ const EMAIL = `e2e-${run}@only2bali.test`;
 const FLOOD_EMAIL = `e2e-flood-${run}@only2bali.test`;
 
 let sessionCookie = "";
+/** Set once a booking has taken seats, so cleanup can give them back. */
+let bookedDepartureId = "";
 
 interface CallOptions {
   ip?: string;
@@ -429,6 +431,118 @@ async function main() {
     check("the sign-in is audited", Number(row.n) === 1, `${row.n} rows`);
   }
 
+  // ---------- booking, seat inventory and the price boundary ----------
+  //
+  // Run while the session is still live, because a booking without a signed-in
+  // account is refused by design.
+  console.log("\nBooking and seat inventory");
+  {
+    const res = await call("/api/bookings", {
+      body: { departureId: "00000000-0000-0000-0000-000000000000", pax: 1, protocol: "vegetarian",
+              travellers: [{ fullName: "Anonymous Test" }] },
+    });
+    check("an anonymous booking is refused", res.status === 401, `HTTP ${res.status}`);
+  }
+
+  const [dep] = (await db.execute(sql`
+    select d.id, d.price_amount, d.seats_total, d.seats_held, d.seats_booked
+    from departure d
+    join package p on p.id = d.package_id
+    where d.status = 'open' and p.status = 'published'
+      and d.seats_total - d.seats_held - d.seats_booked >= 3
+    order by d.start_date asc limit 1
+  `)) as unknown as [
+    { id: string; price_amount: string; seats_total: number; seats_held: number; seats_booked: number } | undefined
+  ];
+
+  if (!check("a bookable departure exists", Boolean(dep))) {
+    console.log("  (skipping the booking checks — seed the catalogue first)");
+  } else {
+    bookedDepartureId = dep!.id;
+    const unitPrice = Number(dep!.price_amount);
+    const heldBefore = Number(dep!.seats_held);
+
+    {
+      const res = await call("/api/bookings", {
+        cookie: sessionCookie,
+        body: { departureId: dep!.id, pax: 3, protocol: "jain", travellers: [{ fullName: "Only One Name" }] },
+      });
+      check("a group size that disagrees with the traveller list is refused",
+        res.status === 400, `HTTP ${res.status}`);
+    }
+
+    {
+      const res = await call("/api/bookings", {
+        cookie: sessionCookie,
+        body: {
+          departureId: dep!.id,
+          pax: 2,
+          rooms: 1,
+          protocol: "jain",
+          // The client tries to set its own price. It must be ignored — Zod
+          // strips it, and nothing downstream would read it anyway.
+          grossAmount: 1,
+          amount: 1,
+          travellers: [
+            { fullName: `E2E Lead ${run}`, age: 40, dietaryNotes: "Jain, no root vegetables" },
+            { fullName: `E2E Companion ${run}`, age: 38 },
+          ],
+        },
+      });
+      const body = await json(res);
+      check("a complete booking is accepted", res.status === 201 && body?.success === true, `HTTP ${res.status}`);
+      check("it returns a reference", /^O2B-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(body?.data?.reference ?? ""),
+        body?.data?.reference);
+      check("the amount is computed on the server, not taken from the client",
+        body?.data?.grossAmount === unitPrice * 2, `${body?.data?.grossAmount} vs ${unitPrice * 2}`);
+      check("the seats are held for a limited time",
+        Boolean(body?.data?.holdExpiresAt) && new Date(body.data.holdExpiresAt).getTime() > Date.now(),
+        body?.data?.holdExpiresAt);
+
+      const [row] = (await db.execute(sql`
+        select status, gross_amount, commission_amount, net_amount, pax
+        from booking where reference = ${body?.data?.reference ?? ""}
+      `)) as unknown as [
+        { status: string; gross_amount: string; commission_amount: string; net_amount: string; pax: number } | undefined
+      ];
+      check("the booking is stored awaiting payment", row?.status === "pending_payment", row?.status);
+      check("the stored amount ignores the client's number",
+        Boolean(row) && Number(row!.gross_amount) === unitPrice * 2, row?.gross_amount);
+      check("commission and net add back up to the gross",
+        Boolean(row) && Number(row!.commission_amount) + Number(row!.net_amount) === Number(row!.gross_amount));
+
+      const [after] = (await db.execute(sql`
+        select seats_held from departure where id = ${dep!.id}
+      `)) as unknown as [{ seats_held: number }];
+      check("the seats leave available inventory", Number(after.seats_held) === heldBefore + 2,
+        `${after.seats_held} held, was ${heldBefore}`);
+
+      const [holds] = (await db.execute(sql`
+        select count(*)::int as n from seat_hold where departure_id = ${dep!.id} and expires_at > now()
+      `)) as unknown as [{ n: number }];
+      check("a live seat hold exists", Number(holds.n) >= 1, `${holds.n} holds`);
+    }
+
+    {
+      // More seats than the departure can possibly have. The check constraint
+      // `departure_seats_sane` is the backstop; this proves the application
+      // refuses before it gets there, with a useful answer rather than a 500.
+      const res = await call("/api/bookings", {
+        cookie: sessionCookie,
+        body: {
+          departureId: dep!.id,
+          pax: 30,
+          protocol: "vegetarian",
+          travellers: Array.from({ length: 30 }, (_, i) => ({ fullName: `E2E Overflow ${run} ${i}` })),
+        },
+      });
+      const body = await json(res);
+      check("a departure cannot be oversold", res.status === 409, `HTTP ${res.status}`);
+      check("and it says how many seats are actually left",
+        typeof body?.data?.seatsAvailable === "number", String(body?.data?.seatsAvailable));
+    }
+  }
+
   // ---------- signing out actually invalidates ----------
   console.log("\nSign-out");
   {
@@ -483,6 +597,35 @@ async function main() {
 
 /** Everything this run created, keyed to identifiers no real user can hold. */
 async function cleanup() {
+  /**
+   * Bookings first. `booking.trip_request_id` is ON DELETE RESTRICT, so
+   * deleting the account would otherwise fail rather than cascade — which is
+   * the correct rule for real data and a trap for a test that ignores it.
+   */
+  await db.execute(sql`
+    delete from booking where traveller_id in (
+      select t.id from traveller t
+      join account a on a.id = t.account_id
+      where a.email = ${EMAIL})
+  `);
+  await db.execute(sql`
+    delete from seat_hold where trip_request_id in (
+      select tr.id from trip_request tr
+      join traveller t on t.id = tr.traveller_id
+      join account a on a.id = t.account_id
+      where a.email = ${EMAIL})
+  `);
+  if (bookedDepartureId) {
+    // Recomputed from the holds that remain rather than decremented by what
+    // this run took, so a half-finished run cannot leave the count drifting.
+    await db.execute(sql`
+      update departure d set seats_held = coalesce((
+        select sum(h.seats) from seat_hold h
+        where h.departure_id = d.id and h.expires_at > now()), 0)
+      where d.id = ${bookedDepartureId}
+    `);
+  }
+
   await db.execute(sql`delete from account where email = ${EMAIL}`);
   await db.execute(sql`delete from otp_code where identifier in (${`email:${EMAIL}`}, ${`email:${FLOOD_EMAIL}`})`);
   await db.execute(sql`delete from lead where name = ${`E2E ${run}`}`);
@@ -494,7 +637,8 @@ async function cleanup() {
     select
       (select count(*) from account where email in (${EMAIL}, ${FLOOD_EMAIL}))
     + (select count(*) from lead where name = ${`E2E ${run}`})
-    + (select count(*) from vendor_application where business_name = ${`E2E Kitchen ${run}`}) as n
+    + (select count(*) from vendor_application where business_name = ${`E2E Kitchen ${run}`})
+    + (select count(*) from booking_traveller where full_name like ${`E2E %${run}%`}) as n
   `)) as unknown as [{ n: number }];
   check("the test leaves nothing behind", Number(left.n) === 0, `${left.n} rows remain`);
 }

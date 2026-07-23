@@ -140,3 +140,37 @@ export const documentKind = pgEnum("document_kind", [
   "photo_id",
   "kitchen_certificate",
 ]);
+
+/**
+ * Payments.
+ *
+ * Deliberately provider-agnostic. Which gateway Only2Bali signs with is a
+ * commercial decision that has not been made, and the schema must not force it:
+ * a provider is a column value, not a table name. Adding one later is a new enum
+ * value, not a migration of live money rows.
+ */
+export const paymentProvider = pgEnum("payment_provider", [
+  "razorpay",
+  "stripe",
+  "payu",
+  "cashfree",
+  /** Wire transfer reconciled by hand. Real, and the only option on day one. */
+  "manual_bank_transfer",
+]);
+
+/**
+ * Authorization and capture are separate states because they are separate events
+ * at every gateway. Collapsing them is how a booking gets confirmed against
+ * money that was never actually taken.
+ */
+export const paymentStatus = pgEnum("payment_status", [
+  "created",
+  "authorized",
+  "captured",
+  "failed",
+  "refunded",
+  "partially_refunded",
+]);
+
+/** Group travel is rarely paid in one go. */
+export const paymentPurpose = pgEnum("payment_purpose", ["deposit", "balance", "full", "addon"]);

@@ -14,12 +14,14 @@
 |---|---|---|
 | Django API | **Live**, being retired | Azure App Service. Accounts, OTP, journey wizard. Zoho removed 2026-07-23. |
 | React site | **Live**, legacy | Now has a 404 route. Four routes still call the deleted FastAPI service. |
-| Next.js site | **Live** | Accounts, OTP login, sessions, catalogue, package pages, lead capture. |
+| Next.js site | **Live** | Accounts, OTP login, sessions, catalogue, package pages, lead capture, booking. |
+| Postgres (VPS) | **Live** | `o2b-postgres`, own container, port 5433, mTLS. 45 tables, migrations 0000-0002 applied, catalogue + demo marketplace data seeded. |
+| Booking flow | **Shipped, no gateway yet** | `POST /api/bookings` holds seats and computes the amount server-side. `payment` / `payment_event` tables exist; no provider is wired in. |
 | FastAPI layer | **Deleted** | Removed 2026-07-22. Its chat widget removed from the CRA 2026-07-23. |
-| Migration CRA → Next.js | **In progress** | Accounts no longer block it. Booking does. |
-| Test coverage | 93 unit + 60 end-to-end + 38 database checks | All three run in CI. |
+| Migration CRA → Next.js | **In progress** | Accounts and booking no longer block it. Payment collection does. |
+| Test coverage | 97 unit + 74 end-to-end + 41 database checks | All three run in CI. |
 | Docs | Refreshed 2026-07-23 | |
-| Build | **In progress** | Sprint 0 items closed except the two that need a human. |
+| Build | **In progress** | Sprint 0 closed. Payment gateway selection is the next real blocker. |
 
 ---
 
@@ -157,7 +159,8 @@ Not done - this is what blocks retiring the React app:
       full sign-in round trip, and the shared rate limit
 - [ ] Add Django tests - there are none
 - [ ] Add route guards to the React app, or accept as-is given it is being retired
-- [ ] Extend the end-to-end suite to booking, once a booking flow exists
+- [x] Extend the end-to-end suite to booking - seat hold, server-computed amount, oversell
+      refused, all under `Booking and seat inventory` in `scripts/e2e.ts`
 
 ---
 
@@ -165,6 +168,7 @@ Not done - this is what blocks retiring the React app:
 
 | Date | Milestone | Notes |
 |---|---|---|
+| 2026-07-23 | Postgres live on the VPS, booking flow shipped, payment schema in place | `o2b-postgres` in its own Docker container, mTLS, 45 tables. `payment` / `payment_event` tables, `POST /api/bookings` with seat holds and a server-computed amount. Marketplace demo data (providers, listings, compliance, bookings, a review) seeded on both the local test database and the VPS. |
 | 2026-07-23 | Sprint 0 closed except the human steps | Zoho deleted, leads and vendor applications persisted, package detail page, Postgres rate limiting, CRA 404, end-to-end suite in CI. |
 | 2026-07-16 | Repo cloned locally + docs added | Project folder had been empty. Four apps mapped, seven live defects found and recorded. |
 | 2026-07-15 | Forked from `caloganathan/Only2bali_v3.0` | Now taken forward as Sourabh's own product. |
@@ -188,7 +192,15 @@ Not done - this is what blocks retiring the React app:
 - [ ] **Move production to Sourabh's Vercel** — `docs/vercel-handover.md`. This unblocks
       contact details and login in one step.
 - [ ] Choose an email provider and set `RESEND_API_KEY`, so people can actually sign in.
+- [ ] **Choose a payment gateway** (Razorpay is the natural default for INR — UPI, cards,
+      netbanking, no forex headache). `payment` / `payment_event` exist, `POST /api/bookings`
+      already produces the exact server-computed amount a gateway order needs. What is
+      missing is the provider integration itself: creating the gateway order, verifying the
+      webhook signature, and writing `payment_event` rows idempotently. `GET /api/health`
+      already reports `"payments": { "provider": null, "configured": false }` so this is
+      visible rather than discovered by a traveller stuck at checkout.
 - [ ] Decide what happens to the four legacy React routes that call the deleted FastAPI
       service.
-- [ ] Next feature: trip requests, which is the first thing that fills the marketplace
-      tables the schema already has.
+- [ ] Remove the demo marketplace data (`delete from booking where reference like
+      'O2B-DEMO-%'`; `delete from account where email like '%@demo.only2bali.com'`) before
+      the site takes real signups — `infra/postgres/seed-demo.sql` documents both statements.

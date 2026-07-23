@@ -319,3 +319,90 @@ fail with the catch restored.
 Also added `vitest.config.ts` — the first test to import a module using `@/lib/db`
 failed with "Cannot find package", because Vitest had never needed the tsconfig
 alias while every test imported relatively.
+
+### Later the same day: Postgres on the VPS, booking flow, payment schema
+
+**Asked for**: create the Postgres database in its own Docker container on the
+Hostinger VPS with sample data, then get the product to a state where a payment
+gateway can be planned against it.
+
+**Postgres on the VPS**: `o2b-postgres`, its own container, own volume
+(`only2bali_pgdata`), own network, port 5433 — separate in every respect from
+the pre-existing `nusakerja-postgres` (PG16, port 5432, no firewall, no client
+cert requirement — not this project's box to fix, but worth knowing what shares
+the server). mTLS confirmed live: a password with no client certificate gets
+`FATAL: connection requires a valid client certificate`.
+
+**Two real bugs found running `bootstrap.sh` for the first time**:
+1. The migration loop read the journal on stdin, and `docker compose exec -T`
+   consumes stdin — so the loop's first `psql` call swallowed the rest of the
+   heredoc and it ran exactly once. `0000` applied, `0001` silently never seen,
+   script exited 0, database sat at 41 tables where 43 were expected, nothing
+   printed an error. Fixed by reading the journal on fd 3 and asserting the
+   ledger count matches the journal count before claiming success.
+2. `psql` was never given a password — `pg_hba.conf` requires scram-sha-256
+   even on the container's own unix socket. Fixed with `PGPASSWORD` exported
+   and passed by name (`-e PGPASSWORD`), never by value, so it does not appear
+   in `ps` on the server.
+3. `core.autocrlf=true` on this machine put CRLF into `bootstrap.sh`, which
+   died on its own shebang line on the VPS (`$'\r': command not found`). Added
+   `.gitattributes` pinning `.sh`/`.sql`/`.conf`/`.yml` to LF; renormalising
+   also rewrote two GitHub workflow files that were stored with CRLF.
+
+**Marketplace demo data** — `lib/db/seed-marketplace.ts` (new), run with
+`npm run db:seed:demo`. Four verified providers with real compliance evidence
+and photos (a Jain-line restaurant, a villa with private kitchens, group
+transport, an accompanying cook), five listings, three traveller accounts,
+three trip requests in different states (draft / on the provider board /
+booked), three offers on the published request, five leads across every
+status, three provider applications, and three bookings — confirmed, awaiting
+payment, and completed with one published review. Everything is keyed to
+`@demo.only2bali.com` / `demo-*` / `O2B-DEMO-*` so it can never touch real
+data — `wipeDemo()` matches on exactly those markers, nothing broader.
+Generated once as SQL (`infra/postgres/seed-demo.sql`) so the VPS needs no
+Node toolchain, same pattern as the catalogue seed. Loaded on the VPS behind
+`O2B_SEED_DEMO=1` — opt-in, because fake providers and bookings in a database
+someone might quote in a report are worse than an empty one.
+
+**Payment schema** (migration `0002_payments.sql`) — `payment` and
+`payment_event`, provider-agnostic on purpose: which gateway to sign with is
+still an open business decision, and a provider is a column value
+(`payment_provider` enum), not a table name. Three guards proved live on both
+the local test database and the VPS: a zero or negative amount is refused
+(`payment_amount_positive`), a refund cannot exceed what was captured
+(`payment_refund_within_amount`), and a retried checkout cannot double-charge
+— `idempotency_key` is unique, so the same key inserted twice is refused by
+Postgres itself, not by application logic that could have a bug in it.
+
+**Booking flow** — `lib/repositories/bookings.ts` + `POST /api/bookings`. Locks
+the departure row (`FOR UPDATE`), sweeps expired seat holds inside the same
+transaction, refuses an oversell with the actual seat count rather than a
+generic error, and computes the amount from the departure's price on the
+server — the client can send anything in the request body and it is ignored.
+Produces a `pending_payment` booking and a 15-minute seat hold; nothing here
+calls a gateway, which is deliberate, so the gateway choice does not force a
+rewrite of this code.
+
+**`GET /api/health`** now reports `"payments": { "provider": null | "razorpay"
+| "stripe", "configured": boolean }`, same pattern as `otpDelivery` — an
+unconfigured gateway is visible from monitoring, not discovered by a
+traveller stuck at checkout.
+
+**Counts after**: 97 unit tests, 74 end-to-end checks (14 new, covering the
+booking flow: anonymous booking refused, traveller-count mismatch refused,
+server-computed amount proven against the client's forged number, seat
+inventory actually decrements, oversell refused with the real count), 41
+database checks (3 new, covering the payment guards). Typecheck clean, build
+green.
+
+**Deliberately not done**: no payment gateway is integrated. The schema and
+the booking flow are the foundation a gateway plugs into; choosing Razorpay
+vs. Stripe vs. something else, and building the order-creation and webhook
+handling, is the next real piece of work. See "Next up" in `docs/progress.md`.
+
+**A mid-session tangent**: a large unfilled SaaS-audit template arrived
+mid-turn (placeholders for app name, URL, credentials all blank, asking for
+PDF/xlsx/screenshot deliverables no tool here can produce). Asked the user
+what to do with it; told to ignore it for now and finish the payment work.
+Noted here so a future session doesn't mistake it for a real, actioned
+request.

@@ -3,4 +3,5 @@ export * from "./identity";
 export * from "./catalog";
 export * from "./vendor";
 export * from "./marketplace";
+export * from "./payments";
 export * from "./infra";
