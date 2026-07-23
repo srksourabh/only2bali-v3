@@ -41,7 +41,8 @@ export async function generateMetadata({
   params: Promise<{ lang: string; slug: string }>;
 }): Promise<Metadata> {
   const { lang, slug } = await params;
-  const pkg = await getPackageBySlug(slug).catch(() => null);
+  // Not caught. See the note on the page component below.
+  const pkg = await getPackageBySlug(slug);
   if (!pkg) return { title: "Not found — Only2Bali" };
 
   return {
@@ -69,7 +70,24 @@ export default async function PackagePage({
   const lang = rawLang as Locale;
   const dict = await getDictionary(lang);
 
-  const pkg = await getPackageBySlug(slug).catch(() => null);
+  /**
+   * Deliberately not wrapped in a catch.
+   *
+   * This used to be `.catch(() => null)`, which turned any database failure
+   * into `notFound()`. The result was observed in production on 2026-07-23:
+   * every package page returned 404 while `DATABASE_URL` was unset, Vercel's
+   * error tracker showed nothing at all, and crawlers were told the packages
+   * did not exist.
+   *
+   * 404 must mean "there is no such package", never "we could not ask". A
+   * failed query now propagates: the request 500s, which is truthful, and the
+   * error appears in the runtime logs where someone will see it.
+   *
+   * The homepage does the opposite on purpose — it is marketing and must render
+   * from the dictionary when Postgres is down. This page cannot: it has no
+   * itinerary to show and must not invent one.
+   */
+  const pkg = await getPackageBySlug(slug);
   if (!pkg) notFound();
 
   const copy = dict.packages.items.find((i) => i.slug === slug);
