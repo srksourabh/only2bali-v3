@@ -91,7 +91,7 @@ async function main() {
       (select count(*) from pg_constraint where contype='c' and connamespace='public'::regnamespace) as checks
   `)) as unknown as [{ tables: string; enums: string; indexes: string; checks: string }];
   const c = counts[0];
-  check("41 tables present", Number(c.tables) >= 41, `${c.tables} tables`);
+  check("all tables present", Number(c.tables) >= 43, `${c.tables} tables`);
   check("enums present", Number(c.enums) >= 29, `${c.enums} enums`);
   check("indexes present", Number(c.indexes) >= 80, `${c.indexes} indexes`);
   check("check constraints present", Number(c.checks) >= 4, `${c.checks} constraints`);
@@ -99,13 +99,14 @@ async function main() {
   const missing: string[] = [];
   for (const t of ["account", "session", "otp_code", "audit_log", "circuit", "package",
                    "departure", "trip_request", "offer", "booking", "vendor",
-                   "service_listing", "listing_compliance"]) {
+                   "service_listing", "listing_compliance", "lead", "vendor_application",
+                   "rate_limit"]) {
     const r = (await db.execute(
       sql`select to_regclass(${"public." + t}) is not null as ok`
     )) as unknown as [{ ok: boolean }];
     if (!r[0].ok) missing.push(t);
   }
-  check("all core tables exist", missing.length === 0, missing.length ? `missing: ${missing.join(", ")}` : "13 checked");
+  check("all core tables exist", missing.length === 0, missing.length ? `missing: ${missing.join(", ")}` : "16 checked");
 
   // ---------- business rules enforced by the database, not the app ----------
   console.log("\nBusiness rules (must be refused by Postgres itself)");

@@ -160,3 +160,40 @@ export const blackoutDate = pgTable(
   },
   (t) => [index("blackout_scope_date_idx").on(t.scope, t.scopeId, t.date)]
 );
+
+/**
+ * A vendor's first contact, before they have an account.
+ *
+ * `vendor.account_id` is NOT NULL by design — a real provider record belongs to
+ * someone who has signed in and been verified. An application arrives from an
+ * anonymous form, so it cannot be a `vendor` row yet, and it must not create an
+ * unverified account as a side effect of submitting a form. It lands here and is
+ * promoted by an admin once the business is real.
+ */
+export const vendorApplication = pgTable(
+  "vendor_application",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    businessName: text("business_name").notNull(),
+    /** The form's own label, not the `vendor_type` enum — the two do not map
+     *  one to one, and losing what the applicant actually said helps nobody. */
+    businessType: text("business_type").notNull(),
+    baseArea: text("base_area").notNull(),
+    cuisine: text("cuisine"),
+    capabilities: text("capabilities").array().notNull(),
+    languages: text("languages").array(),
+    priceBand: text("price_band"),
+    whatsapp: text("whatsapp").notNull(),
+    email: text("email"),
+    availability: text("availability"),
+    notes: text("notes"),
+    status: verificationStatus("status").notNull().default("pending"),
+    reviewedBy: uuid("reviewed_by").references(() => account.id, { onDelete: "set null" }),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    /** Kept for abuse tracing only. */
+    ip: text("ip"),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("vendor_application_status_idx").on(t.status, t.createdAt)]
+);
