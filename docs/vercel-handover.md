@@ -11,14 +11,37 @@ Verified 2026-07-23 against the running site, not assumed:
 - A project called **`only2bali` already exists on your own team**
   (`srksourabhs-projects`, `prj_Qny5SmpF064e9jXmhezZcHiasK3J`). The repo is
   linked to it through `only2bali-next/.vercel/project.json`.
-- **It is serving the legacy React app, not the Next.js app.**
-  `https://only2bali.vercel.app/api/health` returns the CRA's `index.html` via
-  its SPA catch-all instead of JSON. That is the Root Directory trap below:
-  with the field blank, Vercel reads the root `vercel.json`, which builds
-  `Frontend/`.
-- **The project is not connected to GitHub.** Both of its deployments were
-  pushed from a local machine by the Vercel CLI (`gitDirty: 1`), so a push to
-  `main` deploys nothing. Its last *production* deploy was 2026-07-11.
+- **It was serving the legacy React app.** `/api/health` returned the CRA's
+  `index.html` through its SPA catch-all instead of JSON. That is the Root
+  Directory trap below: with the field blank, Vercel reads the root
+  `vercel.json`, which builds `Frontend/`.
+- **Now fixed by deploying the right directory.** `vercel deploy --prod` run
+  from `only2bali-next/` on 2026-07-23 put the Next.js app on
+  `only2bali.vercel.app`. The CLI uploads the current directory, so it sidesteps
+  the blank Root Directory setting — which is still blank, and still has to be
+  fixed before step 1 below.
+- **The project is not connected to GitHub.** Every deployment so far was pushed
+  from a laptop by the Vercel CLI, so a push to `main` deploys nothing.
+- **Connect Git only after Root Directory is set.** In that order. Connect it
+  first and the next push to `main` builds `Frontend/` and puts the legacy app
+  back on production automatically.
+
+### What that production deploy can and cannot do
+
+`AUTH_SECRET` is the only environment variable set on the project, so:
+
+| Works | Does not |
+|---|---|
+| Homepage, all seven locales, correct `<html lang>` | Package pages — they 404, because the catalogue lives in Postgres |
+| Static pages: about, food, faq, privacy, terms | Sign-in — `/api/auth/request-otp` answers 503 |
+| Unknown URLs return a real 404 | Enquiry and vendor forms — the save fails, so the form says so |
+| `/api/health` reporting all of the above honestly | WhatsApp and email buttons — hidden, no number configured |
+
+Everything in the right column is one variable away: `DATABASE_URL` plus the
+three `PGSSL_*` PEMs. Until then the site browses but cannot transact.
+
+Roll back to the previous production deployment at any time with
+`vercel rollback` from `only2bali-next/`.
 - `only2bali-v3-0.vercel.app` — the site the docs used to call production — is
   a separate deployment on **caloganathan's** account.
 
@@ -51,9 +74,22 @@ Everything else that is still open depends on this one step.
    `Frontend/` — the legacy React app. That is what `only2bali.vercel.app` is
    serving right now.
 
-3. **Add the environment variables** (Settings → Environment Variables), for
-   Production and Preview. Names and meanings are in
-   `only2bali-next/.env.example`.
+3. **Add the environment variables.** Either in Settings → Environment
+   Variables, or from `only2bali-next/` with the CLI, which reads the value from
+   your terminal rather than putting it in a file:
+
+   ```bash
+   npx vercel env add DATABASE_URL production
+   npx vercel env add PGSSL_CA production      # base64 of the PEM
+   npx vercel env add PGSSL_CERT production
+   npx vercel env add PGSSL_KEY production
+   npx vercel env add RESEND_API_KEY production
+   npx vercel env add NEXT_PUBLIC_WHATSAPP_NUMBER production
+   npx vercel env add NEXT_PUBLIC_CONTACT_EMAIL production
+   npx vercel deploy --prod                    # variables apply on next build
+   ```
+
+   Names and meanings are in `only2bali-next/.env.example`.
 
    | Variable | Where it comes from |
    |---|---|
