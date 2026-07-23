@@ -29,6 +29,7 @@ Thumbs.db
 
 # Next.js
 .next/
+only2bali-next/.e2e/
 next-env.d.ts
 *.tsbuildinfo
 
