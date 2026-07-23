@@ -7,17 +7,19 @@
 
 ## Status overview
 
+> Status overview last verified **2026-07-23** by running the build, the tests and the
+> end-to-end suite, not by reading the previous version of this table.
+
 | Area | Status | Note |
 |---|---|---|
-| Django API | **Live** | Azure App Service. Accounts, OTP, journey wizard, Zoho. |
-| React site | **Live**, legacy | Full features. Being replaced. |
-| Next.js site | **Live**, incomplete | No accounts, OTP, vendor onboarding, or booking. |
-| FastAPI layer | **Orphaned** | Not deployed, unauthenticated. Fate undecided. |
-| Migration CRA → Next.js | **In progress** | Blocked on accounts. See below. |
-| Test coverage | **Minimal** | Vitest in Next.js only. Nothing runs in CI. |
-| Docs | **Done** (2026-07-16) | This set of files. |
-| Upgrade planning | **Done** (2026-07-16) | Plan, backlog, assumptions, task breakdown, UI samples. |
-| Build | **Not started** | Decision reserved by Sourabh - see below. No code changed yet. |
+| Django API | **Live**, being retired | Azure App Service. Accounts, OTP, journey wizard. Zoho removed 2026-07-23. |
+| React site | **Live**, legacy | Now has a 404 route. Four routes still call the deleted FastAPI service. |
+| Next.js site | **Live** | Accounts, OTP login, sessions, catalogue, package pages, lead capture. |
+| FastAPI layer | **Deleted** | Removed 2026-07-22. Its chat widget removed from the CRA 2026-07-23. |
+| Migration CRA → Next.js | **In progress** | Accounts no longer block it. Booking does. |
+| Test coverage | 93 unit + 60 end-to-end + 38 database checks | All three run in CI. |
+| Docs | Refreshed 2026-07-23 | |
+| Build | **In progress** | Sprint 0 items closed except the two that need a human. |
 
 ---
 
@@ -40,39 +42,42 @@ Phase 0 Task 0.1 (delete-endpoint auth).
 
 > Security. Everything else on this page can wait.
 
-- [ ] **Rotate the Zoho credentials.** `Backend/journeys/views.py:495-497` and `:537`
-      hardcode the refresh token, client id, client secret, and an access token. Both
-      repos holding them were public. The refresh token never expires on its own and
-      reaches the CRM - i.e. customer data. **Revoke and reissue at Zoho.** Deleting the
-      lines does not revoke anything; git history and the public fork keep them forever.
-- [ ] **Rotate the SpringEdge SMS API key.** `Backend/users/serializers.py:67`. It sends
-      the login OTPs and is billable.
-- [ ] **Move both to env vars.** `Backend/users/views.py:332-334` already reads the same
-      Zoho credentials correctly with `os.getenv` - copy that pattern into `journeys`.
-- [ ] **Fix the OTP flow.** `users/views.py` generates 4-digit codes, caches them in
-      plaintext, and compares with `!=`. The hardened `OTP` / `OTPAuditLog` /
-      `RateLimitLog` models already exist in `models.py` and are never imported. Wire
-      them in - the hard part is written.
-- [ ] **Correct or remove `docs/security-fixes-status.md`.** It asserts both of the above were fixed.
-      They were not. It is actively misleading.
+- [ ] **Revoke the Zoho credentials at Zoho.** The integration was deleted from the code
+      on 2026-07-23, but the refresh token, client id, client secret and access token
+      remain in git history and both repositories that held them were public. The refresh
+      token does not expire on its own and reaches the CRM — customer data. **Only Sourabh
+      can do this.** Deleting code revokes nothing.
+- [ ] **Rotate the SpringEdge SMS API key** at the provider, for the same reason. It
+      sends the login OTPs and is billable. **Only Sourabh can do this.**
+- [x] Move secrets out of source — done; Zoho is gone entirely and SpringEdge reads
+      `SPRINGEDGE_API_KEY` from the environment.
+- [ ] **Fix the Django OTP flow.** `users/views.py` still generates 4-digit codes, caches
+      them in plaintext, and compares with `!=`. The hardened `OTP` / `OTPAuditLog` /
+      `RateLimitLog` models exist in `models.py` and are never imported. Lower priority
+      than it was: the Next.js app has a correct implementation and is the destination.
+- [x] Correct `docs/security-fixes-status.md` — rewritten 2026-07-22, extended 2026-07-23.
 
 ## Urgent
 
 > Things that affect real customers right now.
 
-- [ ] **Replace placeholder contact details on the live site.**
-      `only2bali-next/lib/config.ts` ships WhatsApp `6281200000000` and
-      `hello@only2bali.com`, both marked TODO. Lead capture is WhatsApp + mailto only,
-      so **every lead from the Next.js site currently goes nowhere.**
+- [x] **Placeholder contact details.** `lib/config.ts` now reads
+      `NEXT_PUBLIC_WHATSAPP_NUMBER` / `NEXT_PUBLIC_CONTACT_EMAIL`, rejects the old
+      placeholders, and hides the buttons when unset. Enquiries and vendor applications
+      are written to Postgres before any external app is opened, so a lead no longer
+      depends on the visitor completing a WhatsApp draft.
+- [ ] **Paste the real contact values into Vercel.** Blocked on the item below.
 - [ ] **Get production onto Sourabh's own Vercel.** `only2bali-v3-0.vercel.app` runs
-      from caloganathan's Vercel account, not Sourabh's. Until it moves, he cannot
-      change env vars, fix the placeholders, or roll back his own production site.
-- [ ] **Add a 404 route to the React app.** The SPA catch-all returns HTTP 200 with a
-      blank page for any unmatched URL - verified live on `/food`. Google indexes those
-      as successful pages.
-- [ ] **The chat widget says "We're offline" on the live site.** It calls the FastAPI
-      service in `Backend/app/`, which is deployed nowhere. Either deploy it (with auth
-      added first), or remove the widget.
+      from caloganathan's Vercel account. Until it moves, he cannot set environment
+      variables, enable login, or roll back his own production site. Step-by-step
+      runbook: `docs/vercel-handover.md`. **This is the single blocking item.**
+- [ ] **Configure an OTP provider** (`RESEND_API_KEY` or `SPRINGEDGE_API_KEY`). Until
+      then `/api/auth/request-otp` answers 503 and `/api/health` reports
+      `"otpDelivery": ["none"]`. Blocked on the Vercel move.
+- [x] **404 route in the React app.** Added 2026-07-23 with `noindex`, so unmatched URLs
+      no longer render a blank page that crawlers treat as real.
+- [x] **The offline chat widget.** Removed 2026-07-23 along with its component; the
+      FastAPI service it called was deleted on 2026-07-22.
 
 ## Infrastructure
 
@@ -128,23 +133,31 @@ Not done - this is what blocks retiring the React app:
 
 - [ ] `Backend/only2bali/wsgi.py` - settings check tests dict keys not values, so
       `deployment.py` is dead code
-- [ ] `Frontend/src/App.js` - imports `./Pages/Home` and `./pages/PlanTrip`; only
-      `Pages/` exists. Windows-only luck; breaks on case-sensitive CI
+- [x] `Frontend/src/App.js` - `Pages/` and `pages/` differed only by case. Consolidated
+      into `pages/` on 2026-07-23; `App.js` imports `./pages/Home`
 - [ ] `Backend/.env.example` - documents `DJANGO_SECRET_KEY`, code reads `MY_SECRET_KEY`
 - [ ] `Backend/only2bali/settings.py` - hardcoded `FRONTEND_URL=localhost:3000`,
       Twilio number, Redis host
 - [ ] CORS regex allows all `*.vercel.app` and `*.azurestaticapps.net`
-- [ ] `Backend/app/` - no auth on any FastAPI route
+- [x] `Backend/app/` - deleted 2026-07-22
+- [ ] `Frontend/` - four routes (`/vendor-onboarding`, `/plan`, `/itinerary`, `/booking`)
+      call the deleted FastAPI service and fail on the live site. Removing them is a
+      product decision, so they were left in place
 - [ ] `Frontend/` - JWT in localStorage, no route guards, auth repeated in 16+ files
 - [ ] `Frontend/.env` is committed (URLs only today - keep it that way)
 
 ## Health and quality
 
 - [ ] Add a test step to `.github/workflows/main_pybackend.yml` (currently commented out)
-- [ ] Run Vitest in CI for `only2bali-next/`
+- [x] Run Vitest in CI for `only2bali-next/` - 93 tests
+- [x] Apply every migration in CI, not just `0000` - the `database` job now runs
+      `drizzle-kit migrate`, so a broken later migration fails the build
+- [x] End-to-end suite in CI - `npm run test:e2e`, 60 checks over real HTTP against a
+      real Postgres. Covers routing, the package page, lead and vendor persistence, the
+      full sign-in round trip, and the shared rate limit
 - [ ] Add Django tests - there are none
 - [ ] Add route guards to the React app, or accept as-is given it is being retired
-- [ ] Playwright E2E for the booking flow (`AGENTS.md` mandates it; none exist)
+- [ ] Extend the end-to-end suite to booking, once a booking flow exists
 
 ---
 
@@ -152,6 +165,7 @@ Not done - this is what blocks retiring the React app:
 
 | Date | Milestone | Notes |
 |---|---|---|
+| 2026-07-23 | Sprint 0 closed except the human steps | Zoho deleted, leads and vendor applications persisted, package detail page, Postgres rate limiting, CRA 404, end-to-end suite in CI. |
 | 2026-07-16 | Repo cloned locally + docs added | Project folder had been empty. Four apps mapped, seven live defects found and recorded. |
 | 2026-07-15 | Forked from `caloganathan/Only2bali_v3.0` | Now taken forward as Sourabh's own product. |
 | 2026-07-14 | Vercel 404 + backend CORS fixes | Last upstream work. Both frontends touched same day. |
@@ -162,13 +176,19 @@ Not done - this is what blocks retiring the React app:
 
 | Date | Blocker | Affects | Status |
 |---|---|---|---|
-| 2026-07-16 | Fate of FastAPI layer undecided | Cleanup, onboarding clarity | open |
-| 2026-07-16 | Next.js lacks accounts | Retiring the React app | open |
+| 2026-07-16 | Fate of FastAPI layer undecided | Cleanup, onboarding clarity | **closed** 2026-07-22 — deleted |
+| 2026-07-16 | Next.js lacks accounts | Retiring the React app | **closed** — accounts, OTP and sessions shipped |
+| 2026-07-23 | Production runs on caloganathan's Vercel | Contact details, login, rollback | open — `docs/vercel-handover.md` |
+| 2026-07-23 | Zoho and SpringEdge credentials not revoked at the providers | Security | open — only Sourabh can do it |
 
 ## Next up
 
-- [ ] Sourabh reviews these docs and corrects anything wrong
-- [ ] Fix the placeholder WhatsApp number and email (customer-facing, highest impact)
-- [ ] Decide the FastAPI question
-- [ ] Pick the next feature: either accounts in Next.js, or a business feature on the
-      existing stack
+- [ ] **Revoke the two leaked credentials** (Zoho, SpringEdge). Nothing else on this list
+      matters as much.
+- [ ] **Move production to Sourabh's Vercel** — `docs/vercel-handover.md`. This unblocks
+      contact details and login in one step.
+- [ ] Choose an email provider and set `RESEND_API_KEY`, so people can actually sign in.
+- [ ] Decide what happens to the four legacy React routes that call the deleted FastAPI
+      service.
+- [ ] Next feature: trip requests, which is the first thing that fills the marketplace
+      tables the schema already has.

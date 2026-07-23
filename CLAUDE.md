@@ -43,12 +43,17 @@ is kept only until the Django users are migrated.
 cd only2bali-next && npm run dev:local        # prints the OTP to the terminal
 cd only2bali-next && npm run dev:down         # remove the local database
 
-npm test          # Vitest, 79 tests
+npm test          # Vitest, 93 tests
+npm run test:e2e  # 60 checks: boots Postgres + the app, drives it over HTTP
 npm run typecheck
 npm run build
 npm run db:verify # 38 checks against whatever DATABASE_URL points at
 npm run db:seed
 ```
+
+`db:verify` and `db:seed` read `.env.local` themselves. `test:e2e` uses Docker
+unless you set `O2B_DB_URL`, which is how CI runs it against a service
+container.
 
 Django, if you need it:
 
@@ -77,6 +82,11 @@ and `WEBSITE_HOSTNAME`.
   `request`. Zod at every boundary.
 - **Business rules belong in the database.** Four are check constraints, not
   application conventions, and `npm run db:verify` proves they fire.
+- **A form that only opens WhatsApp is not a lead.** Public forms write to
+  Postgres first (`lead`, `vendor_application`); WhatsApp and email are a
+  convenience layered on top and disappear when unconfigured.
+- **Rate limiting counts in Postgres** (`lib/rate-limit-db.ts`). The in-memory
+  limiter is the fallback for when the database is unreachable, not the primary.
 - **Never use `tier` as a price boundary.** Pricing is open-ended min/max with no
   floor and no ceiling; `tier` is a display label only.
 - **Django**: apps are `users` and `journeys`. Every endpoint is a hand-written
@@ -107,8 +117,13 @@ load-bearing ones.
   will deploy the old site and wonder why nothing changed.
 - `Backend/only2bali/wsgi.py` checks `if '<hostname>' in os.environ` — that tests
   dictionary **keys**, not values, so `deployment.py` is dead code.
-- `Frontend/src/App.js` imports both `./Pages/Home` and `./pages/PlanTrip`; only
-  `Pages/` exists. Works on Windows, breaks on case-sensitive Linux CI.
+- `Frontend/src/` used to track `Pages/Home.js` and `pages/*` as two directories
+  differing only by case — one directory on Windows, two on Linux. Consolidated
+  into `pages/` on 2026-07-23. Do not reintroduce the split.
+- **Four legacy React routes still call the deleted FastAPI service**
+  (`/vendor-onboarding`, `/plan`, `/itinerary`, `/booking`, via
+  `Frontend/src/services/api.js`). They fail on the live site. Removing them is a
+  product decision, so they were left in place.
 - `Backend/.env.example` documents `DJANGO_SECRET_KEY`; `settings.py` reads
   `MY_SECRET_KEY`. Several other names diverge.
 - **CORS allows any `*.vercel.app` and any `*.azurestaticapps.net` origin with
@@ -122,11 +137,18 @@ load-bearing ones.
 ## Outstanding, and genuinely urgent
 
 **Zoho tokens and the SpringEdge SMS key were committed to source in repos that
-were public.** They have been removed from the code and read from environment
-variables, but **they remain in git history and have not been revoked at the
-provider.** Deleting the lines does not revoke them. Until that is done, treat
-both as compromised — see `docs/security-fixes-status.md`.
+were public.** The Zoho integration has now been deleted outright — code, URL
+route and `.env.example` entries — and the SMS key is read from the environment.
+Neither change revokes anything: **both remain in git history and have not been
+revoked at the provider.** Until they are, treat both as compromised. See
+`docs/security-fixes-status.md`.
 
-Login also cannot deliver codes in production until an email or SMS provider is
-configured. That refusal is deliberate: it fails loudly rather than silently
-sending nothing.
+Login cannot deliver codes in production until an email or SMS provider is
+configured. `/api/auth/request-otp` answers 503 with an honest message, and
+`GET /api/health` reports `"otpDelivery": ["none"]`, so this is visible from
+monitoring rather than discovered by a visitor.
+
+Contact details are unset until someone puts real ones in Vercel. Enquiries are
+stored in Postgres regardless; the WhatsApp and email buttons simply do not
+render. See `docs/vercel-handover.md`, which is the step everything else waits
+on — production still runs from someone else's Vercel account.
