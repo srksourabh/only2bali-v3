@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { requestOtpSchema, toIdentifier } from "@/lib/validators/auth";
 import { requestOtp } from "@/lib/auth/service";
-import { clientKey, rateLimit } from "@/lib/rate-limit";
+import { canDeliver } from "@/lib/auth/delivery";
+import { clientKey } from "@/lib/rate-limit";
+import { rateLimitShared } from "@/lib/rate-limit-db";
 
 export const dynamic = "force-dynamic";
 
@@ -38,13 +40,31 @@ export async function POST(req: Request) {
       );
     }
 
+    // Say so before spending a rate-limit slot and writing a code nobody can
+    // read. The alternative — a generic 500 after the visitor has waited — is
+    // how "login is quietly broken" goes unnoticed for a week.
+    const channel = parsed.data.email ? "email" : "sms";
+    if (!canDeliver(channel)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            channel === "email"
+              ? "Email sign-in is not available yet. Please contact us instead."
+              : "SMS sign-in is not available yet. Please contact us instead.",
+          reason: "delivery_not_configured",
+        },
+        { status: 503 }
+      );
+    }
+
     const ip = clientKey(req);
     const identifier = toIdentifier(parsed.data);
 
-    const byIp = rateLimit(`otp:ip:${ip}`, PER_IP.limit, PER_IP.windowMs);
+    const byIp = await rateLimitShared(`otp:ip:${ip}`, PER_IP.limit, PER_IP.windowMs);
     if (!byIp.allowed) return throttled(byIp.retryAfterSeconds);
 
-    const byId = rateLimit(`otp:id:${identifier}`, PER_IDENTIFIER.limit, PER_IDENTIFIER.windowMs);
+    const byId = await rateLimitShared(`otp:id:${identifier}`, PER_IDENTIFIER.limit, PER_IDENTIFIER.windowMs);
     if (!byId.allowed) return throttled(byId.retryAfterSeconds);
 
     await requestOtp(parsed.data, {

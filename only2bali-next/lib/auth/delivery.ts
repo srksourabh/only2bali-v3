@@ -12,6 +12,33 @@ export interface DeliveryResult {
   channel: "email" | "sms" | "console";
 }
 
+export class DeliveryNotConfiguredError extends Error {
+  constructor(public channel: "email" | "sms") {
+    super(`No ${channel} provider configured.`);
+    this.name = "DeliveryNotConfiguredError";
+  }
+}
+
+/**
+ * Which channels can actually reach a person right now.
+ *
+ * Read by `/api/health` and by the login endpoint, so "login is broken" is
+ * visible from a monitoring check rather than discovered by a visitor who has
+ * already typed their email and waited for a code that was never sent.
+ */
+export function deliveryChannels(): Array<"email" | "sms" | "console"> {
+  if (process.env.NODE_ENV !== "production") return ["console"];
+  const channels: Array<"email" | "sms"> = [];
+  if (process.env.RESEND_API_KEY) channels.push("email");
+  if (process.env.SPRINGEDGE_API_KEY) channels.push("sms");
+  return channels;
+}
+
+export function canDeliver(channel: "email" | "sms"): boolean {
+  const available = deliveryChannels();
+  return available.includes("console") || available.includes(channel);
+}
+
 export async function deliverOtp(
   identifier: { email?: string; mobile?: string },
   code: string
@@ -34,11 +61,7 @@ export async function deliverOtp(
     return sendEmail(identifier.email!, code);
   }
 
-  throw new Error(
-    `No ${channel} provider configured. Set ${
-      channel === "sms" ? "SPRINGEDGE_API_KEY" : "RESEND_API_KEY"
-    } before enabling login in production.`
-  );
+  throw new DeliveryNotConfiguredError(channel);
 }
 
 async function sendSms(mobileNumber: string, code: string): Promise<DeliveryResult> {
