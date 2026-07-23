@@ -73,7 +73,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import HomePage from './Pages/Home';
+// './pages', lower case. Home.js used to be tracked under 'Pages/' while every
+// other page sat in 'pages/'. Windows merges the two, Linux does not, so the
+// repository carried two directories differing only by case.
+import HomePage from './pages/Home';
 import SignUp from './SignUp';
 import OtpContainer from './Otpverfication';
 import Signin from './Signin';
@@ -103,7 +106,7 @@ import GlobalLoader from './GlobalLoader';
 import PlanTrip from './pages/PlanTrip';
 import ItineraryPageNew from './pages/Itinerary';
 import BookingPage from './pages/Booking';
-import ChatWidget from './components/ChatWidget';
+import NotFound from './pages/NotFound';
 
 const AppContent = () => {
   // 1. Set up a state to track loading
@@ -160,6 +163,9 @@ const AppContent = () => {
         <Route path="/plan" element={<PlanTrip />} />
         <Route path="/itinerary" element={<ItineraryPageNew />} />
         <Route path="/booking" element={<BookingPage />} />
+        {/* Anything else. Without this the app rendered a blank page and the
+            host answered 200, so unmatched URLs were indexed as real pages. */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </>
   );
@@ -174,7 +180,9 @@ function App() {
     <>
       <FunkyCursor />
       <AppContent />
-      <ChatWidget />
+      {/* The chat widget was removed on 2026-07-23. It called the FastAPI
+          service in Backend/app/, which is deployed nowhere, so it showed
+          "We're offline" on every page of the live site. */}
     </>
   );
 }
