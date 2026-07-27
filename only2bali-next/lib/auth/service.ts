@@ -1,10 +1,11 @@
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { account, otpCode, session, auditLog, traveller } from "@/lib/db/schema";
+import { account, otpCode, session, auditLog, traveller, vendor, oauthAccount } from "@/lib/db/schema";
 import {
-  generateOtp, hashOtp, safeEqual, generateSessionToken, hashSessionToken,
+  generateOtp, hashOtp, safeEqual, generateSessionToken, hashSessionToken, hashPassword, verifyPassword,
 } from "./crypto";
 import { deliverOtp } from "./delivery";
+import type { PasswordSignInInput, PasswordSignUpInput } from "@/lib/validators/auth";
 
 export const OTP_TTL_MINUTES = 10;
 export const OTP_MAX_ATTEMPTS = 5;
@@ -19,6 +20,10 @@ export type VerifyFailure =
 export type VerifyResult =
   | { ok: true; accountId: string; token: string; expiresAt: Date; isNewAccount: boolean }
   | { ok: false; reason: VerifyFailure };
+
+export type PasswordAuthResult =
+  | { ok: true; accountId: string; token: string; expiresAt: Date; isNewAccount: boolean }
+  | { ok: false; reason: "invalid" | "role_mismatch" | "username_taken" };
 
 interface Identifier {
   email?: string;
@@ -149,7 +154,190 @@ async function upsertAccount(id: Identifier): Promise<{ accountId: string; isNew
   return { accountId: created.id, isNewAccount: true };
 }
 
-async function createSession(
+function slugify(value: string): string {
+  const base = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 48);
+  return base || `provider-${Date.now()}`;
+}
+
+async function createTravellerIfMissing(accountId: string): Promise<void> {
+  await db
+    .insert(traveller)
+    .values({ accountId })
+    .onConflictDoNothing({ target: traveller.accountId });
+}
+
+async function createVendorIfMissing(accountId: string, businessName: string): Promise<void> {
+  const base = slugify(businessName);
+  let slug = base;
+  for (let i = 0; i < 5; i++) {
+    try {
+      await db
+        .insert(vendor)
+        .values({
+          accountId,
+          slug,
+          businessName,
+          vendorType: "tour_agency",
+          verificationStatus: "draft",
+          onboardingStep: 1,
+        })
+        .onConflictDoNothing({ target: vendor.accountId });
+      return;
+    } catch (err) {
+      if (i === 4) throw err;
+      slug = `${base}-${i + 2}`;
+    }
+  }
+}
+
+export async function signUpWithPassword(
+  input: PasswordSignUpInput,
+  meta: { ip?: string; userAgent?: string } = {}
+): Promise<PasswordAuthResult> {
+  const existing = await db
+    .select({ id: account.id })
+    .from(account)
+    .where(eq(account.username, input.username))
+    .limit(1);
+  if (existing.length) return { ok: false, reason: "username_taken" };
+
+  const [created] = await db
+    .insert(account)
+    .values({
+      username: input.username,
+      passwordHash: hashPassword(input.password),
+      email: input.email || null,
+      role: input.role,
+      emailVerifiedAt: null,
+      lastLoginAt: new Date(),
+    })
+    .returning();
+
+  if (input.role === "vendor") {
+    await createVendorIfMissing(created.id, input.businessName!);
+  } else {
+    await createTravellerIfMissing(created.id);
+  }
+
+  const { token, expiresAt } = await createSession(created.id, meta);
+  await db.insert(auditLog).values({
+    accountId: created.id,
+    action: "account.password_created",
+    resourceType: "account",
+    resourceId: created.id,
+    details: { role: input.role },
+    ip: meta.ip,
+  });
+
+  return { ok: true, accountId: created.id, token, expiresAt, isNewAccount: true };
+}
+
+export async function signInWithPassword(
+  input: PasswordSignInInput,
+  meta: { ip?: string; userAgent?: string } = {}
+): Promise<PasswordAuthResult> {
+  const [row] = await db
+    .select()
+    .from(account)
+    .where(eq(account.username, input.username))
+    .limit(1);
+
+  if (!row || row.status !== "active" || !verifyPassword(input.password, row.passwordHash)) {
+    return { ok: false, reason: "invalid" };
+  }
+  if (row.role !== input.role) return { ok: false, reason: "role_mismatch" };
+
+  await db.update(account).set({ lastLoginAt: new Date() }).where(eq(account.id, row.id));
+  const { token, expiresAt } = await createSession(row.id, meta);
+  await db.insert(auditLog).values({
+    accountId: row.id,
+    action: "auth.password_login",
+    resourceType: "account",
+    resourceId: row.id,
+    details: { role: row.role },
+    ip: meta.ip,
+  });
+
+  return { ok: true, accountId: row.id, token, expiresAt, isNewAccount: false };
+}
+
+export async function signInWithGoogleProfile(
+  profile: { providerAccountId: string; email: string; name?: string | null },
+  role: "traveller" | "vendor",
+  meta: { ip?: string; userAgent?: string } = {}
+): Promise<PasswordAuthResult> {
+  const linked = await db
+    .select({ accountId: oauthAccount.accountId, role: account.role, status: account.status })
+    .from(oauthAccount)
+    .innerJoin(account, eq(oauthAccount.accountId, account.id))
+    .where(and(eq(oauthAccount.provider, "google"), eq(oauthAccount.providerAccountId, profile.providerAccountId)))
+    .limit(1);
+
+  let accountId = linked[0]?.accountId;
+  let isNewAccount = false;
+
+  if (linked[0] && (linked[0].role !== role || linked[0].status !== "active")) {
+    return { ok: false, reason: linked[0].role !== role ? "role_mismatch" : "invalid" };
+  }
+
+  if (!accountId) {
+    const existing = await db
+      .select()
+      .from(account)
+      .where(eq(account.email, profile.email))
+      .limit(1);
+
+    if (existing[0]) {
+      if (existing[0].role !== role) return { ok: false, reason: "role_mismatch" };
+      accountId = existing[0].id;
+      await db.update(account).set({ emailVerifiedAt: new Date(), lastLoginAt: new Date() }).where(eq(account.id, accountId));
+    } else {
+      const [created] = await db
+        .insert(account)
+        .values({
+          email: profile.email,
+          role,
+          emailVerifiedAt: new Date(),
+          lastLoginAt: new Date(),
+        })
+        .returning();
+      accountId = created.id;
+      isNewAccount = true;
+    }
+
+    await db.insert(oauthAccount).values({
+      accountId,
+      provider: "google",
+      providerAccountId: profile.providerAccountId,
+      email: profile.email,
+    }).onConflictDoNothing();
+  }
+
+  if (role === "vendor") {
+    await createVendorIfMissing(accountId, profile.name || profile.email.split("@")[0]);
+  } else {
+    await createTravellerIfMissing(accountId);
+  }
+
+  const { token, expiresAt } = await createSession(accountId, meta);
+  await db.insert(auditLog).values({
+    accountId,
+    action: "auth.google_login",
+    resourceType: "account",
+    resourceId: accountId,
+    details: { role },
+    ip: meta.ip,
+  });
+
+  return { ok: true, accountId, token, expiresAt, isNewAccount };
+}
+
+export async function createSession(
   accountId: string,
   meta: { ip?: string; userAgent?: string }
 ): Promise<{ token: string; expiresAt: Date }> {

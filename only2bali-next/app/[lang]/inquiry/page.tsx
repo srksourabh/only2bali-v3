@@ -72,6 +72,23 @@ function InquiryComponent() {
         setErr(json?.error ?? "We could not save that just now. Please try again.");
         return false;
       }
+
+      // Signed-in travellers also get a provider-board request. Anonymous
+      // visitors still become leads; they can sign in later when they want bids.
+      await fetch("/api/trip-requests", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          protocol: toProtocol(f.food) ?? "vegetarian",
+          groupSize: Number(f.size),
+          departureCity: f.city,
+          flexibleMonth: f.when,
+          notes: f.msg,
+          publishToProviders: true,
+          budgetBasis: "unsure",
+        }),
+      }).catch(() => undefined);
+
       setSaved(true);
       setErr(null);
       return true;
@@ -104,7 +121,7 @@ function InquiryComponent() {
     <main><section><div className="wrap">
       <span className="tag">Group Inquiry</span>
       <h2>Ready to plan? Tell us about your group.</h2>
-      <p className="sub">Share the basics and our travel designer will call you back with a customized plan — no payment, no obligation.</p>
+      <p className="sub">Share the basics and our travel designer will call you back. Signed-in travelers can also receive provider bids inside the website before booking through Only2Bali.</p>
       <form onSubmit={submit} noValidate>
         <div className="row">
           <div><label htmlFor="ln">Your name *</label><input id="ln" value={f.name} onChange={set("name")} required /></div>

@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, randomInt, timingSafeEqual, createHash } from "node:crypto";
+import { createHmac, randomBytes, randomInt, timingSafeEqual, createHash, scryptSync } from "node:crypto";
 
 /**
  * Secret used to key the OTP and session hashes. Kept separate from any other
@@ -55,4 +55,23 @@ export function generateSessionToken(): string {
  */
 export function hashSessionToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
+}
+
+export function hashPassword(password: string): string {
+  const salt = randomBytes(16).toString("base64url");
+  const hash = scryptSync(password, salt, 64, { N: 16384, r: 8, p: 1 }).toString("base64url");
+  return `scrypt:v1:16384:8:1:${salt}:${hash}`;
+}
+
+export function verifyPassword(password: string, stored: string | null): boolean {
+  if (!stored) return false;
+  const [scheme, version, n, r, p, salt, expected] = stored.split(":");
+  if (scheme !== "scrypt" || version !== "v1" || !salt || !expected) return false;
+
+  const actual = scryptSync(password, salt, 64, {
+    N: Number(n),
+    r: Number(r),
+    p: Number(p),
+  }).toString("base64url");
+  return safeEqual(actual, expected);
 }

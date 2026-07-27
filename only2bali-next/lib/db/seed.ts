@@ -349,7 +349,8 @@ export async function seed() {
 }
 
 // Executed directly by `npm run db:seed`.
-if (process.argv[1]?.includes("seed")) {
+const entrypoint = process.argv[1]?.replace(/\\/g, "/");
+if (entrypoint?.endsWith("/lib/db/seed.ts") || entrypoint?.endsWith("lib/db/seed.ts")) {
   seed()
     .then(() => process.exit(0))
     .catch((e) => {

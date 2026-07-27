@@ -174,3 +174,26 @@ export const paymentStatus = pgEnum("payment_status", [
 
 /** Group travel is rarely paid in one go. */
 export const paymentPurpose = pgEnum("payment_purpose", ["deposit", "balance", "full", "addon"]);
+
+export const mediaKind = pgEnum("media_kind", ["photo", "menu", "licence", "gallery", "cover"]);
+export const providerContentStatus = pgEnum("provider_content_status", [
+  "draft",
+  "pending_review",
+  "published",
+  "paused",
+  "rejected",
+]);
+export const payoutAccountStatus = pgEnum("payout_account_status", [
+  "pending",
+  "verified",
+  "rejected",
+  "disabled",
+]);
+export const disbursementStatus = pgEnum("disbursement_status", [
+  "pending",
+  "approved",
+  "processing",
+  "paid",
+  "failed",
+  "held",
+]);

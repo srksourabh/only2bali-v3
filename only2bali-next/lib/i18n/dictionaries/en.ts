@@ -5,14 +5,14 @@
  */
 export const en = {
   meta: {
-    title: "Only2Bali — verified vegetarian, Jain and vegan group travel to Bali",
+    title: "Only2Bali - verified Bali trips for Indian groups",
     description:
-      "Group travel from India to Bali built around Jain, vegetarian and vegan protocol, with guides who speak your language. Every meal rated before your itinerary is issued.",
+      "Group travel from India to Bali with verified food, comfortable stays, quality rides, luxury cars, guides, and budget options from economical to premium.",
   },
 
   nav: {
     circuits: "Circuits",
-    guarantee: "The veg guarantee",
+    guarantee: "Trip quality",
     verify: "How we verify",
     packages: "Packages",
     plan: "Plan my trip",
@@ -21,26 +21,26 @@ export const en = {
   },
 
   hero: {
-    eyebrow: "India → Bali · Jain · Vegetarian · Vegan",
-    headlineBefore: "Every meal on your trip is ",
+    eyebrow: "India to Bali · Food · Stays · Rides · Guides",
+    headlineBefore: "Every part of your Bali trip is ",
     headlineEm: "verified",
     headlineAfter: " before you land.",
-    sub: "Group travel to Bali built around Indian dietary protocol and your own language — not a “veg option” bolted onto someone else’s itinerary.",
+    sub: "Group travel to Bali built around Indian food needs, comfortable stays, quality rides, luxury cars, local guides, and clear budget options from economical to premium.",
     cta1: "Send my dates",
-    cta2: "See how the guarantee works",
+    cta2: "See how we verify providers",
     caption: "Sembah — the folded-hand greeting shared by Bali and India",
   },
 
   rail: [
-    { value: "4", label: "Themed circuits, not a generic tour" },
+    { value: "4", label: "Food, stays, rides and experiences planned together" },
     { value: "7", label: "Indian languages spoken by our guides" },
     { value: "10+", label: "Group size for an accompanying cook" },
-    { value: "Every meal", label: "Rated before your itinerary is issued" },
+    { value: "3 tiers", label: "Economical, comfort and premium budgets" },
   ],
 
   circuits: {
     heading: "Choose the Bali you actually came for.",
-    sub: "Four circuits, each built on real ground — temples, trails, kitchens and workshops we have walked ourselves. Pick one, and the whole trip organises around it.",
+    sub: "Four circuits, each backed by real providers for kitchens, hotels, villas, cars, guides and activities. Pick your route and we match the whole trip around your comfort and budget.",
     addOn: "Add on",
     items: {
       ramayana: {
@@ -49,14 +49,14 @@ export const en = {
         stops: "6 temple stops · Kecak at sunset · satvik meal days",
       },
       adventure: {
-        name: "Rafting to sunrise",
-        blurb: "Ayung river, Mount Batur before dawn, Nusa Penida water.",
-        stops: "High-energy veg meal plans",
+        name: "Quality rides to sunrise",
+        blurb: "Ayung river, Mount Batur before dawn, Nusa Penida water, and driver-led transfers that do not feel random.",
+        stops: "Private cars, vans and buses matched to group size",
       },
       culinary: {
-        name: "The veg food trail",
-        blurb: "Pure-veg kitchens, a cooking class, and warungs that cook to protocol.",
-        stops: "Every kitchen inspected",
+        name: "The food and stay trail",
+        blurb: "Pure-veg kitchens, cooking classes, villa kitchens, resorts and budget stays that work for Indian groups.",
+        stops: "Kitchens and stays checked together",
       },
       artistic: {
         name: "Carvers, weavers and painters",
@@ -64,8 +64,8 @@ export const en = {
         stops: "Hands-on workshops · small groups",
       },
       coast: {
-        name: "Coast & rest days",
-        blurb: "Nusa Dua, Jimbaran, and time to do nothing at all.",
+        name: "Coast, rest and luxury cars",
+        blurb: "Nusa Dua, Jimbaran, beach clubs, airport transfers and premium cars for groups that want a smoother trip.",
         stops: "",
       },
       wellness: {
@@ -77,8 +77,8 @@ export const en = {
   },
 
   guarantee: {
-    heading: "“100% vegetarian” is a claim. This is the receipt.",
-    sub: "Every meal on every itinerary carries a rating before you see it. Change the protocol and watch what changes — this is the actual logic, not a marketing panel.",
+    heading: "Food is verified. So are the stay, ride and budget fit.",
+    sub: "Every itinerary carries clear checks before you book: food protocol, kitchen confidence, stay comfort, vehicle type, guide language and total INR budget.",
     protocols: { jain: "Jain", veg: "Vegetarian", vegan: "Vegan" },
     legend: {
       green: "Dedicated kitchen, verified",
@@ -113,19 +113,19 @@ export const en = {
   },
 
   verify: {
-    heading: "How a kitchen earns a green rating.",
-    sub: "No competitor in faith-based travel publishes their method. We do, because the method is the product.",
+    heading: "How a provider earns trust.",
+    sub: "We verify the service, not just the sales pitch: kitchen practice, room fit, vehicle quality, language support, pricing clarity and response speed.",
     steps: [
       { title: "We visit unannounced", body: "A member of our team eats there first. No scheduled inspection, no advance notice." },
-      { title: "We check the line, not the menu", body: "Separate oil, separate utensils, separate prep surface. A veg menu printed by a kitchen that shares a wok is amber, not green." },
+      { title: "We check the real service", body: "Separate oil and utensils for food, room quality for stays, vehicle condition for rides, and the actual guide or driver who will serve the group." },
       { title: "Jain protocol is asked explicitly", body: "No onion, no garlic, no root vegetable — confirmed with the cook who will actually be on shift, and photographed." },
-      { title: "The rating expires", body: "Kitchens change hands and staff move on. A rating that is not re-checked drops out of our system rather than quietly ageing." },
+      { title: "The rating expires", body: "Kitchens, hotels, drivers and prices change. A rating that is not re-checked drops out of our system rather than quietly ageing." },
     ],
   },
 
   packages: {
     heading: "Departures with real dates and real seats.",
-    sub: "Indicative per person, excluding international flights. Every package is customisable — these are starting points, not fixed menus.",
+    sub: "Indicative per person, excluding international flights. Every package can move up or down: budget hotels, comfort villas, premium resorts, private vans, luxury cars and custom food support.",
     perPerson: "per person · from",
     checkDates: "Check dates",
     nights: "nights",
@@ -182,8 +182,8 @@ export const en = {
   },
 
   close: {
-    heading: "Tell us your dates. We’ll come back with three quotes.",
-    body: "From verified providers, within 24 hours, each priced all-in with the compliance rating for every meal already attached. No call centre, no drip campaign.",
+    heading: "Tell us your dates. We’ll come back with clear options.",
+    body: "We match verified food providers, stays, cars, guides and activities, then show economical, comfort and premium choices in INR so your group can decide fast.",
     cta1: "Start with my dates",
     cta2: "List my business as a provider",
   },
@@ -201,7 +201,7 @@ export const en = {
   },
 
   footer: {
-    tagline: "Verified vegetarian, Jain and vegan group travel to Bali.",
+    tagline: "Verified food, stays, rides and group travel to Bali.",
     note: "Photography and palette from the existing site.",
   },
 

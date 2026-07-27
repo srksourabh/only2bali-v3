@@ -26,7 +26,8 @@ import {
 import { sql } from "drizzle-orm";
 import { booking } from "./marketplace";
 import { account } from "./identity";
-import { paymentProvider, paymentStatus, paymentPurpose } from "./enums";
+import { vendor, vendorPayoutAccount } from "./vendor";
+import { paymentProvider, paymentStatus, paymentPurpose, disbursementStatus } from "./enums";
 
 export const payment = pgTable(
   "payment",
@@ -128,5 +129,42 @@ export const paymentEvent = pgTable(
   (t) => [
     uniqueIndex("payment_event_provider_event_uq").on(t.provider, t.providerEventId),
     index("payment_event_unprocessed_idx").on(t.processedAt, t.receivedAt),
+  ]
+);
+
+export const paymentDisbursement = pgTable(
+  "payment_disbursement",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    bookingId: uuid("booking_id").notNull().references(() => booking.id, { onDelete: "restrict" }),
+    paymentId: uuid("payment_id").references(() => payment.id, { onDelete: "set null" }),
+    vendorId: uuid("vendor_id").notNull().references(() => vendor.id, { onDelete: "restrict" }),
+    payoutAccountId: uuid("payout_account_id").references(() => vendorPayoutAccount.id, { onDelete: "set null" }),
+    provider: paymentProvider("provider").notNull().default("manual_bank_transfer"),
+    providerPayoutId: text("provider_payout_id"),
+    grossAmount: bigint("gross_amount", { mode: "number" }).notNull(),
+    commissionAmount: bigint("commission_amount", { mode: "number" }).notNull().default(0),
+    netAmount: bigint("net_amount", { mode: "number" }).notNull(),
+    travellerCurrency: text("traveller_currency").notNull().default("INR"),
+    vendorCurrency: text("vendor_currency").notNull().default("IDR"),
+    fxRate: text("fx_rate"),
+    status: disbursementStatus("status").notNull().default("pending"),
+    holdReason: text("hold_reason"),
+    approvedBy: uuid("approved_by").references(() => account.id, { onDelete: "set null" }),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    paidAt: timestamp("paid_at", { withTimezone: true }),
+    failureCode: text("failure_code"),
+    failureMessage: text("failure_message"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("disbursement_vendor_status_idx").on(t.vendorId, t.status, t.createdAt),
+    index("disbursement_booking_idx").on(t.bookingId),
+    uniqueIndex("disbursement_provider_payout_uq")
+      .on(t.provider, t.providerPayoutId)
+      .where(sql`${t.providerPayoutId} IS NOT NULL`),
+    check("disbursement_amounts_sane",
+      sql`${t.grossAmount} > 0 AND ${t.commissionAmount} >= 0 AND ${t.netAmount} > 0`),
   ]
 );

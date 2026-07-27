@@ -65,6 +65,26 @@ export default async function AccountPage({ params }: { params: Promise<{ lang: 
               {dict.account.browseCta}
             </Link>
           </section>
+
+          {user.role === "vendor" && (
+            <section className="acard">
+              <h2>Provider workspace</h2>
+              <p className="empty">Manage prices, services, photos, events, offers, address and payout details.</p>
+              <Link className="btn btn-solid btn-sm" href={`/${lang}/provider`}>
+                Open provider dashboard
+              </Link>
+            </section>
+          )}
+
+          {user.role === "admin" && (
+            <section className="acard">
+              <h2>Admin control</h2>
+              <p className="empty">Fix rates, approve pictures, announce events and publish discounts.</p>
+              <Link className="btn btn-solid btn-sm" href={`/${lang}/admin`}>
+                Open admin dashboard
+              </Link>
+            </section>
+          )}
         </div>
 
         <p className="accountnote">{dict.account.protocolNote}</p>

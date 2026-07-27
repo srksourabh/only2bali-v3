@@ -6,7 +6,9 @@ import type { Dictionary } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n/config";
 
 type Channel = "email" | "mobile";
-type Step = "identifier" | "code";
+type Step = "password" | "identifier" | "code";
+type Role = "traveller" | "vendor" | "admin";
+type Mode = "signin" | "signup";
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -22,9 +24,15 @@ export default function LoginForm({
   const t = dict.auth;
   const router = useRouter();
 
+  const [role, setRole] = useState<Role>("traveller");
+  const [mode, setMode] = useState<Mode>("signin");
+  const [step, setStep] = useState<Step>("password");
   const [channel, setChannel] = useState<Channel>("email");
-  const [step, setStep] = useState<Step>("identifier");
   const [contact, setContact] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +43,7 @@ export default function LoginForm({
 
   // Move focus to whichever field the reader now has to fill.
   useEffect(() => {
-    (step === "code" ? codeRef : contactRef).current?.focus();
+    if (step !== "password") (step === "code" ? codeRef : contactRef).current?.focus();
   }, [step]);
 
   useEffect(() => {
@@ -48,6 +56,38 @@ export default function LoginForm({
     () => (channel === "email" ? { email: contact } : { mobile: contact }),
     [channel, contact]
   );
+
+  async function passwordAuth(e?: React.FormEvent) {
+    e?.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(mode === "signup" ? "/api/auth/password/signup" : "/api/auth/password/signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username,
+          password,
+          role,
+          email,
+          businessName,
+        }),
+      });
+      const body = await res.json().catch(() => null);
+      if (res.ok) {
+        router.push(role === "vendor" ? `/${lang}/provider` : role === "admin" ? `/${lang}/admin` : next);
+        router.refresh();
+        return;
+      }
+      setError(body?.fields?.[0]?.message ?? body?.error ?? t.errGeneric);
+    } catch {
+      setError(t.errNetwork);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const googleHref = `/api/auth/google/start?role=${role}&next=${encodeURIComponent(role === "vendor" ? `/${lang}/provider` : next)}`;
 
   async function send(e?: React.FormEvent) {
     e?.preventDefault();
@@ -113,7 +153,119 @@ export default function LoginForm({
 
   return (
     <div className="authcard">
-      {step === "identifier" ? (
+      <div className="rolegrid" role="tablist" aria-label="Login type">
+        {(["traveller", "vendor", "admin"] as const).map((r) => (
+          <button
+            key={r}
+            type="button"
+            role="tab"
+            aria-selected={role === r}
+            onClick={() => {
+              setRole(r);
+              setMode("signin");
+              setError(null);
+            }}
+          >
+            {r === "traveller" ? "Traveler" : r === "vendor" ? "Service provider" : "Admin"}
+          </button>
+        ))}
+      </div>
+
+      {step === "password" ? (
+        <form onSubmit={passwordAuth} noValidate>
+          <h1>
+            {role === "admin"
+              ? "Admin control login"
+              : mode === "signup"
+                ? `Create ${role === "vendor" ? "provider" : "traveler"} account`
+                : `Sign in as ${role === "vendor" ? "provider" : "traveler"}`}
+          </h1>
+          <p className="authsub">
+            {role === "admin"
+              ? "Admin accounts are created by the platform owner only. This login controls provider approvals, rates, images, events and discounts."
+              : "Use username and password, or continue with Google. Your session stays in a secure HTTP-only cookie."}
+          </p>
+
+          {role !== "admin" && (
+            <div className="authtabs" role="tablist" aria-label="Account action">
+              {(["signin", "signup"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === m}
+                  onClick={() => {
+                    setMode(m);
+                    setError(null);
+                  }}
+                >
+                  {m === "signin" ? "Sign in" : "Create account"}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {role !== "admin" && (
+            <a className="googlebtn" href={googleHref}>
+              <span aria-hidden="true">G</span>
+              Continue with Google
+            </a>
+          )}
+
+          <label htmlFor="username">Username</label>
+          <input
+            id="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
+            required
+            aria-invalid={Boolean(error)}
+          />
+
+          <label htmlFor="password">Password</label>
+          <input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete={mode === "signup" ? "new-password" : "current-password"}
+            required
+            aria-invalid={Boolean(error)}
+          />
+
+          {mode === "signup" && role !== "admin" && (
+            <>
+              <label htmlFor="email">Email</label>
+              <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+            </>
+          )}
+
+          {mode === "signup" && role === "vendor" && (
+            <>
+              <label htmlFor="businessName">Business name</label>
+              <input id="businessName" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required />
+            </>
+          )}
+
+          {error && (
+            <p className="autherr" id="auth-error" role="alert">
+              {error}
+            </p>
+          )}
+
+          <button className="btn btn-primary authsubmit" type="submit" disabled={busy || !username || !password}>
+            {busy ? "Checking..." : mode === "signup" ? "Create account" : "Sign in"}
+          </button>
+
+          {role !== "admin" && (
+            <div className="authalt">
+              <button type="button" onClick={() => setStep("identifier")}>
+                Use OTP instead
+              </button>
+            </div>
+          )}
+        </form>
+      ) : step === "identifier" ? (
         <form onSubmit={send} noValidate>
           <h1>{t.heading}</h1>
           <p className="authsub">{t.sub}</p>
@@ -162,6 +314,11 @@ export default function LoginForm({
           <button className="btn btn-primary authsubmit" type="submit" disabled={busy || !contact}>
             {busy ? t.sending : t.continue}
           </button>
+          <div className="authalt">
+            <button type="button" onClick={() => setStep("password")}>
+              Use username and password
+            </button>
+          </div>
         </form>
       ) : (
         <form onSubmit={verify} noValidate>

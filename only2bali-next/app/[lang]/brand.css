@@ -429,6 +429,34 @@ section { padding: clamp(3.5rem, 7vw, 6rem) 0; }
 .authtabs button[aria-selected="true"] { background: var(--emerald); color: #fff; }
 .authtabs button:focus-visible { outline: 2px solid var(--saffron); outline-offset: 2px; }
 
+.rolegrid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: .45rem;
+  margin-bottom: 1.4rem; padding: .35rem; background: var(--cream);
+  border-radius: var(--r);
+}
+.rolegrid button {
+  min-height: 44px; border: 0; border-radius: var(--r-sm); background: transparent;
+  color: var(--text-2); font: inherit; font-size: .82rem; font-weight: 700;
+  cursor: pointer; padding: .45rem .5rem;
+}
+.rolegrid button[aria-selected="true"] {
+  background: var(--emerald); color: #fff;
+}
+
+.googlebtn {
+  display: flex; align-items: center; justify-content: center; gap: .6rem;
+  width: 100%; min-height: 46px; margin: .2rem 0 1rem;
+  border: 1.5px solid var(--hair); border-radius: var(--r-pill);
+  color: var(--head); background: var(--surface); text-decoration: none;
+  font-size: .9rem; font-weight: 700;
+}
+.googlebtn span {
+  display: grid; place-items: center; width: 22px; height: 22px;
+  border-radius: 50%; background: var(--cream); color: var(--emerald);
+  font-family: var(--font-body), sans-serif; font-weight: 800;
+}
+.googlebtn:hover { border-color: var(--emerald); }
+
 .authcard label {
   display: block; font-size: .82rem; font-weight: 600;
   color: var(--head); margin-bottom: .4rem;
@@ -485,6 +513,7 @@ section { padding: clamp(3.5rem, 7vw, 6rem) 0; }
 }
 
 .accountgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; }
+.accountgrid.admin-grid { grid-template-columns: repeat(2, 1fr); align-items: start; }
 .acard {
   background: var(--surface); border: 1px solid var(--hair);
   border-radius: var(--r-lg); padding: 1.5rem;
@@ -500,4 +529,31 @@ section { padding: clamp(3.5rem, 7vw, 6rem) 0; }
 
 @media (max-width: 860px) {
   .accountgrid { grid-template-columns: 1fr; }
+  .accountgrid.admin-grid { grid-template-columns: 1fr; }
+  .rolegrid { grid-template-columns: 1fr; }
 }
+
+.admin-list {
+  width: 100%; list-style: none; margin: .2rem 0 0; padding: 0;
+  display: grid; gap: .7rem;
+}
+.admin-list li {
+  display: grid; gap: .35rem; padding: .75rem;
+  border: 1px solid var(--hair); border-radius: var(--r-sm);
+  background: var(--page);
+}
+.admin-list b { color: var(--head); font-size: .9rem; }
+.admin-list span {
+  color: var(--text-2); font-size: .78rem; overflow-wrap: anywhere;
+}
+.admin-list input {
+  width: 100%; border: 1px solid var(--hair); border-radius: var(--r-sm);
+  padding: .5rem .6rem; background: var(--surface); color: var(--text);
+}
+.mini-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
+.mini-actions button {
+  border: 1px solid var(--hair); background: var(--surface); color: var(--head);
+  border-radius: var(--r-pill); padding: .35rem .65rem; font: inherit;
+  font-size: .76rem; font-weight: 700; cursor: pointer;
+}
+.mini-actions button:hover { border-color: var(--emerald); color: var(--emerald); }

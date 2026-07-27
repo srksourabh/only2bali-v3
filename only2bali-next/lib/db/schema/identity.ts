@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, integer, boolean, index, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, integer, boolean, index, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
 import { accountRole, accountStatus, otpPurpose } from "./enums";
 
 export const account = pgTable(
@@ -7,6 +7,8 @@ export const account = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     email: text("email").unique(),
     mobile: text("mobile").unique(),
+    username: text("username").unique(),
+    passwordHash: text("password_hash"),
     role: accountRole("role").notNull().default("traveller"),
     status: accountStatus("status").notNull().default("active"),
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
@@ -16,6 +18,23 @@ export const account = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("account_role_status_idx").on(t.role, t.status)]
+);
+
+export const oauthAccount = pgTable(
+  "oauth_account",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    accountId: uuid("account_id").notNull().references(() => account.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    providerAccountId: text("provider_account_id").notNull(),
+    email: text("email"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("oauth_provider_account_uq").on(t.provider, t.providerAccountId),
+    index("oauth_account_idx").on(t.accountId),
+  ]
 );
 
 /**

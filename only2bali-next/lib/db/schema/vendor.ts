@@ -1,11 +1,13 @@
 import {
-  pgTable, uuid, text, integer, bigint, boolean, timestamp, index, primaryKey, date, numeric,
+  pgTable, uuid, text, integer, bigint, boolean, timestamp, index, primaryKey, date, numeric, jsonb,
+  doublePrecision,
 } from "drizzle-orm/pg-core";
 import { account } from "./identity";
 import { circuit } from "./catalog";
 import {
   vendorType, verificationStatus, listingStatus, tier, priceUnit, protocol,
   guaranteeLevel, complianceRating, kitchenType, availabilityStatus, documentKind,
+  mediaKind, providerContentStatus, payoutAccountStatus,
 } from "./enums";
 
 export const vendor = pgTable(
@@ -19,6 +21,13 @@ export const vendor = pgTable(
     vendorType: vendorType("vendor_type").notNull(),
     baseArea: text("base_area"),
     description: text("description"),
+    addressLine1: text("address_line1"),
+    addressLine2: text("address_line2"),
+    city: text("city"),
+    postalCode: text("postal_code"),
+    country: text("country").notNull().default("Indonesia"),
+    latitude: doublePrecision("latitude"),
+    longitude: doublePrecision("longitude"),
     logo: text("logo"),
     coverImage: text("cover_image"),
     whatsapp: text("whatsapp"),
@@ -79,6 +88,12 @@ export const serviceListing = pgTable(
     serviceType: vendorType("service_type").notNull(),
     description: text("description"),
     area: text("area"),
+    addressLine1: text("address_line1"),
+    addressLine2: text("address_line2"),
+    city: text("city"),
+    postalCode: text("postal_code"),
+    latitude: doublePrecision("latitude"),
+    longitude: doublePrecision("longitude"),
     capacityMin: integer("capacity_min").notNull().default(1),
     capacityMax: integer("capacity_max").notNull().default(30),
     tier: tier("tier").notNull().default("comfort"),
@@ -86,6 +101,10 @@ export const serviceListing = pgTable(
     priceCurrency: text("price_currency").notNull().default("INR"),
     priceUnit: priceUnit("price_unit").notNull().default("per_person"),
     images: text("images").array(),
+    serviceDetails: jsonb("service_details"),
+    inclusions: text("inclusions").array(),
+    exclusions: text("exclusions").array(),
+    cancellationPolicy: text("cancellation_policy"),
     status: listingStatus("status").notNull().default("draft"),
     active: boolean("active").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -95,6 +114,99 @@ export const serviceListing = pgTable(
     index("listing_vendor_status_idx").on(t.vendorId, t.status, t.active),
     index("listing_capacity_idx").on(t.capacityMin, t.capacityMax),
   ]
+);
+
+export const vendorMedia = pgTable(
+  "vendor_media",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    vendorId: uuid("vendor_id").notNull().references(() => vendor.id, { onDelete: "cascade" }),
+    listingId: uuid("listing_id").references(() => serviceListing.id, { onDelete: "cascade" }),
+    kind: mediaKind("kind").notNull().default("photo"),
+    fileUrl: text("file_url").notNull(),
+    altText: text("alt_text"),
+    caption: text("caption"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    approved: boolean("approved").notNull().default(false),
+    uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("vendor_media_vendor_idx").on(t.vendorId, t.kind, t.approved),
+    index("vendor_media_listing_idx").on(t.listingId, t.sortOrder),
+  ]
+);
+
+export const vendorEvent = pgTable(
+  "vendor_event",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    vendorId: uuid("vendor_id").notNull().references(() => vendor.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }),
+    area: text("area"),
+    addressLine1: text("address_line1"),
+    priceAmount: bigint("price_amount", { mode: "number" }),
+    priceCurrency: text("price_currency").notNull().default("INR"),
+    displayCurrency: text("display_currency").notNull().default("IDR"),
+    capacity: integer("capacity"),
+    images: text("images").array(),
+    status: providerContentStatus("status").notNull().default("draft"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("vendor_event_vendor_status_idx").on(t.vendorId, t.status, t.startsAt),
+    index("vendor_event_board_idx").on(t.status, t.startsAt),
+  ]
+);
+
+export const vendorPromotion = pgTable(
+  "vendor_promotion",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    vendorId: uuid("vendor_id").notNull().references(() => vendor.id, { onDelete: "cascade" }),
+    listingId: uuid("listing_id").references(() => serviceListing.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    offerCode: text("offer_code"),
+    priceAmount: bigint("price_amount", { mode: "number" }),
+    priceCurrency: text("price_currency").notNull().default("INR"),
+    displayCurrency: text("display_currency").notNull().default("IDR"),
+    terms: text("terms"),
+    validFrom: timestamp("valid_from", { withTimezone: true }),
+    validUntil: timestamp("valid_until", { withTimezone: true }),
+    images: text("images").array(),
+    status: providerContentStatus("status").notNull().default("draft"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("vendor_promotion_vendor_status_idx").on(t.vendorId, t.status, t.validUntil),
+    index("vendor_promotion_listing_idx").on(t.listingId),
+  ]
+);
+
+export const vendorPayoutAccount = pgTable(
+  "vendor_payout_account",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    vendorId: uuid("vendor_id").notNull().unique().references(() => vendor.id, { onDelete: "cascade" }),
+    accountHolderName: text("account_holder_name").notNull(),
+    bankName: text("bank_name"),
+    bankCountry: text("bank_country").notNull().default("Indonesia"),
+    currency: text("currency").notNull().default("IDR"),
+    gatewayContactId: text("gateway_contact_id"),
+    gatewayFundAccountId: text("gateway_fund_account_id"),
+    maskedAccount: text("masked_account"),
+    upiId: text("upi_id"),
+    status: payoutAccountStatus("status").notNull().default("pending"),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("vendor_payout_status_idx").on(t.status, t.createdAt)]
 );
 
 export const listingCircuit = pgTable(

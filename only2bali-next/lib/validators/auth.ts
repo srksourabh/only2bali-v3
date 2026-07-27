@@ -39,6 +39,41 @@ export const verifyOtpSchema = z
 export type RequestOtpInput = z.infer<typeof requestOtpSchema>;
 export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;
 
+const username = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(3, "Username must be at least 3 characters.")
+  .max(40, "Username is too long.")
+  .regex(/^[a-z0-9._-]+$/, "Use letters, numbers, dots, dashes or underscores only.");
+
+const password = z
+  .string()
+  .min(10, "Password must be at least 10 characters.")
+  .max(128, "Password is too long.");
+
+export const authRoleSchema = z.enum(["traveller", "vendor", "admin"]);
+
+export const passwordSignUpSchema = z.object({
+  username,
+  password,
+  email: email.optional().or(z.literal("")),
+  role: z.enum(["traveller", "vendor"]),
+  businessName: z.string().trim().min(2).max(160).optional(),
+}).refine((value) => value.role !== "vendor" || Boolean(value.businessName), {
+  message: "Provider business name is required.",
+  path: ["businessName"],
+});
+
+export const passwordSignInSchema = z.object({
+  username,
+  password: z.string().min(1, "Enter your password.").max(128),
+  role: authRoleSchema,
+});
+
+export type PasswordSignUpInput = z.infer<typeof passwordSignUpSchema>;
+export type PasswordSignInInput = z.infer<typeof passwordSignInSchema>;
+
 /** The single string an OTP is keyed on, so email and mobile cannot collide. */
 export function toIdentifier(input: { email?: string; mobile?: string }): string {
   return input.email ? `email:${input.email}` : `mobile:${input.mobile}`;
