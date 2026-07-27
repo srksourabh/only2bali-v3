@@ -41,7 +41,7 @@ export async function rateLimitShared(
     if (count > limit) return { allowed: false, remaining: 0, retryAfterSeconds };
     return { allowed: true, remaining: limit - count, retryAfterSeconds: 0 };
   } catch (err) {
-    console.error("[rate-limit] Postgres counter unavailable, falling back to memory", err);
+    console.warn("[rate-limit] Postgres counter unavailable, falling back to memory", err);
     return rateLimitMemory(key, limit, windowMs);
   }
 }

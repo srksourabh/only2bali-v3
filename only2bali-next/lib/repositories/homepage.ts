@@ -69,7 +69,7 @@ export async function getHomePackages(
   try {
     rows = await listPackageCards({ limit: 3 });
   } catch (err) {
-    console.error("[homepage] catalogue unavailable, using dictionary content", err);
+    console.warn("[homepage] catalogue unavailable, using dictionary content", err);
     return {
       packages: dict.packages.items.map((i) => ({ ...i, why: [...i.why], chips: [...i.chips], live: null })),
       source: "fallback",
