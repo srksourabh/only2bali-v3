@@ -38,7 +38,7 @@ export default async function SiteNav({ lang, dict }: { lang: Locale; dict: Dict
             </Link>
           )}
 
-          <Link className="btn btn-primary" href={`/${lang}/inquiry`}>
+          <Link className="btn btn-primary" href={`/${lang}/planner`}>
             {dict.nav.plan}
           </Link>
         </div>

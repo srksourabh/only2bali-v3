@@ -6,6 +6,96 @@
   padding: 1.5rem;
 }
 
+.plain-planner {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 1.25rem;
+  align-items: stretch;
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: var(--shadow);
+}
+
+.plain-planner-copy {
+  padding: 1rem;
+  background: var(--emerald-d);
+  color: #fff;
+  border-radius: 10px;
+}
+
+.plain-planner-copy h1 {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(1.6rem, 3vw, 2.25rem);
+  line-height: 1.05;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.plain-planner-copy p {
+  color: #dbeee8;
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+.plain-planner-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.plain-planner-box label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--emerald-d);
+}
+
+.plain-planner-box textarea {
+  width: 100%;
+  min-height: 190px;
+  resize: vertical;
+  padding: 1rem;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink);
+  background: var(--ivory);
+  line-height: 1.5;
+}
+
+.plain-planner-box textarea:focus {
+  outline: none;
+  border-color: var(--saffron);
+  background: #fff;
+}
+
+.plain-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.published-preview {
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--emerald);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.published-preview h4 {
+  color: var(--emerald-d);
+  margin: 0.4rem 0;
+}
+
+.published-preview p {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 /* Progress Bar */
 .wizard-progress-container {
   width: 100%;
@@ -139,6 +229,16 @@
 }
 
 @media (max-width: 640px) {
+  .plain-planner {
+    grid-template-columns: 1fr;
+    padding: 0.9rem;
+  }
+  .plain-actions {
+    justify-content: stretch;
+  }
+  .plain-actions button {
+    width: 100%;
+  }
   .form-group-row {
     grid-template-columns: 1fr;
     gap: 1rem;

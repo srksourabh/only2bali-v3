@@ -77,6 +77,7 @@ export async function POST(req: Request) {
       rent_period,
       include_driver,
       preferred_languages,
+      plain_request,
     } = body;
 
     const parsedStart = from_date ? new Date(from_date) : new Date();
@@ -106,6 +107,7 @@ export async function POST(req: Request) {
 Create a highly customized day-by-day itinerary based on the user's selections.
 
 Trip details:
+- Traveler plain-English request: ${plain_request || "No plain-English request provided; use the structured fields below."}
 - Lead Traveler Name: ${name} (Age: ${age})
 - Travel Dates: ${from_date} to ${to_date} (${dayCount} days)
 - Group Size: ${number_of_people} pax (Crew: ${crew_type})
@@ -120,6 +122,7 @@ Trip details:
 - Guide languages: ${preferred_languages.join(", ")}
 
 Focus on:
+0. If the plain-English request conflicts with the structured fields, keep the safety and food rules from the structured fields, but use the plain-English request to shape the route, pace, hotel type, special events and provider suggestions.
 1. Validating the diet preference: Make sure ALL lunch & dinners explicitly state they are 100% compliant with "${food}" (especially if Jain, specify no onion, garlic, or root vegetables). Mention specific Balinese Indian restaurants (like Ganesha Ek Sanskriti, Queen's Tandoor, Indian Delights) or chef-prepared buffet items.
 2. Incorporate the selected Interest activities (such as beach visits, temple excursions, spa/wellness, wedding backdrops, trekking).
 3. Accommodations must align with budget tier: Economical (3-star hotels/guesthouses), Comfort (4-star resort or boutique villas), Premium (5-star private pool luxury villas).
@@ -201,6 +204,7 @@ function generateMockItinerary(start: Date, days: number, body: any): any[] {
   const budgetTier = body.budget || "comfort";
   const hotelClass = budgetTier === "premium" ? "5-Star Luxury Private Pool Villa" : budgetTier === "comfort" ? "4-Star Boutique Resort" : "3-Star Deluxe Hotel";
   const guideLang = body.preferred_languages?.[0] || "English";
+  const plain = typeof body.plain_request === "string" ? body.plain_request.trim() : "";
   
   const dailyCost = budgetTier === "premium" ? 10000 : budgetTier === "comfort" ? 6000 : 3500;
 
@@ -212,8 +216,9 @@ function generateMockItinerary(start: Date, days: number, body: any): any[] {
       result.push({
         day: 1,
         date: dateStr,
-        title: "Arrive in Bali & Sunset Oceanside Dinner",
+        title: plain ? "Arrival shaped from your plain-English brief" : "Arrive in Bali & Sunset Oceanside Dinner",
         activities: [
+          ...(plain ? [`Trip brief applied: ${plain.slice(0, 180)}${plain.length > 180 ? "..." : ""}`] : []),
           `Arrive at Ngurah Rai International Airport from ${body.international_airport || "Delhi/Mumbai"}`,
           `Welcome garland service and meet your private local driver and ${guideLang}-speaking guide`,
           "Transfer to your hotel in Seminyak, check in and freshen up",

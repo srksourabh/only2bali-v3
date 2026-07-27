@@ -12,6 +12,7 @@ export const MAX_DAYS = 30;
 const shortText = z.string().trim().max(200);
 
 export const plannerInputSchema = z.object({
+  plain_request: z.string().trim().max(4000).default(""),
   name: shortText.default("Traveler"),
   age: z.union([z.string().trim().max(10), z.number()]).optional(),
   crew_type: shortText.default("friends_get_together"),

@@ -212,6 +212,15 @@ export interface PackageDetail extends PackageCard {
  * has no reason to believe the badge.
  */
 export async function getPackageBySlug(slug: string): Promise<PackageDetail | null> {
+  try {
+    return await getPackageBySlugFromDb(slug);
+  } catch (err) {
+    console.warn("[package] catalogue unavailable, using itinerary fallback", err);
+    return getFallbackPackageBySlug(slug);
+  }
+}
+
+async function getPackageBySlugFromDb(slug: string): Promise<PackageDetail | null> {
   const [row] = await db.select().from(pkg).where(and(eq(pkg.slug, slug), eq(pkg.status, "published"))).limit(1);
   if (!row) return null;
 
@@ -292,5 +301,347 @@ export async function getPackageBySlug(slug: string): Promise<PackageDetail | nu
     excluded: inclusions.filter((i) => i.kind === "excluded").map((i) => i.label),
     departures: departures.map((d) => ({ ...d, seatsAvailable: Number(d.seatsAvailable) })),
     compliance,
+  };
+}
+
+const futureDate = (offsetDays: number) => {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + offsetDays);
+  return d.toISOString().slice(0, 10);
+};
+
+function meal(
+  meal: PackageDayMeal["meal"],
+  description: string,
+  complianceRating: PackageDayMeal["complianceRating"],
+  note: string | null = null
+): PackageDayMeal {
+  return { meal, description, complianceRating, note };
+}
+
+const fallbackPackages: PackageDetail[] = [
+  {
+    id: "fallback-sattvik-serenity",
+    slug: "sattvik-serenity",
+    name: "Sattvik Serenity",
+    days: 6,
+    nights: 5,
+    tier: "premium",
+    protocols: ["jain", "vegetarian"],
+    basePriceAmount: 88_000 * 100,
+    basePriceCurrency: "INR",
+    heroImage: "/Asset/D-card-img2.png",
+    blurb: "Premium partner itinerary for the Ramayana temple circuit with Jain food support, quality rides and comfortable stays.",
+    languages: ["Hindi", "Gujarati", "English"],
+    places: ["Ubud", "Tirta Empul", "Besakih", "Uluwatu", "Nusa Dua"],
+    highlights: [
+      "Premium partner option selected for stricter Jain handling",
+      "Comfort stay, private guide and admin-reviewed vehicle plan",
+      "Luxury car upgrade available only when selected",
+    ],
+    circuitKeys: ["ramayana", "culinary"],
+    nextDeparture: { startDate: futureDate(28), priceAmount: 88_000 * 100, seatsAvailable: 14 },
+    description:
+      "A dummy-data premium partner plan for families who want temples, strict Jain food, comfortable stay standards and predictable rides.",
+    kitchen: true,
+    cookReady: true,
+    groupSizeMin: 6,
+    groupSizeMax: 24,
+    itinerary: [
+      {
+        dayNumber: 1,
+        title: "Arrival in Bali and Ubud check-in",
+        summary: "Airport pickup, welcome briefing and a light Ubud evening.",
+        stayArea: "Ubud",
+        transportNote: "Private AC Innova or HiAce based on group size.",
+        meals: [
+          meal("breakfast", "In-flight or packed Indian breakfast", "amber", "Airline meal reconfirmed before ticketing."),
+          meal("lunch", "Welcome Jain thali at verified Ubud restaurant", "green", "No onion, garlic or root vegetables."),
+          meal("dinner", "Villa dinner prepared on separate Jain utensils", "green", "Cook support available for groups of 10+."),
+        ],
+      },
+      {
+        dayNumber: 2,
+        title: "Tirta Empul, Ubud Palace and local market",
+        summary: "Temple morning, relaxed shopping and early dinner.",
+        stayArea: "Ubud",
+        transportNote: "Senior-friendly temple routing with shorter walking stretches.",
+        meals: [
+          meal("breakfast", "Poha, fruit and tea at the villa", "green"),
+          meal("lunch", "Gujarati lunch near Ubud Palace", "green", "Kitchen confirmed before departure."),
+          meal("dinner", "Indian vegetarian buffet at resort", "amber", "Separate service line required."),
+        ],
+      },
+      {
+        dayNumber: 3,
+        title: "Besakih temple and East Bali drive",
+        summary: "A full circuit day with rest stops, photo pauses and verified meal routing.",
+        stayArea: "Ubud",
+        transportNote: "Premium van or luxury car upgrade available.",
+        meals: [
+          meal("breakfast", "Early Jain breakfast box", "green", "Packed before temple departure."),
+          meal("lunch", "Packed Jain lunch on the route", "green", "Avoids uncertain kitchens near the temple."),
+          meal("dinner", "Satvik dinner in Ubud", "green", "Dedicated vegetarian partner."),
+        ],
+      },
+      {
+        dayNumber: 4,
+        title: "Rice terraces, spa time and craft village",
+        summary: "A lighter day after the long temple route, with enough time for rest.",
+        stayArea: "Ubud",
+        transportNote: "Half-day car hire with driver on standby.",
+        meals: [
+          meal("breakfast", "Villa breakfast with Jain upma and fruit", "green"),
+          meal("lunch", "Tegallalang shared-kitchen warung", "red", "Substituted with a Jain-capable Ubud restaurant."),
+          meal("dinner", "Private villa dinner", "green", "Separate prep surface."),
+        ],
+      },
+      {
+        dayNumber: 5,
+        title: "Uluwatu temple, Kecak and Nusa Dua stay",
+        summary: "Move south, check into a beach-side stay and finish with the Kecak sunset show.",
+        stayArea: "Nusa Dua",
+        transportNote: "Comfort van included; luxury car upgrade on request.",
+        meals: [
+          meal("breakfast", "Ubud breakfast before checkout", "green"),
+          meal("lunch", "South Bali Indian vegetarian restaurant", "amber", "Jain items pre-ordered."),
+          meal("dinner", "Late Jain dinner after Kecak", "green", "Reserved timing."),
+        ],
+      },
+      {
+        dayNumber: 6,
+        title: "Beach morning and airport departure",
+        summary: "Quiet breakfast, optional beach walk, airport transfer and departure support.",
+        stayArea: "Nusa Dua",
+        transportNote: "Airport transfer with luggage vehicle if needed.",
+        meals: [
+          meal("breakfast", "Resort breakfast with Jain counter confirmation", "amber", "Admin must reconfirm before booking."),
+          meal("lunch", "Packed vegetarian lunch if flight is late", "green"),
+          meal("dinner", "In-flight meal", "amber", "Airline meal request required."),
+        ],
+      },
+    ],
+    included: ["Private airport transfers", "Premium partner stays", "Private vehicle and guide", "Jain meal planning", "Temple route support"],
+    excluded: ["International flights", "Visa costs", "Personal shopping", "Luxury car upgrade unless selected"],
+    departures: [
+      { startDate: futureDate(28), endDate: futureDate(33), priceAmount: 88_000 * 100, seatsAvailable: 14 },
+      { startDate: futureDate(56), endDate: futureDate(61), priceAmount: 94_000 * 100, seatsAvailable: 10 },
+    ],
+    compliance: { green: 13, amber: 4, red: 1 },
+  },
+  {
+    id: "fallback-bali-veg-explorer",
+    slug: "bali-veg-explorer",
+    name: "Bali Veg Explorer",
+    days: 5,
+    nights: 4,
+    tier: "economical",
+    protocols: ["vegetarian", "jain"],
+    basePriceAmount: 39_500 * 100,
+    basePriceCurrency: "INR",
+    heroImage: "/Asset/beaches.png",
+    blurb: "Latest budget partner offer for first-time Bali groups needing vegetarian restaurants, a quality ride and a practical stay.",
+    languages: ["Hindi", "English"],
+    places: ["Kuta", "Ubud", "Uluwatu", "Tanah Lot"],
+    highlights: [
+      "Lower-cost partner offer for flexible groups",
+      "Private car or van options instead of random taxi planning",
+      "Vegetarian and Jain-capable food stops marked day by day",
+    ],
+    circuitKeys: ["culinary", "adventure"],
+    nextDeparture: { startDate: futureDate(21), priceAmount: 39_500 * 100, seatsAvailable: 18 },
+    description:
+      "A dummy-data economical plan for travelers who want Bali highlights without premium pricing. Admin can replace this with selected partner rates.",
+    kitchen: false,
+    cookReady: true,
+    groupSizeMin: 2,
+    groupSizeMax: 30,
+    itinerary: [
+      {
+        dayNumber: 1,
+        title: "Arrival, Kuta check-in and sunset dinner",
+        summary: "Meet your driver, check in and keep the first evening light.",
+        stayArea: "Kuta",
+        transportNote: "Airport pickup in private AC car or van.",
+        meals: [
+          meal("breakfast", "In-flight meal", "amber", "Airline meal request."),
+          meal("lunch", "Arrival snacks and Indian tea", "green"),
+          meal("dinner", "Vegetarian dinner near Kuta", "green", "Jain variant on request."),
+        ],
+      },
+      {
+        dayNumber: 2,
+        title: "Water sports and Uluwatu Kecak",
+        summary: "Tanjung Benoa activities, beach time and sunset Kecak show.",
+        stayArea: "Kuta",
+        transportNote: "Full-day private car with driver.",
+        meals: [
+          meal("breakfast", "Hotel breakfast with vegetarian counter", "amber", "Shared hotel kitchen."),
+          meal("lunch", "Indian vegetarian lunch in Nusa Dua", "green"),
+          meal("dinner", "Post-show thali dinner", "green", "Pre-booked table."),
+        ],
+      },
+      {
+        dayNumber: 3,
+        title: "Ubud rice terraces and market day",
+        summary: "Cultural Ubud route with rice terraces, local market and craft stops.",
+        stayArea: "Ubud",
+        transportNote: "Car or van transfer from Kuta to Ubud.",
+        meals: [
+          meal("breakfast", "Hotel breakfast", "amber", "Vegetarian selection checked."),
+          meal("lunch", "Pure vegetarian Ubud restaurant", "green"),
+          meal("dinner", "Simple Indian dinner at Ubud stay", "green", "No non-veg prep for group order."),
+        ],
+      },
+      {
+        dayNumber: 4,
+        title: "Tanah Lot and shopping",
+        summary: "Late start, temple sunset and local shopping with flexible meal timing.",
+        stayArea: "Kuta",
+        transportNote: "Private vehicle retained until dinner.",
+        meals: [
+          meal("breakfast", "Resort breakfast", "amber"),
+          meal("lunch", "Vegetarian lunch box during shopping", "green"),
+          meal("dinner", "Indian restaurant dinner after Tanah Lot", "green", "Jain order cutoff is 24 hours."),
+        ],
+      },
+      {
+        dayNumber: 5,
+        title: "Souvenir stop and departure",
+        summary: "Checkout, souvenir stop and airport transfer.",
+        stayArea: "Flight home",
+        transportNote: "Airport drop included.",
+        meals: [
+          meal("breakfast", "Hotel breakfast", "amber"),
+          meal("lunch", "Packed vegetarian meal", "green"),
+          meal("dinner", "In-flight meal", "amber", "Airline meal request."),
+        ],
+      },
+    ],
+    included: ["4 nights stay", "Private airport transfers", "Daily private ride", "Selected vegetarian meals", "Basic guide coordination"],
+    excluded: ["Flights", "Visa", "Water-sport ticket upgrades", "Luxury car upgrade"],
+    departures: [
+      { startDate: futureDate(21), endDate: futureDate(25), priceAmount: 39_500 * 100, seatsAvailable: 18 },
+      { startDate: futureDate(49), endDate: futureDate(53), priceAmount: 42_500 * 100, seatsAvailable: 16 },
+    ],
+    compliance: { green: 10, amber: 5, red: 0 },
+  },
+  {
+    id: "fallback-active-bali",
+    slug: "active-bali",
+    name: "Active Bali",
+    days: 5,
+    nights: 4,
+    tier: "comfort",
+    protocols: ["vegetarian", "vegan"],
+    basePriceAmount: 47_500 * 100,
+    basePriceCurrency: "INR",
+    heroImage: "/Asset/adventure.png",
+    blurb: "Adventure-focused partner offer with rafting, sunrise, Nusa Penida and vegan or vegetarian meal planning.",
+    languages: ["Hindi", "English"],
+    places: ["Ayung River", "Mount Batur", "Nusa Penida"],
+    highlights: [
+      "Comfort partner offer for active groups",
+      "Protein-heavy vegetarian and vegan meals planned around activity days",
+      "Private ride schedule designed to avoid wasted transfer time",
+    ],
+    circuitKeys: ["adventure"],
+    nextDeparture: { startDate: futureDate(35), priceAmount: 47_500 * 100, seatsAvailable: 12 },
+    description: "A dummy-data adventure plan for active travelers who want clean food, comfortable transfers and budget clarity.",
+    kitchen: false,
+    cookReady: false,
+    groupSizeMin: 2,
+    groupSizeMax: 18,
+    itinerary: [
+      {
+        dayNumber: 1,
+        title: "Arrival and Seminyak recovery evening",
+        summary: "Airport pickup, check-in and early dinner before activity days.",
+        stayArea: "Seminyak",
+        transportNote: "Private car or van based on group size.",
+        meals: [
+          meal("breakfast", "In-flight meal", "amber", "Pre-select veg or vegan."),
+          meal("lunch", "Arrival snack box", "green"),
+          meal("dinner", "Vegetarian or vegan dinner in Seminyak", "green"),
+        ],
+      },
+      {
+        dayNumber: 2,
+        title: "Ayung rafting and ATV trail",
+        summary: "Action day with rafting, ATV and recovery meal timing.",
+        stayArea: "Ubud",
+        transportNote: "Full-day private vehicle with wet-bag space.",
+        meals: [
+          meal("breakfast", "High-energy breakfast at hotel", "amber", "Vegan on request."),
+          meal("lunch", "Packed vegetarian lunch after rafting", "green"),
+          meal("dinner", "Ubud plant-forward dinner", "green"),
+        ],
+      },
+      {
+        dayNumber: 3,
+        title: "Mount Batur sunrise and hot springs",
+        summary: "Early trek, hot springs and slow afternoon.",
+        stayArea: "Ubud",
+        transportNote: "Pre-dawn pickup with driver rest rules.",
+        meals: [
+          meal("breakfast", "Packed trek breakfast", "green", "No egg for vegetarian groups."),
+          meal("lunch", "Post-trek vegetarian meal", "amber", "Shared mountain kitchen."),
+          meal("dinner", "Indian dinner in Ubud", "green"),
+        ],
+      },
+      {
+        dayNumber: 4,
+        title: "Nusa Penida day trip",
+        summary: "Island viewpoints and beach time with a packed food plan.",
+        stayArea: "Seminyak",
+        transportNote: "Car, fast boat and island vehicle coordinated together.",
+        meals: [
+          meal("breakfast", "Early hotel breakfast", "amber"),
+          meal("lunch", "Packed vegan or vegetarian lunch", "green", "Avoids uncertain island kitchens."),
+          meal("dinner", "Return dinner at Indian restaurant", "green"),
+        ],
+      },
+      {
+        dayNumber: 5,
+        title: "Beach morning and departure",
+        summary: "Easy checkout day with airport transfer.",
+        stayArea: "Flight home",
+        transportNote: "Airport transfer included.",
+        meals: [
+          meal("breakfast", "Hotel breakfast", "amber"),
+          meal("lunch", "Vegetarian lunch before airport", "green"),
+          meal("dinner", "In-flight meal", "amber"),
+        ],
+      },
+    ],
+    included: ["4 nights stay", "Private transport", "Rafting coordination", "Batur sunrise coordination", "Meal planning"],
+    excluded: ["Flights", "Visa", "Premium activity upgrades", "Personal equipment"],
+    departures: [
+      { startDate: futureDate(35), endDate: futureDate(39), priceAmount: 47_500 * 100, seatsAvailable: 12 },
+      { startDate: futureDate(63), endDate: futureDate(67), priceAmount: 51_000 * 100, seatsAvailable: 11 },
+    ],
+    compliance: { green: 9, amber: 6, red: 0 },
+  },
+];
+
+export function getFallbackPackageBySlug(slug: string): PackageDetail | null {
+  const found = fallbackPackages.find((item) => item.slug === slug);
+  if (!found) return null;
+  return {
+    ...found,
+    protocols: [...found.protocols],
+    languages: found.languages ? [...found.languages] : null,
+    places: [...found.places],
+    highlights: [...found.highlights],
+    circuitKeys: [...found.circuitKeys],
+    nextDeparture: found.nextDeparture ? { ...found.nextDeparture } : null,
+    itinerary: found.itinerary.map((day) => ({
+      ...day,
+      meals: day.meals.map((item) => ({ ...item })),
+    })),
+    included: [...found.included],
+    excluded: [...found.excluded],
+    departures: found.departures.map((item) => ({ ...item })),
+    compliance: { ...found.compliance },
   };
 }

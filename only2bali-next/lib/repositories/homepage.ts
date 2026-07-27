@@ -96,7 +96,10 @@ export async function getHomePackages(
       // Built from real columns rather than a hardcoded string, so a price or a
       // night count changed in the database shows up here immediately.
       meta: `${row.days} ${dict.packages.days} · ${row.nights} ${dict.packages.nights} · ${row.places.join(", ")}`,
-      price: formatMoney(row.basePriceAmount, row.basePriceCurrency),
+      // The card is the latest admin/partner offer. Database package rows may
+      // carry higher premium inventory rates, but the landing page should not
+      // imply that every Bali trip starts at the premium partner price.
+      price: copy?.price ?? formatMoney(row.basePriceAmount, row.basePriceCurrency),
       live: {
         days: row.days,
         nights: row.nights,

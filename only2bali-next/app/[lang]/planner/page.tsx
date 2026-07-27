@@ -232,6 +232,8 @@ function PlannerWizardComponent() {
   const [rentPeriod, setRentPeriod] = useState("Whole Trip");
   const [includeDriver, setIncludeDriver] = useState("Yes");
   const [preferredLanguages, setPreferredLanguages] = useState<string[]>([]);
+  const [plainRequest, setPlainRequest] = useState("");
+  const [publishedPreview, setPublishedPreview] = useState(false);
 
   // ── RESULT STATES ──
   const [itinerary, setItinerary] = useState<DayItinerary[]>([]);
@@ -329,6 +331,7 @@ function PlannerWizardComponent() {
     setError(null);
 
     const payload = {
+      plain_request: plainRequest,
       name,
       age: parseInt(age),
       crew_type: crewType,
@@ -373,6 +376,68 @@ function PlannerWizardComponent() {
     }
   };
 
+  const fetchPlainEnglishPlan = async () => {
+    const brief = plainRequest.trim();
+    if (brief.length < 20) {
+      setError("Write at least one clear sentence about your trip, group, budget, food, stay or ride needs.");
+      return;
+    }
+
+    setIsLoading(true);
+    setLoadingMsgIdx(0);
+    setError(null);
+    setPublishedPreview(false);
+    setPublishedPreview(false);
+
+    const start = fromDate || todayStr;
+    const endDate = toDate || new Date(new Date(start).getTime() + 4 * 86_400_000).toISOString().slice(0, 10);
+    const payload = {
+      plain_request: brief,
+      name: name || "Traveler",
+      age: age || "35",
+      crew_type: crewType || "plain_english_request",
+      number_of_people: numberOfPeople || 2,
+      times_visited_bali: timesVisitedBali || "not specified",
+      from_date: start,
+      to_date: endDate,
+      international_airport: internationalAirport || "India",
+      flight_class: flightClass,
+      budget: budgetTier,
+      food: foodProtocol,
+      diet_choices: dietChoices,
+      kitchen: kitchenAccess,
+      cook: cookAccompaniment,
+      interests: selectedInterests.map(id => INTERESTS.find(i => i.id === id)?.name || id),
+      vehicle_type: VEHICLES.find(v => v.id === vehicleType)?.name || vehicleType || "Private car or van",
+      rent_period: rentPeriod,
+      include_driver: includeDriver,
+      preferred_languages: preferredLanguages.length ? preferredLanguages : ["English", "Hindi"]
+    };
+
+    try {
+      const res = await fetch("/api/planner", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success && data.itinerary) {
+        setItinerary(data.itinerary);
+        setIsMockResult(!!data.isMock);
+        setActiveDayTab(1);
+        setStep(6);
+        setPublishedPreview(true);
+      } else {
+        setError(data.error || "Failed to generate itinerary. Please try again.");
+      }
+    } catch (e: any) {
+      console.error(e);
+      setError("Network error calling the itinerary service. Try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Calculate sum of estimated days cost
   const totalCost = itinerary.reduce((sum, item) => sum + (item.estimated_cost_inr || 0), 0);
 
@@ -390,6 +455,38 @@ function PlannerWizardComponent() {
         <div className="wrap">
           <div className="planner-container">
             <span className="tag">Dynamic Custom Planner</span>
+
+            {step <= 5 && !isLoading && (
+              <div className="plain-planner">
+                <div className="plain-planner-copy">
+                  <span className="tag">Plan Your Trip</span>
+                  <h1>Write your Bali trip in plain English.</h1>
+                  <p>
+                    Tell us the group size, food rules, budget, ride quality, stay style,
+                    dates, and anything special. The AI will turn it into a concrete
+                    day-by-day tour plan that can be shared with providers.
+                  </p>
+                </div>
+                <div className="plain-planner-box">
+                  <label htmlFor="plain-trip-request">Your trip brief</label>
+                  <textarea
+                    id="plain-trip-request"
+                    value={plainRequest}
+                    onChange={(e) => setPlainRequest(e.target.value)}
+                    rows={7}
+                    placeholder="Example: We are 8 people from Mumbai visiting Bali for 5 nights in October. We need vegetarian food, a clean 4-star stay, a comfortable van with driver, Ubud temples, Nusa Dua beach time, one luxury car day, and a total budget around Rs 55,000 per person excluding flights."
+                  />
+                  <div className="plain-actions">
+                    <button className="btn-wizard-next" type="button" onClick={fetchPlainEnglishPlan}>
+                      Generate concrete plan
+                    </button>
+                    <button className="btn-wizard-prev" type="button" onClick={() => setStep(1)}>
+                      Use guided form
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Progress Bar (Visible during Form steps) */}
             {step <= 5 && (
@@ -704,6 +801,17 @@ function PlannerWizardComponent() {
                     {isMockResult && (
                       <div className="okbox" style={{ background: "#fef9e7", color: "#b7950b", borderColor: "#f9e79f", marginBottom: "1.5rem", fontSize: "0.85rem" }}>
                         💡 <b>Offline Fallback Mode:</b> The live AI API was not reachable or key is not set. We have calculated a structured template itinerary matching your dates and food rules.
+                      </div>
+                    )}
+
+                    {publishedPreview && (
+                      <div className="published-preview">
+                        <span className="tag">Published preview</span>
+                        <h4>This readable plan is ready for traveler review and provider bidding.</h4>
+                        <p>
+                          In the live marketplace this plan is saved as a traveler inquiry, then
+                          verified providers submit their own itinerary and bid through Only2Bali.
+                        </p>
                       </div>
                     )}
 
