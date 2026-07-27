@@ -13,7 +13,7 @@ const CREW_OPTIONS = [
   { id: "team_bonding", title: "Team Bonding", desc: "Team building, bonding games, and relaxation", icon: "🤝" },
   { id: "alumni_meeting", title: "Alumni Meeting", desc: "Reuniting with old school or college friends", icon: "🎓" },
   { id: "friends_get_together", title: "Friends Get-Together", desc: "Fun vacations with your closest circles", icon: "🥳" },
-  { id: "family", title: "Family Group", desc: "Families traveling with toddlers/children", icon: "👨&zwj;👩&zwj;👧&zwj;👦" },
+  { id: "family", title: "Family Group", desc: "Families traveling with toddlers/children", icon: "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F466}" },
   { id: "new_couple", title: "New Couple", desc: "Honeymooners or romantic couple getaways", icon: "💑" },
   { id: "family_get_together", title: "Family Get-Together", desc: "Multi-generation tours (grandparents to kids)", icon: "👵👶" },
 ];
@@ -817,7 +817,7 @@ function PlannerWizardComponent() {
 
                     {numberOfPeople >= 10 && (
                       <div className="okbox" style={{ marginBottom: "1.5rem", fontSize: "0.85rem" }}>
-                        👨&zwj;🍳 <b>Accompanying Cook qualified:</b> Your large group of {numberOfPeople} pax qualifies for specialized Indian catering chef setups and wholesale pricing.
+                        {"\u{1F468}\u200D\u{1F373}"} <b>Accompanying Cook qualified:</b> Your large group of {numberOfPeople} pax qualifies for specialized Indian catering chef setups and wholesale pricing.
                       </div>
                     )}
 
@@ -909,11 +909,15 @@ function PlannerWizardComponent() {
                   <div className="wizard-nav">
                     {step > 1 && (
                       <button className="btn-wizard-prev" onClick={prevStep}>
-                        &larr; Back
+                        {"\u2190"} Back
                       </button>
                     )}
                     <button className="btn-wizard-next" onClick={nextStep}>
-                      {step === 5 ? "Generate suggestions & calculate cost &rarr;" : "Next step &rarr;"}
+                      {step === 5 ? (
+                        <>Generate suggestions & calculate cost {"\u2192"}</>
+                      ) : (
+                        <>Next step {"\u2192"}</>
+                      )}
                     </button>
                   </div>
                 )}
@@ -922,7 +926,7 @@ function PlannerWizardComponent() {
                 {step === 6 && (
                   <div style={{ textAlign: "center", marginTop: "2rem" }}>
                     <button className="btn-wizard-prev" onClick={() => setStep(1)}>
-                      &larr; Plan another trip / Edit preferences
+                      {"\u2190"} Plan another trip / Edit preferences
                     </button>
                   </div>
                 )}
