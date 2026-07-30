@@ -74,3 +74,31 @@ When operating autonomously (under `/goal` or any multi-step task):
 ## 8. Anti-Patterns (auto-reject)
 
 Patching symptoms without dependency-graph analysis · uncached provider calls in render path · client-side fetch waterfalls · `useEffect` data-fetching where RSC suffices · silent catch blocks · coverage theatre (tests without assertions) · "TODO: handle error".
+
+## Cursor Cloud specific instructions
+
+The active product is `only2bali-next/` (Next.js 15, Node 22). Run all commands from that
+directory. Standard commands live in `only2bali-next/package.json` and `CLAUDE.md`; only the
+non-obvious cloud caveats are below.
+
+- **Docker must be running before `npm run dev:local` or `npm run test:e2e`.** Both spin up a
+  local Postgres 17 container (`o2b-local-db`, host port `55432`). The startup script (`npm run
+  update` layer) does not start the Docker daemon. If `docker ps` fails, start the daemon once per
+  boot in a background/tmux session: `sudo dockerd` (it needs `fuse-overlayfs` storage driver and
+  `iptables-legacy`, already configured in `/etc/docker/daemon.json`). The `ubuntu` user is in the
+  `docker` group, so `docker` works without `sudo` once the daemon is up.
+- **`npm run dev:local` is the one-command local stack:** starts Postgres, applies Drizzle
+  migrations, seeds the catalogue, writes `.env.local` (`DATABASE_URL` + a generated `AUTH_SECRET`),
+  then runs `next dev`. It picks the first free port from 3000, 3100, 3200... Login OTP codes are
+  printed to that terminal on a line like `[auth] OTP for <email>: 123456` (no email/SMS provider is
+  needed in dev). `npm run dev:down` removes the DB container.
+- **Do NOT run `npm run build` while `next dev` is running against the same `.next`.** The build
+  clobbers `.next` and the live dev server then returns HTTP 500 `Cannot find module
+  './chunks/vendor-chunks/next.js'`. Run the build separately, or restart the dev server afterward.
+- **`npm run db:verify` currently reports 3 pre-existing payment-constraint failures** (payment
+  amount / refund bounds / duplicate-charge, which need booking rows the base seed does not create).
+  These fail identically in CI on `main`; they are not an environment problem. Gates that must pass:
+  `npm run typecheck`, `npm test` (97 Vitest tests), `npm run build`. There is no separate lint
+  script — `typecheck` is the type/lint gate.
+- OTP delivery, Google OAuth, Gemini (AI planner), and payments are all optional and degrade
+  gracefully; `GET /api/health` reports what is configured (`otpDelivery: ["console"]` locally).
