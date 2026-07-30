@@ -29,11 +29,10 @@ export async function GET() {
   const otpDelivery = deliveryChannels();
   const ok = database === "connected";
 
-  // No gateway is wired up yet — the schema (`payment`, `payment_event`) is
-  // ready and the booking flow already produces a server-computed amount for
-  // one to attach to, but nothing here should claim payments work until a
-  // provider key is actually set. Same pattern as otpDelivery: report the
-  // fact plainly rather than let a booking silently have nowhere to pay.
+  // Payments are live when RAZORPAY_KEY_ID is set. Checkout creates gateway
+  // orders; capture still needs RAZORPAY_KEY_SECRET (verify) and
+  // RAZORPAY_WEBHOOK_SECRET (webhook). Same pattern as otpDelivery: report
+  // the fact plainly rather than let a booking silently have nowhere to pay.
   const paymentProvider = process.env.RAZORPAY_KEY_ID
     ? "razorpay"
     : process.env.STRIPE_SECRET_KEY

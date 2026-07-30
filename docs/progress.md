@@ -16,12 +16,12 @@
 | React site | **Live**, legacy | Now has a 404 route. Four routes still call the deleted FastAPI service. |
 | Next.js site | **Live** | Accounts, OTP login, sessions, catalogue, package pages, lead capture, booking. |
 | Postgres (VPS) | **Live** | `o2b-postgres`, own container, port 5433, mTLS. 45 tables, migrations 0000-0002 applied, catalogue + demo marketplace data seeded. |
-| Booking flow | **Shipped, no gateway yet** | `POST /api/bookings` holds seats and computes the amount server-side. `payment` / `payment_event` tables exist; no provider is wired in. |
+| Booking flow | **Shipped with Razorpay path** | `POST /api/bookings` holds seats. Checkout, verify (HMAC), webhook (`payment_event`), and account Pay UI are wired for Razorpay. Needs live keys in Vercel. |
 | FastAPI layer | **Deleted** | Removed 2026-07-22. Its chat widget removed from the CRA 2026-07-23. |
-| Migration CRA → Next.js | **In progress** | Accounts and booking no longer block it. Payment collection does. |
-| Test coverage | 97 unit + 74 end-to-end + 41 database checks | All three run in CI. |
-| Docs | Refreshed 2026-07-23 | |
-| Build | **In progress** | Sprint 0 closed. Payment gateway selection is the next real blocker. |
+| Migration CRA → Next.js | **In progress** | Accounts and booking no longer block it. Live Razorpay credentials and Vercel handover still do. |
+| Test coverage | 104 unit + 74 end-to-end + 41 database checks | All three run in CI. Razorpay signature helpers covered in Vitest. |
+| Docs | Refreshed 2026-07-30 | |
+| Build | **In progress** | Razorpay verify/webhook/pay UI shipped; production still needs keys + Vercel ownership. |
 
 ---
 
@@ -192,13 +192,10 @@ Not done - this is what blocks retiring the React app:
 - [ ] **Move production to Sourabh's Vercel** — `docs/vercel-handover.md`. This unblocks
       contact details and login in one step.
 - [ ] Choose an email provider and set `RESEND_API_KEY`, so people can actually sign in.
-- [ ] **Choose a payment gateway** (Razorpay is the natural default for INR — UPI, cards,
-      netbanking, no forex headache). `payment` / `payment_event` exist, `POST /api/bookings`
-      already produces the exact server-computed amount a gateway order needs. What is
-      missing is the provider integration itself: creating the gateway order, verifying the
-      webhook signature, and writing `payment_event` rows idempotently. `GET /api/health`
-      already reports `"payments": { "provider": null, "configured": false }` so this is
-      visible rather than discovered by a traveller stuck at checkout.
+- [x] **Wire Razorpay** — order create (`POST /api/payments/checkout`), Checkout.js verify
+      (`POST /api/payments/verify`), webhook with idempotent `payment_event`
+      (`POST /api/payments/webhook`), account Pay button. Still needs
+      `RAZORPAY_KEY_ID` / `KEY_SECRET` / `WEBHOOK_SECRET` in Vercel (blocked on handover).
 - [ ] Decide what happens to the four legacy React routes that call the deleted FastAPI
       service.
 - [ ] Remove the demo marketplace data (`delete from booking where reference like

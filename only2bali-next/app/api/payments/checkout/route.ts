@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
-    const user = await requireRole("traveller");
+    const user = await requireRole("traveller", "admin");
     const parsed = paymentIntentSchema.safeParse(await readJson(req));
     if (!parsed.success) return validationError(parsed.error);
 
