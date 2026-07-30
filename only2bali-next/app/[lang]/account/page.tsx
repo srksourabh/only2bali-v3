@@ -4,7 +4,9 @@ import type { Metadata } from "next";
 import { getDictionary } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n/config";
 import { getSessionUser } from "@/lib/auth";
+import { listAccountBookings } from "@/lib/repositories/payments";
 import SignOutButton from "./SignOutButton";
+import BookingPayButton from "./BookingPayButton";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,13 @@ export async function generateMetadata({
   return { title: `${dict.account.heading} — Only2Bali`, robots: { index: false, follow: false } };
 }
 
+const money = (minor: number, currency: string) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(minor / 100);
+
 export default async function AccountPage({ params }: { params: Promise<{ lang: string }> }) {
   const lang = (await params).lang as Locale;
   const dict = await getDictionary(lang);
@@ -27,10 +36,23 @@ export default async function AccountPage({ params }: { params: Promise<{ lang: 
   const user = await getSessionUser();
   if (!user) redirect(`/${lang}/login?next=/${lang}/account`);
 
+  const bookings = user.role === "traveller" || user.role === "admin"
+    ? await listAccountBookings(user.accountId)
+    : [];
+
   const roleLabel =
     user.role === "vendor" ? dict.account.roleVendor
     : user.role === "admin" ? dict.account.roleAdmin
     : dict.account.roleTraveller;
+
+  const payCopy = {
+    payNow: dict.account.payNow,
+    paying: dict.account.paying,
+    paid: dict.account.paid,
+    holdExpired: dict.account.holdExpired,
+    errSetup: dict.account.payErrSetup,
+    errGeneric: dict.account.payErrGeneric,
+  };
 
   return (
     <main className="accountpage">
@@ -55,7 +77,43 @@ export default async function AccountPage({ params }: { params: Promise<{ lang: 
 
           <section className="acard">
             <h2>{dict.account.bookingsHeading}</h2>
-            <p className="empty">{dict.account.bookingsEmpty}</p>
+            {bookings.length === 0 ? (
+              <p className="empty">{dict.account.bookingsEmpty}</p>
+            ) : (
+              <ul className="bookinglist">
+                {bookings.map((b) => (
+                  <li key={b.bookingId} className="bookingrow">
+                    <div>
+                      <strong>{b.packageName ?? b.reference}</strong>
+                      <p className="bookingmeta">
+                        {b.reference} · {b.pax} pax · {money(b.grossAmount, b.currency)}
+                        {" · "}
+                        {b.status === "pending_payment"
+                          ? dict.account.awaitingPayment
+                          : b.status === "confirmed"
+                            ? dict.account.confirmed
+                            : b.status}
+                      </p>
+                      {b.packageSlug && (
+                        <Link className="bookinglink" href={`/${lang}/packages/${b.packageSlug}`}>
+                          {b.packageName ?? b.packageSlug}
+                        </Link>
+                      )}
+                    </div>
+                    {b.status === "pending_payment" && (
+                      <BookingPayButton
+                        bookingId={b.bookingId}
+                        amount={b.grossAmount}
+                        currency={b.currency}
+                        reference={b.reference}
+                        holdExpiresAt={b.holdExpiresAt ? b.holdExpiresAt.toISOString() : null}
+                        copy={payCopy}
+                      />
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
 
           <section className="acard">

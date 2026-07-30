@@ -406,3 +406,28 @@ PDF/xlsx/screenshot deliverables no tool here can produce). Asked the user
 what to do with it; told to ignore it for now and finish the payment work.
 Noted here so a future session doesn't mistake it for a real, actioned
 request.
+
+### 2026-07-30 — Razorpay verify, webhook, account pay UI
+
+**Asked for**: apply / land the Razorpay verify + webhook + booking pay UI work
+(branch `cursor/razorpay-verify-webhook-49c3`). The referenced `.patch` file was
+not present in the environment, so the same surface was implemented against the
+existing payment schema and checkout intent path.
+
+**Shipped**:
+- `lib/payments/razorpay.ts` — HMAC helpers for Checkout verify and webhook body
+  signature, plus stable `payment_event` ids. Vitest coverage.
+- `POST /api/payments/verify` — traveller/admin, validates
+  `order_id|payment_id` signature, captures payment, confirms booking, converts
+  seat hold → booked seats.
+- `POST /api/payments/webhook` — records every delivery on `payment_event`
+  (including bad signatures), processes `payment.captured` / `payment.failed`
+  idempotently via `(provider, provider_event_id)`.
+- Account page lists the traveller's bookings with a **Pay now** button that
+  opens Razorpay Checkout.js and posts back to verify.
+- Default checkout provider is now `razorpay`; `.env.example` documents
+  Cashfree env vars too.
+
+**Still blocked on production**: Vercel handover + real
+`RAZORPAY_KEY_ID` / `KEY_SECRET` / `WEBHOOK_SECRET`. Without them health still
+reports payments unconfigured and verify/webhook answer 503.

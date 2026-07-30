@@ -522,6 +522,23 @@ section { padding: clamp(3.5rem, 7vw, 6rem) 0; }
 .acard h2 { font-size: 1.1rem; font-weight: 600; }
 .acard .empty { font-size: .88rem; color: var(--text-2); line-height: 1.55; flex: 1; }
 
+.bookinglist {
+  list-style: none; margin: 0; padding: 0; width: 100%;
+  display: flex; flex-direction: column; gap: .9rem;
+}
+.bookingrow {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 1rem; width: 100%; padding-top: .75rem;
+  border-top: 1px solid var(--hair);
+}
+.bookingrow:first-child { border-top: 0; padding-top: 0; }
+.bookingmeta { margin: .25rem 0 0; font-size: .82rem; color: var(--text-2); line-height: 1.45; }
+.bookinglink { display: inline-block; margin-top: .35rem; font-size: .8rem; color: var(--emerald); }
+.payrow { display: flex; flex-direction: column; align-items: flex-end; gap: .35rem; }
+.payerr { margin: 0; font-size: .78rem; color: #b42318; max-width: 14rem; text-align: right; }
+.paystatus { font-size: .8rem; color: var(--text-2); }
+.paystatus-ok { color: var(--emerald); font-weight: 600; }
+
 .accountnote {
   margin-top: 2rem; font-size: .86rem; color: var(--text-2);
   padding-inline-start: .9rem; border-inline-start: 3px solid var(--saffron);
