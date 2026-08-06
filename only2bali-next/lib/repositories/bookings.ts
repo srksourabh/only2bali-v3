@@ -1,24 +1,33 @@
 /**
- * Turning a departure into a booking that money can be taken against.
+ * Turning a departure or listing into a booking that money can be taken against.
  *
- * The whole thing runs in one transaction with the departure row locked, which
- * is the only way the seat count can be trusted. Two people clicking "book" on
- * the last two seats of a sold-out departure is not a rare edge case — it is
- * what happens on the day a departure nearly fills.
+ * The whole thing runs in one transaction with the inventory row locked, which
+ * is the only way the seat / date count can be trusted.
  *
  * No gateway is called here. This produces the booking, the amount and a
- * time-limited seat hold; a payment provider attaches to that afterwards
- * through `payment` / `payment_event`. Keeping the two apart is deliberate:
- * the gateway has not been chosen, and this code must not have to change when
- * it is.
+ * time-limited hold; a payment provider attaches afterwards through
+ * `payment` / `payment_event`.
  */
 import { and, eq, lt, sql } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 import { db } from "@/lib/db";
-import { booking, bookingTraveller, departure, seatHold, traveller, tripRequest } from "@/lib/db/schema";
-import type { BookingRequestInput } from "@/lib/validators/bookings";
+import {
+  availability,
+  booking,
+  bookingListing,
+  bookingTraveller,
+  departure,
+  seatHold,
+  serviceListing,
+  traveller,
+  tripRequest,
+  vendor,
+} from "@/lib/db/schema";
+import type { DepartureBookingInput, ListingBookingInput } from "@/lib/validators/bookings";
+import { computeListingGrossAmount } from "@/lib/repositories/listing-price";
+import { isPubliclyVisibleListing } from "@/lib/repositories/listings-public";
 
-/** How long a seat is held while the traveller pays. */
+/** How long a seat / date is held while the traveller pays. */
 export const HOLD_MINUTES = 15;
 
 /**
@@ -31,7 +40,12 @@ export type BookingFailure =
   | "departure_not_found"
   | "departure_closed"
   | "not_enough_seats"
-  | "traveller_count_mismatch";
+  | "traveller_count_mismatch"
+  | "listing_not_found"
+  | "listing_unavailable"
+  | "date_blocked"
+  | "date_held"
+  | "capacity_exceeded";
 
 export interface BookingCreated {
   reference: string;
@@ -46,11 +60,6 @@ export type BookingResult =
   | { ok: true; booking: BookingCreated }
   | { ok: false; reason: BookingFailure; seatsAvailable?: number };
 
-/**
- * Human-readable, unguessable, and short enough to read down a phone line.
- * Not sequential — a sequential reference tells a competitor how many bookings
- * were taken last month.
- */
 function newReference(): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no I, O, 0, 1
   const bytes = randomBytes(8);
@@ -59,28 +68,38 @@ function newReference(): string {
   return `O2B-${out.slice(0, 4)}-${out.slice(4, 8)}`;
 }
 
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function ensureTravellerProfile(tx: Tx, accountId: string, leadName: string) {
+  let [profile] = await tx
+    .select({ id: traveller.id })
+    .from(traveller)
+    .where(eq(traveller.accountId, accountId))
+    .limit(1);
+  if (!profile) {
+    [profile] = await tx
+      .insert(traveller)
+      .values({ accountId, fullName: leadName })
+      .returning({ id: traveller.id });
+  }
+  return profile;
+}
+
 export async function createBooking(
   accountId: string,
-  input: BookingRequestInput
+  input: DepartureBookingInput
 ): Promise<BookingResult> {
   if (input.travellers.length !== input.pax) {
     return { ok: false, reason: "traveller_count_mismatch" };
   }
 
   return db.transaction(async (tx) => {
-    /**
-     * Expired holds are swept before the seat count is read, inside the same
-     * transaction. A sweep that runs on a timer elsewhere would leave seats
-     * unsellable for however long the timer takes, which on a nearly-full
-     * departure is the difference between a sale and a lost one.
-     */
     const expired = await tx
       .delete(seatHold)
       .where(and(eq(seatHold.departureId, input.departureId), lt(seatHold.expiresAt, new Date())))
       .returning({ seats: seatHold.seats });
     const releasedSeats = expired.reduce((sum, h) => sum + h.seats, 0);
 
-    // FOR UPDATE. Everything below depends on nobody else changing this row.
     const [dep] = await tx
       .select({
         id: departure.id,
@@ -110,26 +129,8 @@ export async function createBooking(
       return { ok: false, reason: "not_enough_seats" as const, seatsAvailable };
     }
 
-    // The account may never have completed a traveller profile. A booking must
-    // still belong to someone, so create the minimum rather than refusing.
-    let [profile] = await tx
-      .select({ id: traveller.id })
-      .from(traveller)
-      .where(eq(traveller.accountId, accountId))
-      .limit(1);
-    if (!profile) {
-      [profile] = await tx
-        .insert(traveller)
-        .values({ accountId, fullName: input.travellers[0].fullName })
-        .returning({ id: traveller.id });
-    }
+    const profile = await ensureTravellerProfile(tx, accountId, input.travellers[0].fullName);
 
-    /**
-     * `booking.trip_request_id` is NOT NULL, so a catalogue purchase still gets
-     * a request row. That is not bureaucracy: it is what lets a booking that
-     * started as "I clicked buy" and a booking that started as "four providers
-     * bid for my group" be reported, messaged and refunded through one path.
-     */
     const [request] = await tx
       .insert(tripRequest)
       .values({
@@ -154,9 +155,6 @@ export async function createBooking(
       expiresAt: holdExpiresAt,
     });
 
-    // Written as an expression against the current value rather than a computed
-    // number, so the released seats and this hold settle in one statement. The
-    // `departure_seats_sane` check constraint is the backstop.
     await tx
       .update(departure)
       .set({ seatsHeld: sql`${departure.seatsHeld} - ${releasedSeats} + ${input.pax}` })
@@ -202,6 +200,192 @@ export async function createBooking(
         grossAmount,
         currency: dep.priceCurrency,
         pricePerPerson: dep.priceAmount,
+        holdExpiresAt,
+      },
+    };
+  });
+}
+
+/**
+ * Book a verified provider listing for one service date.
+ * Price is always taken from the listing (or date override), never the client.
+ */
+export async function createListingBooking(
+  accountId: string,
+  input: ListingBookingInput
+): Promise<BookingResult> {
+  if (input.travellers.length !== input.pax) {
+    return { ok: false, reason: "traveller_count_mismatch" };
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  if (input.serviceDate < today) {
+    return { ok: false, reason: "listing_unavailable" };
+  }
+
+  return db.transaction(async (tx) => {
+    const [listingRow] = await tx
+      .select()
+      .from(serviceListing)
+      .where(eq(serviceListing.id, input.listingId))
+      .limit(1)
+      .for("update");
+
+    if (!listingRow) return { ok: false, reason: "listing_not_found" as const };
+
+    const [vendorRow] = await tx
+      .select({
+        verificationStatus: vendor.verificationStatus,
+        commissionRate: vendor.commissionRate,
+      })
+      .from(vendor)
+      .where(eq(vendor.id, listingRow.vendorId))
+      .limit(1);
+
+    if (!vendorRow) return { ok: false, reason: "listing_not_found" as const };
+
+    const listing = {
+      id: listingRow.id,
+      vendorId: listingRow.vendorId,
+      priceAmount: listingRow.priceAmount,
+      priceCurrency: listingRow.priceCurrency,
+      priceUnit: listingRow.priceUnit,
+      capacityMin: listingRow.capacityMin,
+      capacityMax: listingRow.capacityMax,
+      status: listingRow.status,
+      active: listingRow.active,
+      verificationStatus: vendorRow.verificationStatus,
+      commissionRate: vendorRow.commissionRate,
+    };
+    if (
+      !isPubliclyVisibleListing({
+        listingStatus: listing.status,
+        listingActive: listing.active,
+        vendorVerificationStatus: listing.verificationStatus,
+      })
+    ) {
+      return { ok: false, reason: "listing_unavailable" as const };
+    }
+
+    if (input.pax < listing.capacityMin || input.pax > listing.capacityMax) {
+      return { ok: false, reason: "capacity_exceeded" as const };
+    }
+
+    await tx
+      .update(availability)
+      .set({ status: "open", holdExpiresAt: null })
+      .where(
+        and(
+          eq(availability.listingId, listing.id),
+          eq(availability.date, input.serviceDate),
+          eq(availability.status, "held"),
+          lt(availability.holdExpiresAt, new Date())
+        )
+      );
+
+    let [slot] = await tx
+      .select()
+      .from(availability)
+      .where(and(eq(availability.listingId, listing.id), eq(availability.date, input.serviceDate)))
+      .limit(1)
+      .for("update");
+
+    if (slot?.status === "blocked" || slot?.status === "booked") {
+      return { ok: false, reason: "date_blocked" as const };
+    }
+    if (slot?.status === "held" && slot.holdExpiresAt && slot.holdExpiresAt > new Date()) {
+      return { ok: false, reason: "date_held" as const };
+    }
+
+    const holdExpiresAt = new Date(Date.now() + HOLD_MINUTES * 60_000);
+    if (!slot) {
+      [slot] = await tx
+        .insert(availability)
+        .values({
+          listingId: listing.id,
+          date: input.serviceDate,
+          status: "held",
+          holdExpiresAt,
+        })
+        .returning();
+    } else {
+      await tx
+        .update(availability)
+        .set({ status: "held", holdExpiresAt })
+        .where(eq(availability.id, slot.id));
+    }
+
+    const profile = await ensureTravellerProfile(tx, accountId, input.travellers[0].fullName);
+
+    const [request] = await tx
+      .insert(tripRequest)
+      .values({
+        travellerId: profile.id,
+        status: "booked",
+        protocol: input.protocol,
+        groupSize: input.pax,
+        rooms: input.rooms,
+        fromDate: input.serviceDate,
+        toDate: input.serviceDate,
+        visibility: "private",
+        specialRequirements: input.specialRequirements,
+        mobileVerified: true,
+      })
+      .returning({ id: tripRequest.id });
+
+    const unitPrice = slot.priceOverrideAmount ?? listing.priceAmount;
+    const grossAmount = computeListingGrossAmount({
+      priceAmount: listing.priceAmount,
+      priceUnit: listing.priceUnit,
+      pax: input.pax,
+      priceOverrideAmount: slot.priceOverrideAmount,
+    });
+    const commissionRate = Number(listing.commissionRate ?? "0.15");
+    const commissionAmount = Math.round(grossAmount * commissionRate);
+
+    const [row] = await tx
+      .insert(booking)
+      .values({
+        reference: newReference(),
+        tripRequestId: request.id,
+        travellerId: profile.id,
+        vendorId: listing.vendorId,
+        pax: input.pax,
+        rooms: input.rooms,
+        grossAmount,
+        currency: listing.priceCurrency,
+        commissionRate: commissionRate.toFixed(4),
+        commissionAmount,
+        netAmount: grossAmount - commissionAmount,
+        status: "pending_payment",
+      })
+      .returning({ id: booking.id, reference: booking.reference });
+
+    await tx.insert(bookingListing).values({
+      bookingId: row.id,
+      listingId: listing.id,
+      priceSnapshot: unitPrice,
+    });
+
+    await tx.insert(bookingTraveller).values(
+      input.travellers.map((t, i) => ({
+        bookingId: row.id,
+        fullName: t.fullName,
+        age: t.age,
+        dietaryNotes: t.dietaryNotes,
+        isLead: i === 0,
+      }))
+    );
+
+    return {
+      ok: true as const,
+      booking: {
+        reference: row.reference,
+        bookingId: row.id,
+        grossAmount,
+        currency: listing.priceCurrency,
+        pricePerPerson:
+          listing.priceUnit === "per_person" ? unitPrice : Math.round(grossAmount / input.pax),
         holdExpiresAt,
       },
     };

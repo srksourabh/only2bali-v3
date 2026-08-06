@@ -75,15 +75,17 @@ reviews both directions; landing tourism-led.
 
 ## Phase B — Book and pay any service
 
-- [ ] **B1** Listing availability calendar (reuse `availability` table) — M
-- [ ] **B2** `POST /api/bookings` accepts `listingId` path (or sibling endpoint) with
+- [x] **B1** Listing availability calendar (reuse `availability` table) — M
+- [x] **B2** `POST /api/bookings` accepts `listingId` path (or sibling endpoint) with
       server-priced amount — L
-- [ ] **B3** Service detail → checkout → Razorpay (same verify/webhook) — M
-- [ ] **B4** Package detail "Book departure" CTA (stop routing money intent to WhatsApp) — M
-- [ ] **B5** Traveller account: pay, status, review prompt — M
-- [ ] **B6** Provider: incoming bookings list + fulfilment status — M
+- [x] **B3** Service detail → checkout → Razorpay (same verify/webhook) — M
+- [x] **B4** Package detail "Book departure" CTA (stop routing money intent to WhatsApp) — M
+- [x] **B5** Traveller account: pay, status, review prompt — M
+- [x] **B6** Provider: incoming bookings list + fulfilment status — M
 
-**Checkpoint:** traveller books a listing end-to-end in staging with test Razorpay keys.
+**Checkpoint:** traveller can hold a listing or package departure, pay via existing Razorpay
+path on account/service UI; provider can mark fulfilment and rate travellers. Live keys still
+owner-gated.
 
 ---
 

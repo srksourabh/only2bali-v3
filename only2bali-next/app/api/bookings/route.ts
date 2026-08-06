@@ -1,21 +1,19 @@
 import { NextResponse } from "next/server";
-import { bookingRequestSchema } from "@/lib/validators/bookings";
-import { createBooking } from "@/lib/repositories/bookings";
+import {
+  bookingRequestSchema,
+  departureBookingSchema,
+  isListingBooking,
+  listingBookingSchema,
+} from "@/lib/validators/bookings";
+import { createBooking, createListingBooking } from "@/lib/repositories/bookings";
 import { getSessionUser } from "@/lib/auth";
 import { rateLimitShared } from "@/lib/rate-limit-db";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Creates a booking in `pending_payment` and holds the seats.
- *
- * This is the last step before money. It deliberately does not take a payment:
- * it produces the booking reference and the server-computed amount that a
- * payment gateway is then pointed at. Nothing here changes when a gateway is
- * chosen.
- *
- * Sign-in is required. An anonymous booking has nobody to send a voucher to,
- * nobody to refund, and no way to prove later who agreed to what.
+ * Creates a booking in `pending_payment` and holds inventory (seats or a listing date).
+ * Sign-in required. Amount is always server-computed.
  */
 const PER_ACCOUNT = { limit: 12, windowMs: 60 * 60_000 };
 const MAX_BODY_BYTES = 16_384;
@@ -44,18 +42,22 @@ export async function POST(req: Request) {
 
     const parsed = bookingRequestSchema.safeParse(json);
     if (!parsed.success) {
+      // Prefer the more specific schema error for clearer fields.
+      const specific =
+        typeof json === "object" && json && "listingId" in json
+          ? listingBookingSchema.safeParse(json)
+          : departureBookingSchema.safeParse(json);
+      const err = specific.success ? parsed.error : specific.error;
       return NextResponse.json(
         {
           success: false,
           error: "Check the details and try again.",
-          fields: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
+          fields: err.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
         },
         { status: 400 }
       );
     }
 
-    // Keyed on the account, not the IP. A family booking from one office
-    // network is normal; twelve bookings from one account in an hour is not.
     const limit = await rateLimitShared(
       `booking:acct:${user.accountId}`,
       PER_ACCOUNT.limit,
@@ -68,18 +70,41 @@ export async function POST(req: Request) {
       );
     }
 
-    const result = await createBooking(user.accountId, parsed.data);
+    const result = isListingBooking(parsed.data)
+      ? await createListingBooking(user.accountId, parsed.data)
+      : await createBooking(user.accountId, parsed.data);
 
     if (!result.ok) {
       switch (result.reason) {
         case "departure_not_found":
+        case "listing_not_found":
           return NextResponse.json(
-            { success: false, error: "That departure no longer exists." },
+            { success: false, error: "That option no longer exists." },
             { status: 404 }
           );
         case "departure_closed":
           return NextResponse.json(
             { success: false, error: "That departure is closed. Please choose another date." },
+            { status: 409 }
+          );
+        case "listing_unavailable":
+          return NextResponse.json(
+            { success: false, error: "That service is not available to book." },
+            { status: 409 }
+          );
+        case "date_blocked":
+          return NextResponse.json(
+            { success: false, error: "That date is not available. Please choose another." },
+            { status: 409 }
+          );
+        case "date_held":
+          return NextResponse.json(
+            { success: false, error: "Someone else is booking that date. Try again in a few minutes." },
+            { status: 409 }
+          );
+        case "capacity_exceeded":
+          return NextResponse.json(
+            { success: false, error: "That group size is outside this service's capacity." },
             { status: 409 }
           );
         case "not_enough_seats":
@@ -101,12 +126,12 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, data: result.booking }, { status: 201 });
   } catch (err) {
-    // The transaction rolled back, so no seats are held and no booking exists.
-    // Say so plainly rather than leaving the traveller wondering whether they
-    // have just paid for something.
     console.error("[bookings] could not create booking", err);
     return NextResponse.json(
-      { success: false, error: "We could not hold those seats just now. Nothing was charged. Please try again." },
+      {
+        success: false,
+        error: "We could not hold that booking just now. Nothing was charged. Please try again.",
+      },
       { status: 500 }
     );
   }

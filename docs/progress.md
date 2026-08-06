@@ -199,7 +199,8 @@ Not done - this is what blocks retiring the React app:
 - [x] **Marketplace Phase A spine** — plan + public `/services`, admin vendor verify,
       bidirectional reviews, tourism-first landing. See
       `docs/planning/indonesia-marketplace-master-plan.md`.
-- [ ] **Phase B** — listing checkout + package Book CTA wired to booking API.
+- [x] **Phase B** — listing checkout + package Book CTA + provider fulfilment.
+- [ ] **Phase C** — media upload, KYC docs, public provider profiles.
 - [ ] Decide what happens to the four legacy React routes that call the deleted FastAPI
       service.
 - [ ] Remove the demo marketplace data (`delete from booking where reference like

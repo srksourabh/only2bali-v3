@@ -443,6 +443,18 @@ async function main() {
     });
     check("an anonymous booking is refused", res.status === 401, `HTTP ${res.status}`);
   }
+  {
+    const res = await call("/api/bookings", {
+      body: {
+        listingId: "00000000-0000-4000-8000-000000000000",
+        serviceDate: "2030-01-15",
+        pax: 1,
+        protocol: "vegetarian",
+        travellers: [{ fullName: "Anonymous Listing" }],
+      },
+    });
+    check("an anonymous listing booking is refused", res.status === 401, `HTTP ${res.status}`);
+  }
 
   const [dep] = (await db.execute(sql`
     select d.id, d.price_amount, d.seats_total, d.seats_held, d.seats_booked

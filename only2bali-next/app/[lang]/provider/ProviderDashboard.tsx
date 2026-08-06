@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ReviewForm from "../account/ReviewForm";
 
 type ApiState = "idle" | "saving" | "saved" | "error";
 
@@ -11,6 +12,20 @@ interface Catalog {
   events: Array<{ id: string; title: string; startsAt: string; status: string }>;
   promotions: Array<{ id: string; title: string; status: string }>;
   payoutAccount: { status: string; currency: string; maskedAccount: string | null } | null;
+}
+
+interface ProviderBooking {
+  bookingId: string;
+  reference: string;
+  status: string;
+  grossAmount: number;
+  netAmount: number | null;
+  currency: string;
+  pax: number;
+  packageName: string | null;
+  listingTitle: string | null;
+  travellerName: string | null;
+  serviceDate: string | null;
 }
 
 async function postJson(path: string, method: "POST" | "PUT" | "PATCH", body: unknown) {
@@ -26,6 +41,7 @@ async function postJson(path: string, method: "POST" | "PUT" | "PATCH", body: un
 
 export default function ProviderDashboard() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
+  const [bookings, setBookings] = useState<ProviderBooking[]>([]);
   const [state, setState] = useState<ApiState>("idle");
   const [error, setError] = useState("");
   const [profile, setProfile] = useState({ businessName: "", baseArea: "", description: "", addressLine1: "", city: "", whatsapp: "" });
@@ -36,18 +52,24 @@ export default function ProviderDashboard() {
   const [payout, setPayout] = useState({ accountHolderName: "", bankName: "", currency: "IDR", maskedAccount: "", upiId: "" });
 
   const load = async () => {
-    const res = await fetch("/api/provider/catalog", { cache: "no-store" });
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error);
-    setCatalog(json.data);
+    const [catalogRes, bookingsRes] = await Promise.all([
+      fetch("/api/provider/catalog", { cache: "no-store" }),
+      fetch("/api/provider/bookings", { cache: "no-store" }),
+    ]);
+    const catalogJson = await catalogRes.json();
+    if (!catalogJson.success) throw new Error(catalogJson.error);
+    setCatalog(catalogJson.data);
     setProfile({
-      businessName: json.data.provider.businessName ?? "",
-      baseArea: json.data.provider.baseArea ?? "",
-      description: json.data.provider.description ?? "",
-      addressLine1: json.data.provider.addressLine1 ?? "",
-      city: json.data.provider.city ?? "",
-      whatsapp: json.data.provider.whatsapp ?? "",
+      businessName: catalogJson.data.provider.businessName ?? "",
+      baseArea: catalogJson.data.provider.baseArea ?? "",
+      description: catalogJson.data.provider.description ?? "",
+      addressLine1: catalogJson.data.provider.addressLine1 ?? "",
+      city: catalogJson.data.provider.city ?? "",
+      whatsapp: catalogJson.data.provider.whatsapp ?? "",
     });
+
+    const bookingsJson = await bookingsRes.json();
+    if (bookingsJson.success) setBookings(bookingsJson.data.bookings ?? []);
   };
 
   useEffect(() => {
@@ -85,6 +107,64 @@ export default function ProviderDashboard() {
         {state === "saved" && <p className="okbox">Saved. Changes that affect travelers are pending review before publishing.</p>}
 
         <div className="accountgrid">
+          <section className="acard">
+            <h2>Incoming bookings</h2>
+            <p className="empty">{bookings.length} bookings assigned to your services.</p>
+            <ul className="admin-list">
+              {bookings.slice(0, 12).map((b) => (
+                <li key={b.bookingId}>
+                  <b>{b.listingTitle ?? b.packageName ?? b.reference}</b>
+                  <span>
+                    {b.reference} · {b.status} · {b.pax} pax
+                    {b.serviceDate ? ` · ${b.serviceDate}` : ""}
+                    {b.travellerName ? ` · ${b.travellerName}` : ""}
+                  </span>
+                  <div className="mini-actions">
+                    {b.status === "confirmed" && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          run(() =>
+                            postJson(`/api/provider/bookings/${b.bookingId}`, "PATCH", {
+                              status: "in_progress",
+                            }).then(() => undefined)
+                          )
+                        }
+                      >
+                        Start fulfilment
+                      </button>
+                    )}
+                    {(b.status === "confirmed" || b.status === "in_progress") && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          run(() =>
+                            postJson(`/api/provider/bookings/${b.bookingId}`, "PATCH", {
+                              status: "completed",
+                            }).then(() => undefined)
+                          )
+                        }
+                      >
+                        Mark completed
+                      </button>
+                    )}
+                  </div>
+                  {(b.status === "confirmed" || b.status === "completed" || b.status === "in_progress") && (
+                    <ReviewForm
+                      bookingId={b.bookingId}
+                      direction="vendor_to_traveller"
+                      copy={{
+                        heading: "Leave a rating",
+                        submit: "Submit rating",
+                        thanks: "Thank you — your rating is saved.",
+                        prompt: "Rate this traveller",
+                      }}
+                    />
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
           <section className="acard">
             <h2>Business profile</h2>
             <label>Business name</label>

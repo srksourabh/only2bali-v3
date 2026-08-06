@@ -85,7 +85,7 @@ export default async function AccountPage({ params }: { params: Promise<{ lang: 
                 {bookings.map((b) => (
                   <li key={b.bookingId} className="bookingrow">
                     <div>
-                      <strong>{b.packageName ?? b.reference}</strong>
+                      <strong>{b.packageName ?? b.listingTitle ?? b.reference}</strong>
                       <p className="bookingmeta">
                         {b.reference} · {b.pax} pax · {money(b.grossAmount, b.currency)}
                         {" · "}
@@ -98,6 +98,11 @@ export default async function AccountPage({ params }: { params: Promise<{ lang: 
                       {b.packageSlug && (
                         <Link className="bookinglink" href={`/${lang}/packages/${b.packageSlug}`}>
                           {b.packageName ?? b.packageSlug}
+                        </Link>
+                      )}
+                      {b.listingId && (
+                        <Link className="bookinglink" href={`/${lang}/services/${b.listingId}`}>
+                          {b.listingTitle ?? b.listingId}
                         </Link>
                       )}
                     </div>

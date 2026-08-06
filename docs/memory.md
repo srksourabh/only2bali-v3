@@ -425,8 +425,18 @@ bidirectional ratings) with less veg-only emphasis on the landing page.
 - Bidirectional review schema (migration 0005) + API + traveller review UI.
 - Bali/Jakarta destination strip + Jakarta sample listing in seed.
 
-**Still open (later phases / owner):** listing checkout, media upload, payouts, request
+**Still open (later phases / owner):** media upload, payouts, request
 board UI, Vercel handover, credential revocation.
+
+### 2026-08-06 (later) — Phase B book and pay
+
+**Shipped:**
+- Listing availability API; `createListingBooking` with server-priced amount and date hold.
+- Unified `POST /api/bookings` for departure + listing.
+- Service detail book+pay UI; package departure Book CTA (no longer WhatsApp-only for money).
+- Payment capture marks listing availability `booked`.
+- Provider bookings list, fulfilment status, vendor→traveller ratings.
+- Account shows listing titles; price helper tests.
 
 ### 2026-07-30 — Razorpay verify, webhook, account pay UI
 

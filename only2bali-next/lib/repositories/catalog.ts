@@ -199,7 +199,13 @@ export interface PackageDetail extends PackageCard {
   itinerary: PackageDay[];
   included: string[];
   excluded: string[];
-  departures: Array<{ startDate: string; endDate: string; priceAmount: number; seatsAvailable: number }>;
+  departures: Array<{
+    id: string | null;
+    startDate: string;
+    endDate: string;
+    priceAmount: number;
+    seatsAvailable: number;
+  }>;
   /** green / amber / red counts across every meal in the itinerary. */
   compliance: { green: number; amber: number; red: number };
 }
@@ -238,6 +244,7 @@ async function getPackageBySlugFromDb(slug: string): Promise<PackageDetail | nul
       .orderBy(asc(packageInclusion.sortOrder)),
     db
       .select({
+        id: departure.id,
         startDate: departure.startDate,
         endDate: departure.endDate,
         priceAmount: departure.priceAmount,
@@ -424,8 +431,8 @@ const fallbackPackages: PackageDetail[] = [
     included: ["Private airport transfers", "Premium partner stays", "Private vehicle and guide", "Jain meal planning", "Temple route support"],
     excluded: ["International flights", "Visa costs", "Personal shopping", "Luxury car upgrade unless selected"],
     departures: [
-      { startDate: futureDate(28), endDate: futureDate(33), priceAmount: 88_000 * 100, seatsAvailable: 14 },
-      { startDate: futureDate(56), endDate: futureDate(61), priceAmount: 94_000 * 100, seatsAvailable: 10 },
+      { id: null, startDate: futureDate(28), endDate: futureDate(33), priceAmount: 88_000 * 100, seatsAvailable: 14 },
+      { id: null, startDate: futureDate(56), endDate: futureDate(61), priceAmount: 94_000 * 100, seatsAvailable: 10 },
     ],
     compliance: { green: 13, amber: 4, red: 1 },
   },
@@ -521,8 +528,8 @@ const fallbackPackages: PackageDetail[] = [
     included: ["4 nights stay", "Private airport transfers", "Daily private ride", "Selected vegetarian meals", "Basic guide coordination"],
     excluded: ["Flights", "Visa", "Water-sport ticket upgrades", "Luxury car upgrade"],
     departures: [
-      { startDate: futureDate(21), endDate: futureDate(25), priceAmount: 39_500 * 100, seatsAvailable: 18 },
-      { startDate: futureDate(49), endDate: futureDate(53), priceAmount: 42_500 * 100, seatsAvailable: 16 },
+      { id: null, startDate: futureDate(21), endDate: futureDate(25), priceAmount: 39_500 * 100, seatsAvailable: 18 },
+      { id: null, startDate: futureDate(49), endDate: futureDate(53), priceAmount: 42_500 * 100, seatsAvailable: 16 },
     ],
     compliance: { green: 10, amber: 5, red: 0 },
   },
@@ -617,8 +624,8 @@ const fallbackPackages: PackageDetail[] = [
     included: ["4 nights stay", "Private transport", "Rafting coordination", "Batur sunrise coordination", "Meal planning"],
     excluded: ["Flights", "Visa", "Premium activity upgrades", "Personal equipment"],
     departures: [
-      { startDate: futureDate(35), endDate: futureDate(39), priceAmount: 47_500 * 100, seatsAvailable: 12 },
-      { startDate: futureDate(63), endDate: futureDate(67), priceAmount: 51_000 * 100, seatsAvailable: 11 },
+      { id: null, startDate: futureDate(35), endDate: futureDate(39), priceAmount: 47_500 * 100, seatsAvailable: 12 },
+      { id: null, startDate: futureDate(63), endDate: futureDate(67), priceAmount: 51_000 * 100, seatsAvailable: 11 },
     ],
     compliance: { green: 9, amber: 6, red: 0 },
   },

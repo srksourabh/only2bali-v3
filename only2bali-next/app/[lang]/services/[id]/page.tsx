@@ -3,10 +3,12 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getDictionary } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n/config";
-import { getPublicServiceById } from "@/lib/repositories/listings-public";
+import { getSessionUser } from "@/lib/auth";
+import { getPublicServiceById, listListingAvailability } from "@/lib/repositories/listings-public";
 import { listPublishedVendorReviews } from "@/lib/repositories/reviews";
+import ServiceBookForm from "../ServiceBookForm";
 
-export const revalidate = 120;
+export const dynamic = "force-dynamic";
 
 const money = (minor: number, currency: string) =>
   new Intl.NumberFormat("en-IN", {
@@ -40,7 +42,36 @@ export default async function ServiceDetailPage({
   const service = await getPublicServiceById(id);
   if (!service) notFound();
 
-  const reviews = await listPublishedVendorReviews(service.vendorId, 8);
+  const user = await getSessionUser();
+  const [reviews, availability] = await Promise.all([
+    listPublishedVendorReviews(service.vendorId, 8),
+    listListingAvailability(id),
+  ]);
+
+  const openDates = (availability?.days ?? []).filter((d) => d.bookable).map((d) => d.date);
+  const defaultDate = openDates[0] ?? null;
+
+  const bookCopy = {
+    bookNow: dict.services.bookNow,
+    booking: dict.services.booking,
+    signedInRequired: dict.services.signedInRequired,
+    signIn: dict.services.signIn,
+    leadName: dict.services.leadName,
+    pax: dict.services.pax,
+    protocol: dict.services.protocol,
+    date: dict.services.date,
+    success: dict.services.success,
+    errGeneric: dict.services.errGeneric,
+    protocols: dict.guarantee.protocols,
+  };
+  const payCopy = {
+    payNow: dict.account.payNow,
+    paying: dict.account.paying,
+    paid: dict.account.paid,
+    holdExpired: dict.account.holdExpired,
+    errSetup: dict.account.payErrSetup,
+    errGeneric: dict.account.payErrGeneric,
+  };
 
   return (
     <main>
@@ -87,15 +118,20 @@ export default async function ServiceDetailPage({
                 </ul>
               </>
             )}
-            <div className="close-actions" style={{ marginTop: "1.5rem" }}>
-              <Link className="btn btn-primary" href={`/${lang}/inquiry`}>
-                {dict.services.bookCta} →
-              </Link>
-              <Link className="btn btn-ghost" href={`/${lang}/planner`}>
-                {dict.nav.plan}
-              </Link>
-            </div>
           </div>
+
+          <ServiceBookForm
+            listingId={service.id}
+            lang={lang}
+            loginHref={`/${lang}/login?next=/${lang}/services/${service.id}`}
+            signedIn={Boolean(user)}
+            defaultDate={defaultDate}
+            openDates={openDates}
+            capacityMin={service.capacityMin}
+            capacityMax={service.capacityMax}
+            bookCopy={bookCopy}
+            payCopy={payCopy}
+          />
 
           {reviews.length > 0 && (
             <div className="acard" style={{ marginTop: "1.2rem" }}>

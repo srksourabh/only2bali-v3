@@ -1,6 +1,6 @@
-import { and, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { serviceListing, vendor } from "@/lib/db/schema";
+import { availability, serviceListing, vendor } from "@/lib/db/schema";
 
 export type PublicListingFilters = {
   region?: "bali" | "jakarta" | "all";
@@ -156,4 +156,58 @@ export async function getPublicServiceById(id: string) {
     return null;
   }
   return row;
+}
+
+export async function listListingAvailability(
+  listingId: string,
+  opts: { from?: string; to?: string } = {}
+) {
+  const service = await getPublicServiceById(listingId);
+  if (!service) return null;
+
+  const from = opts.from ?? new Date().toISOString().slice(0, 10);
+  const toDate = new Date();
+  toDate.setUTCDate(toDate.getUTCDate() + 60);
+  const to = opts.to ?? toDate.toISOString().slice(0, 10);
+
+  const rows = await db
+    .select({
+      date: availability.date,
+      status: availability.status,
+      priceOverrideAmount: availability.priceOverrideAmount,
+      holdExpiresAt: availability.holdExpiresAt,
+    })
+    .from(availability)
+    .where(
+      and(
+        eq(availability.listingId, listingId),
+        gte(availability.date, from),
+        lte(availability.date, to)
+      )
+    )
+    .orderBy(asc(availability.date));
+
+  const now = Date.now();
+  return {
+    service: {
+      id: service.id,
+      title: service.title,
+      priceAmount: service.priceAmount,
+      priceCurrency: service.priceCurrency,
+      priceUnit: service.priceUnit,
+      capacityMin: service.capacityMin,
+      capacityMax: service.capacityMax,
+    },
+    days: rows.map((r) => {
+      const heldLive =
+        r.status === "held" && r.holdExpiresAt && r.holdExpiresAt.getTime() > now;
+      const open = r.status === "open" || (r.status === "held" && !heldLive);
+      return {
+        date: r.date,
+        status: open ? ("open" as const) : (r.status as "held" | "booked" | "blocked"),
+        priceAmount: r.priceOverrideAmount ?? service.priceAmount,
+        bookable: open,
+      };
+    }),
+  };
 }
