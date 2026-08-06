@@ -7,6 +7,7 @@ import { getSessionUser } from "@/lib/auth";
 import { listAccountBookings } from "@/lib/repositories/payments";
 import SignOutButton from "./SignOutButton";
 import BookingPayButton from "./BookingPayButton";
+import ReviewForm from "./ReviewForm";
 
 export const dynamic = "force-dynamic";
 
@@ -108,6 +109,18 @@ export default async function AccountPage({ params }: { params: Promise<{ lang: 
                         reference={b.reference}
                         holdExpiresAt={b.holdExpiresAt ? b.holdExpiresAt.toISOString() : null}
                         copy={payCopy}
+                      />
+                    )}
+                    {(b.status === "confirmed" || b.status === "completed") && (
+                      <ReviewForm
+                        bookingId={b.bookingId}
+                        direction="traveller_to_vendor"
+                        copy={{
+                          heading: dict.account.reviewHeading,
+                          submit: dict.account.reviewSubmit,
+                          thanks: dict.account.reviewThanks,
+                          prompt: dict.account.reviewPrompt,
+                        }}
                       />
                     )}
                   </li>

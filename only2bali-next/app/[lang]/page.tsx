@@ -39,10 +39,10 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
           </h1>
           <p className="hero-sub">{dict.hero.sub}</p>
           <div className="hero-cta">
-            <Link className="btn btn-primary" href={`/${lang}/inquiry`}>
+            <Link className="btn btn-primary" href={`/${lang}#circuits`}>
               {dict.hero.cta1} →
             </Link>
-            <Link className="btn btn-onDark" href="#guarantee">
+            <Link className="btn btn-onDark" href={`/${lang}/services`}>
               {dict.hero.cta2}
             </Link>
           </div>
@@ -69,6 +69,40 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
           </div>
         ))}
       </div>
+
+      {/* ── destinations: Bali + Jakarta first ── */}
+      <section id="destinations">
+        <div className="o2b-wrap">
+          <div className="sechead">
+            <h2>{dict.destinations.heading}</h2>
+            <p>{dict.destinations.sub}</p>
+          </div>
+          <div className="pkgs" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
+            <Link className="pkg" href={`/${lang}/services?region=bali`}>
+              <div className="pkg-img">
+                <Image src="/Asset/beaches.png" alt="" fill sizes="(max-width: 960px) 100vw, 50vw"
+                       style={{ objectFit: "cover" }} />
+                <span className="pkg-tag">{dict.destinations.bali.name}</span>
+              </div>
+              <div className="pkg-body">
+                <h3>{dict.destinations.bali.name}</h3>
+                <p className="meta">{dict.destinations.bali.blurb}</p>
+              </div>
+            </Link>
+            <Link className="pkg" href={`/${lang}/services?region=jakarta`}>
+              <div className="pkg-img">
+                <Image src="/Asset/D-card-img3.png" alt="" fill sizes="(max-width: 960px) 100vw, 50vw"
+                       style={{ objectFit: "cover" }} />
+                <span className="pkg-tag">{dict.destinations.jakarta.name}</span>
+              </div>
+              <div className="pkg-body">
+                <h3>{dict.destinations.jakarta.name}</h3>
+                <p className="meta">{dict.destinations.jakarta.blurb}</p>
+              </div>
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* ── circuits: the product spine ── */}
       <section id="circuits">
@@ -142,6 +176,24 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
                 </li>
               ))}
             </ol>
+          </div>
+        </div>
+      </section>
+
+      {/* ── services marketplace strip ── */}
+      <section id="services-strip" className="packages-band">
+        <div className="o2b-wrap">
+          <div className="sechead">
+            <h2>{dict.services.heading}</h2>
+            <p>{dict.services.sub}</p>
+          </div>
+          <div className="close-actions">
+            <Link className="btn btn-primary" href={`/${lang}/services`}>
+              {dict.nav.services} →
+            </Link>
+            <Link className="btn btn-ghost" href={`/${lang}/vendors`}>
+              {dict.close.cta2}
+            </Link>
           </div>
         </div>
       </section>

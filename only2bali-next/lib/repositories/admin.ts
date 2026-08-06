@@ -1,6 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
+  account,
   auditLog,
   serviceListing,
   vendor,
@@ -10,9 +11,11 @@ import {
   vendorPromotion,
 } from "@/lib/db/schema";
 import type {
+  AdminApplicationDecisionInput,
   AdminContentStatusInput,
   AdminListingPatchInput,
   AdminPromotionPatchInput,
+  AdminVendorVerificationInput,
 } from "@/lib/validators/admin";
 
 export async function getAdminOverview() {
@@ -76,5 +79,77 @@ export async function adminPatchPromotion(adminId: string, id: string, input: Ad
     .where(eq(vendorPromotion.id, id))
     .returning();
   if (row) await audit(adminId, "admin.promotion_updated", "vendor_promotion", id, input);
+  return row ?? null;
+}
+
+/**
+ * Applications are not vendor rows. Approving records the decision and, when the
+ * applicant email already belongs to a vendor account, flips that vendor to verified
+ * so their publishable listings can go live without a second manual step.
+ */
+export async function adminDecideApplication(
+  adminId: string,
+  id: string,
+  input: AdminApplicationDecisionInput
+) {
+  const [app] = await db.select().from(vendorApplication).where(eq(vendorApplication.id, id)).limit(1);
+  if (!app) return null;
+
+  const [row] = await db
+    .update(vendorApplication)
+    .set({
+      status: input.status,
+      reviewedBy: adminId,
+      reviewedAt: new Date(),
+    })
+    .where(eq(vendorApplication.id, id))
+    .returning();
+
+  let linkedVendorId: string | null = null;
+  if (input.status === "verified" && app.email) {
+    const [acct] = await db.select().from(account).where(eq(account.email, app.email)).limit(1);
+    if (acct) {
+      const [v] = await db
+        .update(vendor)
+        .set({
+          verificationStatus: "verified",
+          verifiedAt: new Date(),
+          verifiedBy: adminId,
+          rejectionReason: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(vendor.accountId, acct.id))
+        .returning();
+      linkedVendorId = v?.id ?? null;
+    }
+  }
+
+  await audit(adminId, "admin.application_decided", "vendor_application", id, {
+    ...input,
+    linkedVendorId,
+  });
+  return row ?? null;
+}
+
+export async function adminSetVendorVerification(
+  adminId: string,
+  id: string,
+  input: AdminVendorVerificationInput
+) {
+  const [row] = await db
+    .update(vendor)
+    .set({
+      verificationStatus: input.verificationStatus,
+      verifiedAt: input.verificationStatus === "verified" ? new Date() : null,
+      verifiedBy: input.verificationStatus === "verified" ? adminId : null,
+      rejectionReason:
+        input.verificationStatus === "rejected" || input.verificationStatus === "suspended"
+          ? input.rejectionReason ?? null
+          : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(vendor.id, id))
+    .returning();
+  if (row) await audit(adminId, "admin.vendor_verification", "vendor", id, input);
   return row ?? null;
 }

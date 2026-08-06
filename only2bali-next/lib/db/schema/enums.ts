@@ -197,3 +197,9 @@ export const disbursementStatus = pgEnum("disbursement_status", [
   "failed",
   "held",
 ]);
+
+/** One rating each way per completed booking. */
+export const reviewDirection = pgEnum("review_direction", [
+  "traveller_to_vendor",
+  "vendor_to_traveller",
+]);

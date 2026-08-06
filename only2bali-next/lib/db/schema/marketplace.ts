@@ -1,5 +1,6 @@
 import {
   pgTable, uuid, text, integer, bigint, boolean, timestamp, index, date, jsonb, numeric, check,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { account, traveller } from "./identity";
@@ -7,7 +8,7 @@ import { circuit, pkg } from "./catalog";
 import { vendor, serviceListing } from "./vendor";
 import {
   tripStatus, tripVisibility, budgetBasis, protocol, tier, offerOrigin, offerStatus,
-  bookingStatus, departureStatus, leadSource, leadStatus, itinerarySource,
+  bookingStatus, departureStatus, leadSource, leadStatus, itinerarySource, reviewDirection,
 } from "./enums";
 
 /** Fixed departures. This is what the calendar reads. */
@@ -300,14 +301,20 @@ export const bookingDocument = pgTable("booking_document", {
   issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** Verified-booking-gated only. No review without a completed booking. */
+/**
+ * Verified-booking-gated only. No review without a completed booking.
+ * Both sides rate once: traveller→vendor and vendor→traveller.
+ */
 export const review = pgTable(
   "review",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    bookingId: uuid("booking_id").notNull().unique().references(() => booking.id, { onDelete: "cascade" }),
+    bookingId: uuid("booking_id").notNull().references(() => booking.id, { onDelete: "cascade" }),
+    direction: reviewDirection("direction").notNull().default("traveller_to_vendor"),
     vendorId: uuid("vendor_id").references(() => vendor.id, { onDelete: "cascade" }),
     packageId: uuid("package_id").references(() => pkg.id, { onDelete: "set null" }),
+    reviewerAccountId: uuid("reviewer_account_id").references(() => account.id, { onDelete: "set null" }),
+    revieweeAccountId: uuid("reviewee_account_id").references(() => account.id, { onDelete: "set null" }),
     rating: integer("rating").notNull(),
     foodComplianceKept: boolean("food_compliance_kept"),
     comment: text("comment"),
@@ -316,7 +323,9 @@ export const review = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
+    uniqueIndex("review_booking_direction_uq").on(t.bookingId, t.direction),
     index("review_vendor_idx").on(t.vendorId, t.published),
+    index("review_reviewee_idx").on(t.revieweeAccountId, t.published),
     check("review_rating_range", sql`${t.rating} BETWEEN 1 AND 5`),
   ]
 );

@@ -19,10 +19,11 @@ export default async function SiteNav({ lang, dict }: { lang: Locale; dict: Dict
         </Link>
 
         <div className="navlinks">
+          <Link href={`/${lang}#destinations`}>{dict.nav.destinations}</Link>
           <Link href={`/${lang}#circuits`}>{dict.nav.circuits}</Link>
-          <Link href={`/${lang}#guarantee`}>{dict.nav.guarantee}</Link>
-          <Link href={`/${lang}#verify`}>{dict.nav.verify}</Link>
+          <Link href={`/${lang}/services`}>{dict.nav.services}</Link>
           <Link href={`/${lang}#packages`}>{dict.nav.packages}</Link>
+          <Link href={`/${lang}#guarantee`}>{dict.nav.guarantee}</Link>
         </div>
 
         <div className="navactions">

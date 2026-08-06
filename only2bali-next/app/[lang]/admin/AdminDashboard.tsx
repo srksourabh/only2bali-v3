@@ -56,8 +56,8 @@ export default function AdminDashboard() {
         <header className="accounthead">
           <div>
             <span className="eyebrow">Admin control</span>
-            <h1>Rates, pictures, events and discounts</h1>
-            <p className="empty">All changes are server-side and audit logged against your admin account.</p>
+            <h1>Verify providers, rates, pictures and offers</h1>
+            <p className="empty">Approve applications, verify providers, then publish listings travellers can book. All changes are audit logged.</p>
           </div>
         </header>
 
@@ -73,6 +73,11 @@ export default function AdminDashboard() {
                 <li key={item.id}>
                   <b>{item.businessName}</b>
                   <span>{item.businessType} - {item.status}</span>
+                  <div className="mini-actions">
+                    <button onClick={() => run("Application approved.", () => patch(`/api/admin/applications/${item.id}`, { status: "verified" }))}>Approve</button>
+                    <button onClick={() => run("Application under review.", () => patch(`/api/admin/applications/${item.id}`, { status: "in_review" }))}>Review</button>
+                    <button onClick={() => run("Application rejected.", () => patch(`/api/admin/applications/${item.id}`, { status: "rejected" }))}>Reject</button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -156,6 +161,11 @@ export default function AdminDashboard() {
                 <li key={item.id}>
                   <b>{item.businessName}</b>
                   <span>{item.verificationStatus}</span>
+                  <div className="mini-actions">
+                    <button onClick={() => run("Provider verified.", () => patch(`/api/admin/vendors/${item.id}`, { verificationStatus: "verified" }))}>Verify</button>
+                    <button onClick={() => run("Provider suspended.", () => patch(`/api/admin/vendors/${item.id}`, { verificationStatus: "suspended", rejectionReason: "Suspended by admin" }))}>Suspend</button>
+                    <button onClick={() => run("Provider rejected.", () => patch(`/api/admin/vendors/${item.id}`, { verificationStatus: "rejected", rejectionReason: "Rejected by admin" }))}>Reject</button>
+                  </div>
                 </li>
               ))}
             </ul>

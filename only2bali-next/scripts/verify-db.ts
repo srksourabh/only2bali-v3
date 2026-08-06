@@ -129,8 +129,27 @@ async function main() {
   );
   await mustReject(
     "a review rating must be 1-5",
-    `insert into review (booking_id, rating) values (gen_random_uuid(), 9)`
+    `insert into review (booking_id, direction, rating) values (gen_random_uuid(), 'traveller_to_vendor', 9)`
   );
+  {
+    const existing = (await db.execute(
+      sql`select booking_id::text as booking_id, direction::text as direction from review limit 1`
+    )) as unknown as Array<{ booking_id: string; direction: string }>;
+    if (existing[0]) {
+      await mustReject(
+        "the same booking cannot be rated twice in the same direction",
+        `insert into review (booking_id, direction, rating)
+         values ('${existing[0].booking_id}'::uuid, '${existing[0].direction}'::review_direction, 4)`,
+        "review_booking_direction_uq"
+      );
+    } else {
+      check(
+        "the same booking cannot be rated twice in the same direction",
+        true,
+        "skipped — no review row to collide with"
+      );
+    }
+  }
   await mustReject(
     "an unknown food protocol is not a valid value",
     `insert into trip_request (protocol, group_size) values ('non_vegetarian', 2)`
