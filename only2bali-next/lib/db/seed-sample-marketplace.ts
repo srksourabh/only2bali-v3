@@ -283,6 +283,30 @@ const PROVIDERS: SampleProvider[] = [
           },
         ],
       },
+      {
+        title: "Jakarta airport meet-and-greet with city transfer",
+        serviceType: "transport",
+        description:
+          "CGK airport welcome, Hindi/English coordinator and private transfer to Jakarta hotel or domestic terminal for Bali connections.",
+        area: "Soekarno-Hatta / Central Jakarta",
+        addressLine1: "Terminal 3 Arrivals",
+        city: "Jakarta",
+        tier: "comfort",
+        capacityMin: 2,
+        capacityMax: 12,
+        priceRupees: 8500,
+        priceUnit: "per_group",
+        images: ["/Asset/adventure.png"],
+        circuits: ["adventure"],
+        inclusions: ["Name board meet", "Private AC vehicle", "90 minutes waiting"],
+        exclusions: ["Domestic flight tickets", "Hotel nights"],
+        serviceDetails: {
+          packageStyle: "Airport transfer",
+          vehicleOptions: ["standard SUV", "premium van"],
+          supportWindow: "Flight landing + 90 minutes",
+        },
+        compliance: [],
+      },
     ],
     media: [
       { kind: "cover", fileUrl: "/Asset/beaches.png", altText: "Private Bali itinerary", caption: "Family itinerary planning" },
@@ -1306,6 +1330,7 @@ export async function seedSampleMarketplace() {
 
   await db.insert(review).values({
     bookingId: completedBooking.id,
+    direction: "traveller_to_vendor",
     vendorId: providerIds.get("sample-shuddh-bhojan-ubud")!,
     packageId: explorerPackageId,
     rating: 5,

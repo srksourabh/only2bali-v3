@@ -58,6 +58,9 @@ describe("the package page during a database outage", () => {
 
   it("renders a known package from fallback data", async () => {
     vi.stubEnv("DATABASE_URL", DEAD_DB);
+    vi.doMock("@/lib/auth", () => ({
+      getSessionUser: async () => null,
+    }));
     const { default: PackagePage } = await import("@/app/[lang]/packages/[slug]/page");
 
     await expect(PackagePage({

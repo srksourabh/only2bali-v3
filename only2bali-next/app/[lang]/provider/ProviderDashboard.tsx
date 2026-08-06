@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ReviewForm from "../account/ReviewForm";
+import ProviderBoardPanel from "./ProviderBoardPanel";
 
 type ApiState = "idle" | "saving" | "saved" | "error";
 
@@ -11,6 +13,27 @@ interface Catalog {
   events: Array<{ id: string; title: string; startsAt: string; status: string }>;
   promotions: Array<{ id: string; title: string; status: string }>;
   payoutAccount: { status: string; currency: string; maskedAccount: string | null } | null;
+}
+
+interface ProviderBooking {
+  bookingId: string;
+  reference: string;
+  status: string;
+  grossAmount: number;
+  netAmount: number | null;
+  currency: string;
+  pax: number;
+  packageName: string | null;
+  listingTitle: string | null;
+  travellerName: string | null;
+  serviceDate: string | null;
+}
+
+interface ProviderDocument {
+  id: string;
+  kind: string;
+  fileUrl: string;
+  status: string;
 }
 
 async function postJson(path: string, method: "POST" | "PUT" | "PATCH", body: unknown) {
@@ -24,30 +47,53 @@ async function postJson(path: string, method: "POST" | "PUT" | "PATCH", body: un
   return json.data;
 }
 
+async function uploadFile(file: File, folder: "media" | "documents") {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("folder", folder);
+  const res = await fetch("/api/provider/uploads", { method: "POST", body: form });
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json?.success) throw new Error(json?.error ?? "Upload failed.");
+  return json.data.upload as { url: string };
+}
+
 export default function ProviderDashboard() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
+  const [bookings, setBookings] = useState<ProviderBooking[]>([]);
+  const [documents, setDocuments] = useState<ProviderDocument[]>([]);
   const [state, setState] = useState<ApiState>("idle");
   const [error, setError] = useState("");
   const [profile, setProfile] = useState({ businessName: "", baseArea: "", description: "", addressLine1: "", city: "", whatsapp: "" });
   const [listing, setListing] = useState({ title: "", serviceType: "transport", area: "", priceAmount: "", tier: "comfort", description: "" });
   const [media, setMedia] = useState({ fileUrl: "", kind: "photo", caption: "" });
+  const [docKind, setDocKind] = useState("business_licence");
   const [event, setEvent] = useState({ title: "", startsAt: "", area: "", priceAmount: "", description: "" });
   const [promotion, setPromotion] = useState({ title: "", priceAmount: "", validUntil: "", description: "" });
   const [payout, setPayout] = useState({ accountHolderName: "", bankName: "", currency: "IDR", maskedAccount: "", upiId: "" });
 
   const load = async () => {
-    const res = await fetch("/api/provider/catalog", { cache: "no-store" });
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error);
-    setCatalog(json.data);
+    const [catalogRes, bookingsRes, docsRes] = await Promise.all([
+      fetch("/api/provider/catalog", { cache: "no-store" }),
+      fetch("/api/provider/bookings", { cache: "no-store" }),
+      fetch("/api/provider/documents", { cache: "no-store" }),
+    ]);
+    const catalogJson = await catalogRes.json();
+    if (!catalogJson.success) throw new Error(catalogJson.error);
+    setCatalog(catalogJson.data);
     setProfile({
-      businessName: json.data.provider.businessName ?? "",
-      baseArea: json.data.provider.baseArea ?? "",
-      description: json.data.provider.description ?? "",
-      addressLine1: json.data.provider.addressLine1 ?? "",
-      city: json.data.provider.city ?? "",
-      whatsapp: json.data.provider.whatsapp ?? "",
+      businessName: catalogJson.data.provider.businessName ?? "",
+      baseArea: catalogJson.data.provider.baseArea ?? "",
+      description: catalogJson.data.provider.description ?? "",
+      addressLine1: catalogJson.data.provider.addressLine1 ?? "",
+      city: catalogJson.data.provider.city ?? "",
+      whatsapp: catalogJson.data.provider.whatsapp ?? "",
     });
+
+    const bookingsJson = await bookingsRes.json();
+    if (bookingsJson.success) setBookings(bookingsJson.data.bookings ?? []);
+
+    const docsJson = await docsRes.json();
+    if (docsJson.success) setDocuments(docsJson.data.documents ?? []);
   };
 
   useEffect(() => {
@@ -85,6 +131,65 @@ export default function ProviderDashboard() {
         {state === "saved" && <p className="okbox">Saved. Changes that affect travelers are pending review before publishing.</p>}
 
         <div className="accountgrid">
+          <ProviderBoardPanel />
+          <section className="acard">
+            <h2>Incoming bookings</h2>
+            <p className="empty">{bookings.length} bookings assigned to your services.</p>
+            <ul className="admin-list">
+              {bookings.slice(0, 12).map((b) => (
+                <li key={b.bookingId}>
+                  <b>{b.listingTitle ?? b.packageName ?? b.reference}</b>
+                  <span>
+                    {b.reference} · {b.status} · {b.pax} pax
+                    {b.serviceDate ? ` · ${b.serviceDate}` : ""}
+                    {b.travellerName ? ` · ${b.travellerName}` : ""}
+                  </span>
+                  <div className="mini-actions">
+                    {b.status === "confirmed" && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          run(() =>
+                            postJson(`/api/provider/bookings/${b.bookingId}`, "PATCH", {
+                              status: "in_progress",
+                            }).then(() => undefined)
+                          )
+                        }
+                      >
+                        Start fulfilment
+                      </button>
+                    )}
+                    {(b.status === "confirmed" || b.status === "in_progress") && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          run(() =>
+                            postJson(`/api/provider/bookings/${b.bookingId}`, "PATCH", {
+                              status: "completed",
+                            }).then(() => undefined)
+                          )
+                        }
+                      >
+                        Mark completed
+                      </button>
+                    )}
+                  </div>
+                  {(b.status === "confirmed" || b.status === "completed" || b.status === "in_progress") && (
+                    <ReviewForm
+                      bookingId={b.bookingId}
+                      direction="vendor_to_traveller"
+                      copy={{
+                        heading: "Leave a rating",
+                        submit: "Submit rating",
+                        thanks: "Thank you — your rating is saved.",
+                        prompt: "Rate this traveller",
+                      }}
+                    />
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
           <section className="acard">
             <h2>Business profile</h2>
             <label>Business name</label>
@@ -147,8 +252,26 @@ export default function ProviderDashboard() {
 
           <section className="acard">
             <h2>Photos</h2>
-            <label>Photo or menu URL</label>
-            <input value={media.fileUrl} onChange={(e) => setMedia({ ...media, fileUrl: e.target.value })} placeholder="https://..." />
+            <label>Upload photo</label>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              disabled={state === "saving"}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                run(async () => {
+                  const uploaded = await uploadFile(file, "media");
+                  await postJson("/api/provider/media", "POST", {
+                    fileUrl: uploaded.url,
+                    kind: media.kind,
+                    caption: media.caption,
+                  });
+                  setMedia({ fileUrl: "", kind: "photo", caption: "" });
+                });
+              }}
+            />
             <label>Kind</label>
             <select value={media.kind} onChange={(e) => setMedia({ ...media, kind: e.target.value })}>
               <option value="photo">Photo</option>
@@ -158,12 +281,53 @@ export default function ProviderDashboard() {
             </select>
             <label>Caption</label>
             <input value={media.caption} onChange={(e) => setMedia({ ...media, caption: e.target.value })} />
-            <button className="btn btn-solid btn-sm" disabled={state === "saving"} onClick={() => run(async () => {
+            <label>Or paste https URL</label>
+            <input value={media.fileUrl} onChange={(e) => setMedia({ ...media, fileUrl: e.target.value })} placeholder="https://..." />
+            <button className="btn btn-ghost btn-sm" disabled={state === "saving" || !media.fileUrl} onClick={() => run(async () => {
               await postJson("/api/provider/media", "POST", media);
               setMedia({ fileUrl: "", kind: "photo", caption: "" });
             })}>
-              Add photo
+              Add from URL
             </button>
+          </section>
+
+          <section className="acard">
+            <h2>KYC documents</h2>
+            <p className="empty">Upload a licence, tax ID, insurance or ID for admin review.</p>
+            <label>Document type</label>
+            <select value={docKind} onChange={(e) => setDocKind(e.target.value)}>
+              <option value="business_licence">Business licence</option>
+              <option value="tax_id">Tax ID</option>
+              <option value="insurance">Insurance</option>
+              <option value="photo_id">Photo ID</option>
+              <option value="kitchen_certificate">Kitchen certificate</option>
+            </select>
+            <label>Upload file (JPEG, PNG, WebP or PDF)</label>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              disabled={state === "saving"}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                run(async () => {
+                  const uploaded = await uploadFile(file, "documents");
+                  await postJson("/api/provider/documents", "POST", {
+                    kind: docKind,
+                    fileUrl: uploaded.url,
+                  });
+                });
+              }}
+            />
+            <ul className="admin-list">
+              {documents.slice(0, 8).map((d) => (
+                <li key={d.id}>
+                  <b>{d.kind.replaceAll("_", " ")}</b>
+                  <span>{d.status}</span>
+                </li>
+              ))}
+            </ul>
           </section>
 
           <section className="acard">

@@ -2,14 +2,16 @@ import type { Dictionary } from "./en";
 
 export const ta: Dictionary = {
   meta: {
-    title: "Only2Bali — பாலிக்கு சரிபார்க்கப்பட்ட சைவ, ஜைன மற்றும் வீகன் குழுப் பயணம்",
+    title: "Only2Bali - Indonesia travel marketplace for Indian groups",
     description:
-      "இந்தியாவிலிருந்து பாலிக்கு, ஜைன, சைவ மற்றும் வீகன் முறைகளையும் உங்கள் மொழியையும் மையமாகக் கொண்டு உருவாக்கப்பட்ட குழுப் பயணம். உங்கள் பயணத் திட்டம் வழங்கப்படும் முன்பே ஒவ்வொரு உணவும் சரிபார்க்கப்படுகிறது.",
+      "Book verified stays, rides, guides, restaurants and group packages across Bali, Jakarta and Indonesia — built for Indian travellers, with food protocol as one clear filter.",
   },
 
   nav: {
     circuits: "சுற்றுவழிகள்",
-    guarantee: "சைவ உத்தரவாதம்",
+    destinations: "Destinations",
+    services: "Services",
+    guarantee: "Trip quality",
     verify: "நாங்கள் எப்படி சரிபார்க்கிறோம்",
     packages: "தொகுப்புகள்",
     plan: "என் பயணத்தைத் திட்டமிடு",
@@ -18,22 +20,35 @@ export const ta: Dictionary = {
   },
 
   hero: {
-    eyebrow: "இந்தியா → பாலி · ஜைன · சைவம் · வீகன்",
-    headlineBefore: "நீங்கள் தரையிறங்கும் முன்பே ஒவ்வொரு உணவும் ",
-    headlineEm: "சரிபார்க்கப்பட்டது",
-    headlineAfter: ".",
-    sub: "இந்திய உணவு முறைகளையும் உங்கள் சொந்த மொழியையும் அடிப்படையாகக் கொண்டு கட்டப்பட்ட பாலி குழுப் பயணம் — வேறொருவரின் திட்டத்தில் ஒட்டப்பட்ட “சைவ விருப்பம்” அல்ல.",
-    cta1: "என் தேதிகளை அனுப்பு",
-    cta2: "உத்தரவாதம் எப்படி வேலை செய்கிறது",
-    caption: "செம்பா — பாலியும் இந்தியாவும் பகிர்ந்து கொள்ளும் கைகூப்பி வணக்கம்",
+    eyebrow: "India → Indonesia · Bali · Jakarta · Circuits · Services",
+    headlineBefore: "Your Indonesia trip, ",
+    headlineEm: "built around you",
+    headlineAfter: " — with verified local providers.",
+    sub: "Browse curated circuits and book stays, rides, guides, restaurants and packages from verified partners in Bali, Jakarta and beyond. Pay Only2Bali; we pay the providers.",
+    cta1: "Explore circuits",
+    cta2: "Browse services",
+    caption: "Sembah — the folded-hand greeting shared by Bali and India",
   },
 
   rail: [
-    { value: "4", label: "கருப்பொருள் சுற்றுவழிகள், வழக்கமான சுற்றுலா அல்ல" },
-    { value: "7", label: "எங்கள் வழிகாட்டிகள் பேசும் இந்திய மொழிகள்" },
-    { value: "10+", label: "உடன் வரும் சமையல்காரருக்கான குழு அளவு" },
-    { value: "ஒவ்வொரு உணவும்", label: "திட்டம் வழங்கப்படும் முன் மதிப்பிடப்படுகிறது" },
+    { value: "Bali + Jakarta", label: "Destinations live now, more Indonesia next" },
+    { value: "4", label: "Temple, adventure, food and artisan circuits" },
+    { value: "7", label: "Indian languages spoken by our guides" },
+    { value: "Verified", label: "Providers go live only after admin review" },
   ],
+
+  destinations: {
+    heading: "Where do you want to go?",
+    sub: "Start with Bali or Jakarta. Every service and package is tied to a place, not a vague brochure.",
+    bali: {
+      name: "Bali",
+      blurb: "Temples, coasts, Ubud, Nusa islands — the core circuits and most of our verified supply.",
+    },
+    jakarta: {
+      name: "Jakarta",
+      blurb: "City stays, airport logistics, dining and add-on services for groups entering Indonesia.",
+    },
+  },
 
   circuits: {
     heading: "நீங்கள் உண்மையில் எதற்காக வந்தீர்களோ, அந்த பாலியைத் தேர்வு செய்யுங்கள்.",
@@ -73,9 +88,34 @@ export const ta: Dictionary = {
     },
   },
 
+  services: {
+    heading: "Book services from verified local partners.",
+    sub: "Restaurants, stays, transport, guides, activities and more — listed by providers across Bali and Jakarta, published only after Only2Bali checks them.",
+    empty: "No published services in this filter yet. Providers are onboarding — try another region or check packages.",
+    from: "from",
+    verified: "Verified provider",
+    viewCta: "View service",
+    bookCta: "Enquire to book",
+    bookNow: "Book and pay",
+    booking: "Holding…",
+    signedInRequired: "Sign in to hold this date and pay Only2Bali.",
+    signIn: "Sign in to book",
+    leadName: "Lead traveller full name",
+    pax: "Group size",
+    protocol: "Food protocol",
+    date: "Service date",
+    success: "Held — reference",
+    errGeneric: "Could not create the booking. Nothing was charged.",
+    filterAll: "All destinations",
+    filterBali: "Bali",
+    filterJakarta: "Jakarta",
+    back: "All services",
+    reviewsHeading: "Traveller reviews",
+  },
+
   guarantee: {
-    heading: "“100% சைவம்” என்பது ஒரு கூற்று. இது அதற்கான சான்று.",
-    sub: "ஒவ்வொரு திட்டத்தின் ஒவ்வொரு உணவுக்கும், நீங்கள் பார்ப்பதற்கு முன்பே ஒரு மதிப்பீடு உண்டு. முறையை மாற்றிப் பாருங்கள் — இது உண்மையான தர்க்கம், விளம்பரப் பலகை அல்ல.",
+    heading: "Food protocol is one filter. Stays, rides and budget are checked too.",
+    sub: "Vegetarian, Jain and vegan remain first-class options — disclosed meal by meal — alongside stay comfort, vehicle type, guide language and clear INR pricing.",
     protocols: { jain: "ஜைன", veg: "சைவம்", vegan: "வீகன்" },
     legend: {
       green: "தனி சமையலறை, சரிபார்க்கப்பட்டது",
@@ -110,13 +150,13 @@ export const ta: Dictionary = {
   },
 
   verify: {
-    heading: "ஒரு சமையலறை பச்சை மதிப்பீட்டை எப்படிப் பெறுகிறது.",
-    sub: "நம்பிக்கை சார்ந்த பயணத்துறையில் எந்தப் போட்டியாளரும் தங்கள் முறையை வெளியிடுவதில்லை. நாங்கள் வெளியிடுகிறோம், ஏனெனில் அந்த முறையே எங்கள் தயாரிப்பு.",
+    heading: "ஒரு வழங்குநர் நம்பிக்கையை எப்படிப் பெறுகிறார்.",
+    sub: "தங்கும் இடங்கள், பயணங்கள், வழிகாட்டிகள், செயல்பாடுகள் மற்றும் சமையலறைகள் — பயணிகள் உண்மையில் பெறும் சேவையை நாங்கள் சரிபார்க்கிறோம், விற்பனை வாக்குறுதியை மட்டும் அல்ல.",
     steps: [
-      { title: "முன் அறிவிப்பின்றி செல்கிறோம்", body: "எங்கள் குழுவைச் சேர்ந்த ஒருவர் முதலில் அங்கு சாப்பிடுகிறார். திட்டமிட்ட ஆய்வு இல்லை, முன் அறிவிப்பு இல்லை." },
-      { title: "மெனுவை அல்ல, சமையல் வரிசையைப் பார்க்கிறோம்", body: "தனி எண்ணெய், தனி பாத்திரங்கள், தனி இடம். வாணலியைப் பகிரும் சமையலறையின் அச்சிடப்பட்ட சைவ மெனு அம்பர், பச்சை அல்ல." },
-      { title: "ஜைன முறை வெளிப்படையாகக் கேட்கப்படுகிறது", body: "வெங்காயம் இல்லை, பூண்டு இல்லை, கிழங்கு இல்லை — அன்று உண்மையில் பணியில் இருக்கும் சமையல்காரரிடமே உறுதி செய்யப்பட்டு, புகைப்படம் எடுக்கப்படுகிறது." },
-      { title: "மதிப்பீட்டுக்கு காலாவதி உண்டு", body: "சமையலறைகள் கை மாறும், பணியாளர்கள் மாறுவார்கள். மீண்டும் சரிபார்க்கப்படாத மதிப்பீடு அமைதியாகப் பழையதாகாமல், எங்கள் அமைப்பிலிருந்து வெளியேறுகிறது." },
+      { title: "நேரில் பார்த்து சரிபார்க்கிறோம்", body: "பட்டியல் நேரலைக்கு வரும் முன் எங்கள் குழுவினர் இடத்தையோ வாகனத்தையோ பார்க்கிறோம், அல்லது வழிகாட்டியுடன் செல்கிறோம். திட்டமிட்ட ஆய்வு நாடகம் இல்லை." },
+      { title: "உண்மையான சேவையைப் பார்க்கிறோம்", body: "தங்கலுக்கு அறை பொருத்தம், பயணத்துக்கு வாகன நிலை, வழிகாட்டிக்கு மொழி மற்றும் பாதை அறிவு, உணவு உள்ளிட்டால் சமையலறை நடைமுறை." },
+      { title: "உணவு இருக்கும்போது நெறிமுறை கேட்கப்படுகிறது", body: "உணவு சேர்க்கப்பட்டிருந்தால், ஜைன/சைவ கட்டுப்பாடுகள் அன்றைய சமையல்காரரிடம் உறுதி — வேண்டும்போது வெங்காயம், பூண்டு, கிழங்கு இல்லை — புகைப்படத்துடன்." },
+      { title: "மதிப்பீட்டுக்கு காலாவதி உண்டு", body: "ஹோட்டல்கள், ஓட்டுநர்கள், மெனுக்கள், விலைகள் மாறும். புதுப்பிக்கப்படாத சரிபார்ப்பு அமைதியாகப் பழையதாகாமல் வெளியேறும்." },
     ],
   },
 
@@ -125,6 +165,7 @@ export const ta: Dictionary = {
     sub: "ஒரு நபருக்கான தோராயமான விலை, சர்வதேச விமானக் கட்டணம் நீங்கலாக. ஒவ்வொரு தொகுப்பையும் மாற்றிக் கொள்ளலாம் — இவை தொடக்கப் புள்ளிகள், நிலையான பட்டியல் அல்ல.",
     perPerson: "ஒரு நபருக்கு · முதல்",
     checkDates: "தேதிகளைப் பார்",
+    bookNow: "Book this departure",
     nights: "இரவுகள்",
     days: "நாட்கள்",
     items: [
@@ -259,6 +300,11 @@ export const ta: Dictionary = {
     savedEmpty: "நீங்கள் சேமிக்கும் தொகுப்புகள் இங்கே தோன்றும்.",
     browseCta: "தொகுப்புகளைப் பார்",
     protocolNote: "உங்கள் உணவு முறையை ஒருமுறை அமைத்தால், நாங்கள் உருவாக்கும் ஒவ்வொரு திட்டமும் அதை மதிக்கும்.",
+
+    reviewHeading: "Leave a rating",
+    reviewSubmit: "Submit rating",
+    reviewThanks: "Thank you — your rating is saved.",
+    reviewPrompt: "Rate this provider",
   },
 
 };

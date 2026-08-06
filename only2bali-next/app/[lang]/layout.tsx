@@ -13,6 +13,7 @@ import { locales, localeScript, type Locale } from "@/lib/i18n/config";
 import CustomCursor from "./components/CustomCursor";
 import SiteNav from "./components/SiteNav";
 import SiteFooter from "./components/SiteFooter";
+import PwaRegister from "./components/PwaRegister";
 import "../globals.css";
 import "./brand.css";
 
@@ -63,6 +64,8 @@ export async function generateMetadata({
       type: "website",
     },
     icons: { icon: "/brand/mark.svg" },
+    manifest: "/manifest.webmanifest",
+    appleWebApp: { capable: true, title: "Only2Bali", statusBarStyle: "default" },
   };
 }
 
@@ -85,6 +88,7 @@ export default async function LangLayout({
     <html lang={lang} suppressHydrationWarning>
       <body className={bodyClass}>
         <CustomCursor />
+        <PwaRegister />
         <SiteNav lang={lang} dict={dict} />
         {children}
         <SiteFooter dict={dict} />

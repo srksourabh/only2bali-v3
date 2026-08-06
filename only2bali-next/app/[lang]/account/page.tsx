@@ -7,6 +7,8 @@ import { getSessionUser } from "@/lib/auth";
 import { listAccountBookings } from "@/lib/repositories/payments";
 import SignOutButton from "./SignOutButton";
 import BookingPayButton from "./BookingPayButton";
+import ReviewForm from "./ReviewForm";
+import TravellerMarketplacePanel from "./TravellerMarketplacePanel";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +69,10 @@ export default async function AccountPage({ params }: { params: Promise<{ lang: 
         </header>
 
         <div className="accountgrid">
+          {(user.role === "traveller" || user.role === "admin") && (
+            <TravellerMarketplacePanel lang={lang} />
+          )}
+
           <section className="acard">
             <h2>{dict.account.tripsHeading}</h2>
             <p className="empty">{dict.account.tripsEmpty}</p>
@@ -84,7 +90,7 @@ export default async function AccountPage({ params }: { params: Promise<{ lang: 
                 {bookings.map((b) => (
                   <li key={b.bookingId} className="bookingrow">
                     <div>
-                      <strong>{b.packageName ?? b.reference}</strong>
+                      <strong>{b.packageName ?? b.listingTitle ?? b.reference}</strong>
                       <p className="bookingmeta">
                         {b.reference} · {b.pax} pax · {money(b.grossAmount, b.currency)}
                         {" · "}
@@ -99,6 +105,11 @@ export default async function AccountPage({ params }: { params: Promise<{ lang: 
                           {b.packageName ?? b.packageSlug}
                         </Link>
                       )}
+                      {b.listingId && (
+                        <Link className="bookinglink" href={`/${lang}/services/${b.listingId}`}>
+                          {b.listingTitle ?? b.listingId}
+                        </Link>
+                      )}
                     </div>
                     {b.status === "pending_payment" && (
                       <BookingPayButton
@@ -108,6 +119,18 @@ export default async function AccountPage({ params }: { params: Promise<{ lang: 
                         reference={b.reference}
                         holdExpiresAt={b.holdExpiresAt ? b.holdExpiresAt.toISOString() : null}
                         copy={payCopy}
+                      />
+                    )}
+                    {(b.status === "confirmed" || b.status === "completed") && (
+                      <ReviewForm
+                        bookingId={b.bookingId}
+                        direction="traveller_to_vendor"
+                        copy={{
+                          heading: dict.account.reviewHeading,
+                          submit: dict.account.reviewSubmit,
+                          thanks: dict.account.reviewThanks,
+                          prompt: dict.account.reviewPrompt,
+                        }}
                       />
                     )}
                   </li>

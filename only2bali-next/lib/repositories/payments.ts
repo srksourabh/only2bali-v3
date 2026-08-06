@@ -3,13 +3,17 @@ import { randomUUID } from "node:crypto";
 import { db } from "@/lib/db";
 import {
   account,
+  availability,
   booking,
+  bookingListing,
   departure,
   payment,
   paymentEvent,
   pkg,
   seatHold,
+  serviceListing,
   traveller,
+  tripRequest,
 } from "@/lib/db/schema";
 import {
   razorpayEventId,
@@ -17,6 +21,7 @@ import {
   verifyRazorpayWebhookSignature,
 } from "@/lib/payments/razorpay";
 import type { PaymentIntentInput, RazorpayVerifyInput } from "@/lib/validators/payments";
+import { createHeldDisbursementForBooking } from "@/lib/repositories/disbursements";
 
 export class PaymentSetupError extends Error {
   constructor(message: string) {
@@ -309,6 +314,11 @@ async function confirmBookingFromPayment(
       pax: booking.pax,
       departureId: booking.departureId,
       tripRequestId: booking.tripRequestId,
+      vendorId: booking.vendorId,
+      grossAmount: booking.grossAmount,
+      commissionAmount: booking.commissionAmount,
+      netAmount: booking.netAmount,
+      currency: booking.currency,
     })
     .from(booking)
     .where(eq(booking.id, args.bookingId))
@@ -361,7 +371,40 @@ async function confirmBookingFromPayment(
           seatsBooked: sql`${departure.seatsBooked} + ${seats}`,
         })
         .where(eq(departure.id, book.departureId));
+    } else {
+      // Listing booking: convert the date hold into a booked slot.
+      const [link] = await tx
+        .select({
+          listingId: bookingListing.listingId,
+          fromDate: tripRequest.fromDate,
+        })
+        .from(bookingListing)
+        .innerJoin(booking, eq(bookingListing.bookingId, booking.id))
+        .innerJoin(tripRequest, eq(booking.tripRequestId, tripRequest.id))
+        .where(eq(bookingListing.bookingId, args.bookingId))
+        .limit(1);
+      if (link?.listingId && link.fromDate) {
+        await tx
+          .update(availability)
+          .set({ status: "booked", holdExpiresAt: null })
+          .where(
+            and(eq(availability.listingId, link.listingId), eq(availability.date, link.fromDate))
+          );
+      }
     }
+  }
+
+  // Escrow: hold vendor payout until trip start / voucher (admin releases).
+  if (book.vendorId && book.netAmount != null && book.netAmount > 0) {
+    await createHeldDisbursementForBooking(tx, {
+      bookingId: book.bookingId,
+      paymentId: args.paymentId,
+      vendorId: book.vendorId,
+      grossAmount: book.grossAmount,
+      commissionAmount: book.commissionAmount ?? Math.max(book.grossAmount - book.netAmount, 0),
+      netAmount: book.netAmount,
+      travellerCurrency: book.currency,
+    });
   }
 
   return {
@@ -661,6 +704,8 @@ export type AccountBookingRow = {
   pax: number;
   packageName: string | null;
   packageSlug: string | null;
+  listingTitle: string | null;
+  listingId: string | null;
   createdAt: Date;
   holdExpiresAt: Date | null;
 };
@@ -677,13 +722,19 @@ export async function listAccountBookings(accountId: string): Promise<AccountBoo
       pax: booking.pax,
       packageName: pkg.name,
       packageSlug: pkg.slug,
+      listingTitle: serviceListing.title,
+      listingId: serviceListing.id,
       createdAt: booking.createdAt,
       tripRequestId: booking.tripRequestId,
       departureId: booking.departureId,
+      serviceDate: tripRequest.fromDate,
     })
     .from(booking)
     .innerJoin(traveller, eq(booking.travellerId, traveller.id))
     .leftJoin(pkg, eq(booking.packageId, pkg.id))
+    .leftJoin(bookingListing, eq(bookingListing.bookingId, booking.id))
+    .leftJoin(serviceListing, eq(bookingListing.listingId, serviceListing.id))
+    .leftJoin(tripRequest, eq(booking.tripRequestId, tripRequest.id))
     .where(eq(traveller.accountId, accountId))
     .orderBy(desc(booking.createdAt))
     .limit(50);
@@ -704,6 +755,35 @@ export async function listAccountBookings(accountId: string): Promise<AccountBoo
     holds.map((h) => [`${h.tripRequestId}:${h.departureId ?? ""}`, h.expiresAt] as const)
   );
 
+  const listingIds = rows
+    .filter((r) => r.listingId && r.serviceDate && r.status === "pending_payment")
+    .map((r) => ({ listingId: r.listingId!, date: r.serviceDate! }));
+
+  const listingHolds =
+    listingIds.length > 0
+      ? await db
+          .select({
+            listingId: availability.listingId,
+            date: availability.date,
+            holdExpiresAt: availability.holdExpiresAt,
+            status: availability.status,
+          })
+          .from(availability)
+          .where(
+            and(
+              inArray(
+                availability.listingId,
+                [...new Set(listingIds.map((l) => l.listingId))]
+              ),
+              eq(availability.status, "held")
+            )
+          )
+      : [];
+
+  const listingHoldMap = new Map(
+    listingHolds.map((h) => [`${h.listingId}:${h.date}`, h.holdExpiresAt] as const)
+  );
+
   return rows.map((r) => ({
     bookingId: r.bookingId,
     reference: r.reference,
@@ -713,10 +793,16 @@ export async function listAccountBookings(accountId: string): Promise<AccountBoo
     pax: r.pax,
     packageName: r.packageName,
     packageSlug: r.packageSlug,
+    listingTitle: r.listingTitle,
+    listingId: r.listingId,
     createdAt: r.createdAt,
     holdExpiresAt:
       r.status === "pending_payment"
-        ? holdByTrip.get(`${r.tripRequestId}:${r.departureId ?? ""}`) ?? null
+        ? r.departureId
+          ? holdByTrip.get(`${r.tripRequestId}:${r.departureId}`) ?? null
+          : r.listingId && r.serviceDate
+            ? listingHoldMap.get(`${r.listingId}:${r.serviceDate}`) ?? null
+            : null
         : null,
   }));
 }

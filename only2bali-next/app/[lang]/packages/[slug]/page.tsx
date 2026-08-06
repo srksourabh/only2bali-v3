@@ -6,6 +6,8 @@ import { getDictionary } from "@/lib/i18n";
 import { locales, type Locale } from "@/lib/i18n/config";
 import { getPackageBySlug } from "@/lib/repositories/catalog";
 import { formatDeparture } from "@/lib/repositories/homepage";
+import { getSessionUser } from "@/lib/auth";
+import PackageBookForm from "../PackageBookForm";
 import "./package.css";
 
 /**
@@ -73,8 +75,30 @@ export default async function PackagePage({
   const pkg = await getPackageBySlug(slug);
   if (!pkg) notFound();
 
+  const user = await getSessionUser();
   const copy = dict.packages.items.find((i) => i.slug === slug);
   const totalMeals = pkg.compliance.green + pkg.compliance.amber + pkg.compliance.red;
+
+  const bookCopy = {
+    bookNow: dict.packages.bookNow,
+    booking: dict.services.booking,
+    signedInRequired: dict.services.signedInRequired,
+    signIn: dict.services.signIn,
+    leadName: dict.services.leadName,
+    pax: dict.services.pax,
+    protocol: dict.services.protocol,
+    success: dict.services.success,
+    errGeneric: dict.services.errGeneric,
+    protocols: dict.guarantee.protocols,
+  };
+  const payCopy = {
+    payNow: dict.account.payNow,
+    paying: dict.account.paying,
+    paid: dict.account.paid,
+    holdExpired: dict.account.holdExpired,
+    errSetup: dict.account.payErrSetup,
+    errGeneric: dict.account.payErrGeneric,
+  };
 
   return (
     <main className="pkgpage">
@@ -111,9 +135,21 @@ export default async function PackagePage({
             <p className="grouprange">
               Group of {pkg.groupSizeMin}–{pkg.groupSizeMax}
             </p>
-            <Link className="btn btn-solid" href={`/${lang}/inquiry?package=${slug}`}>
+            <Link className="btn btn-ghost" href={`/${lang}/inquiry?package=${slug}`}>
               {dict.packages.checkDates}
             </Link>
+            {pkg.departures[0]?.id && (
+              <PackageBookForm
+                departureId={pkg.departures[0].id}
+                label={formatDeparture(pkg.departures[0].startDate, lang)}
+                seatsAvailable={pkg.departures[0].seatsAvailable}
+                lang={lang}
+                loginHref={`/${lang}/login?next=/${lang}/packages/${slug}`}
+                signedIn={Boolean(user)}
+                bookCopy={bookCopy}
+                payCopy={payCopy}
+              />
+            )}
           </aside>
         </header>
 
@@ -192,15 +228,28 @@ export default async function PackagePage({
             <h2 id="dep-h">Upcoming departures</h2>
             <ul className="departures">
               {pkg.departures.map((d) => (
-                <li key={d.startDate}>
+                <li key={d.id ?? d.startDate}>
                   <b>{formatDeparture(d.startDate, lang)}</b>
                   <span>{money(d.priceAmount, pkg.basePriceCurrency)}</span>
                   <span className={d.seatsAvailable <= 5 ? "seats low" : "seats"}>
                     {d.seatsAvailable} seats left
                   </span>
-                  <Link className="btn btn-o btn-sm" href={`/${lang}/inquiry?package=${slug}`}>
-                    {dict.packages.checkDates}
-                  </Link>
+                  {d.id ? (
+                    <PackageBookForm
+                      departureId={d.id}
+                      label={formatDeparture(d.startDate, lang)}
+                      seatsAvailable={d.seatsAvailable}
+                      lang={lang}
+                      loginHref={`/${lang}/login?next=/${lang}/packages/${slug}`}
+                      signedIn={Boolean(user)}
+                      bookCopy={bookCopy}
+                      payCopy={payCopy}
+                    />
+                  ) : (
+                    <Link className="btn btn-o btn-sm" href={`/${lang}/inquiry?package=${slug}`}>
+                      {dict.packages.checkDates}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>

@@ -1,17 +1,26 @@
-import { and, eq, isNull, or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { randomBytes } from "node:crypto";
 import { db } from "@/lib/db";
 import {
-  account,
+  booking,
   message,
   messageThread,
   offer,
+  requestBoardView,
   traveller,
   tripRequest,
   vendor,
 } from "@/lib/db/schema";
 import type { MessageInput, ProviderBidInput, TripRequestCreateInput } from "@/lib/validators/marketplace";
 
-function maskContacts(body: string): { masked: string; detected: boolean } {
+/** Vendor sets net; platform derives traveller-facing total. Never invert this. */
+export function deriveTravellerTotal(vendorNetAmount: number, commissionRate: number): number {
+  const rate = Number.isFinite(commissionRate) ? commissionRate : 0.15;
+  const safe = Math.min(Math.max(rate, 0), 0.9);
+  return Math.ceil(vendorNetAmount / (1 - safe));
+}
+
+export function maskContacts(body: string): { masked: string; detected: boolean } {
   const email = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
   const url = /\b(?:https?:\/\/|www\.)\S+/gi;
   const phone = /(?:\+?\d[\d\s().-]{7,}\d)/g;
@@ -20,6 +29,14 @@ function maskContacts(body: string): { masked: string; detected: boolean } {
     .replace(url, "[link hidden until booking]")
     .replace(phone, "[phone hidden until booking]");
   return { masked, detected: masked !== body };
+}
+
+function newBookingReference(): string {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = randomBytes(8);
+  let out = "";
+  for (const b of bytes) out += alphabet[b % alphabet.length];
+  return `O2B-${out.slice(0, 4)}-${out.slice(4, 8)}`;
 }
 
 async function getOrCreateTraveller(accountId: string) {
@@ -102,7 +119,10 @@ export async function createProviderBid(
     .where(eq(tripRequest.id, requestId))
     .limit(1);
   if (!request) return { ok: false as const, reason: "request_not_found" };
-  if (request.visibility === "private" || request.status !== "submitted") {
+  if (
+    request.visibility === "private" ||
+    (request.status !== "submitted" && request.status !== "quoted")
+  ) {
     return { ok: false as const, reason: "request_closed" };
   }
   if (request.bidsCloseAt && request.bidsCloseAt.getTime() < Date.now()) {
@@ -110,7 +130,7 @@ export async function createProviderBid(
   }
 
   const commissionRate = Number(provider.commissionRate ?? "0.15");
-  const totalAmount = Math.ceil(input.vendorNetAmount / (1 - commissionRate));
+  const totalAmount = deriveTravellerTotal(input.vendorNetAmount, commissionRate);
 
   const [thread] = await db
     .insert(messageThread)
@@ -216,4 +236,375 @@ export async function findVendorIdForAccount(accountId: string) {
     .where(eq(vendor.accountId, accountId))
     .limit(1);
   return row?.id ?? null;
+}
+
+/** Open board for verified providers — no traveller contact details. */
+export async function listOpenRequestBoard(vendorId: string, limit = 40) {
+  const now = new Date();
+  const rows = await db
+    .select({
+      id: tripRequest.id,
+      protocol: tripRequest.protocol,
+      tier: tripRequest.tier,
+      groupSize: tripRequest.groupSize,
+      nights: tripRequest.nights,
+      fromDate: tripRequest.fromDate,
+      toDate: tripRequest.toDate,
+      flexibleMonth: tripRequest.flexibleMonth,
+      departureCity: tripRequest.departureCity,
+      interests: tripRequest.interests,
+      kitchenRequired: tripRequest.kitchenRequired,
+      cookRequired: tripRequest.cookRequired,
+      preferredLanguage: tripRequest.preferredLanguage,
+      budgetMinAmount: tripRequest.budgetMinAmount,
+      budgetMaxAmount: tripRequest.budgetMaxAmount,
+      budgetCurrency: tripRequest.budgetCurrency,
+      budgetBasis: tripRequest.budgetBasis,
+      specialRequirements: tripRequest.specialRequirements,
+      requirementTags: tripRequest.requirementTags,
+      bidsCloseAt: tripRequest.bidsCloseAt,
+      publishedAt: tripRequest.publishedAt,
+      status: tripRequest.status,
+    })
+    .from(tripRequest)
+    .where(
+      and(
+        eq(tripRequest.visibility, "open_to_verified"),
+        inArray(tripRequest.status, ["submitted", "quoted"]),
+        or(isNull(tripRequest.bidsCloseAt), sql`${tripRequest.bidsCloseAt} > ${now}`)
+      )
+    )
+    .orderBy(desc(tripRequest.publishedAt))
+    .limit(limit);
+
+  // Record a board view for the hottest request (first) so scraping signals work later.
+  if (rows[0]) {
+    await db.insert(requestBoardView).values({ tripRequestId: rows[0].id, vendorId, viewCount: 1 });
+  }
+
+  return rows;
+}
+
+export async function listTravellerRequests(accountId: string, limit = 40) {
+  const [profile] = await db.select({ id: traveller.id }).from(traveller).where(eq(traveller.accountId, accountId)).limit(1);
+  if (!profile) return [];
+  return db
+    .select({
+      id: tripRequest.id,
+      status: tripRequest.status,
+      protocol: tripRequest.protocol,
+      groupSize: tripRequest.groupSize,
+      fromDate: tripRequest.fromDate,
+      toDate: tripRequest.toDate,
+      nights: tripRequest.nights,
+      visibility: tripRequest.visibility,
+      budgetMinAmount: tripRequest.budgetMinAmount,
+      budgetMaxAmount: tripRequest.budgetMaxAmount,
+      budgetCurrency: tripRequest.budgetCurrency,
+      createdAt: tripRequest.createdAt,
+      bidsCloseAt: tripRequest.bidsCloseAt,
+    })
+    .from(tripRequest)
+    .where(eq(tripRequest.travellerId, profile.id))
+    .orderBy(desc(tripRequest.createdAt))
+    .limit(limit);
+}
+
+export async function listOffersForRequest(
+  requestId: string,
+  accountId: string,
+  role: "traveller" | "vendor" | "admin"
+) {
+  if (role === "traveller") {
+    const [profile] = await db.select({ id: traveller.id }).from(traveller).where(eq(traveller.accountId, accountId)).limit(1);
+    if (!profile) return { ok: false as const, reason: "forbidden" };
+    const [req] = await db
+      .select({ travellerId: tripRequest.travellerId })
+      .from(tripRequest)
+      .where(eq(tripRequest.id, requestId))
+      .limit(1);
+    if (!req || req.travellerId !== profile.id) return { ok: false as const, reason: "forbidden" };
+  } else if (role === "vendor") {
+    const vendorId = await findVendorIdForAccount(accountId);
+    if (!vendorId) return { ok: false as const, reason: "forbidden" };
+
+    const rows = await db
+      .select({
+        id: offer.id,
+        title: offer.title,
+        summary: offer.summary,
+        totalAmount: offer.totalAmount,
+        vendorNetAmount: offer.vendorNetAmount,
+        currency: offer.currency,
+        origin: offer.origin,
+        status: offer.status,
+        rank: offer.rank,
+        score: offer.score,
+        submittedAt: offer.submittedAt,
+        validUntil: offer.validUntil,
+        vendorId: offer.vendorId,
+        businessName: vendor.businessName,
+        vendorSlug: vendor.slug,
+        ratingAvg: vendor.ratingAvg,
+        ratingCount: vendor.ratingCount,
+      })
+      .from(offer)
+      .leftJoin(vendor, eq(offer.vendorId, vendor.id))
+      .where(and(eq(offer.tripRequestId, requestId), eq(offer.vendorId, vendorId)))
+      .orderBy(asc(offer.rank), asc(offer.totalAmount));
+    return { ok: true as const, offers: rows };
+  }
+
+  const rows = await db
+    .select({
+      id: offer.id,
+      title: offer.title,
+      summary: offer.summary,
+      totalAmount: offer.totalAmount,
+      currency: offer.currency,
+      origin: offer.origin,
+      status: offer.status,
+      rank: offer.rank,
+      score: offer.score,
+      submittedAt: offer.submittedAt,
+      validUntil: offer.validUntil,
+      vendorId: offer.vendorId,
+      businessName: vendor.businessName,
+      vendorSlug: vendor.slug,
+      ratingAvg: vendor.ratingAvg,
+      ratingCount: vendor.ratingCount,
+    })
+    .from(offer)
+    .leftJoin(vendor, eq(offer.vendorId, vendor.id))
+    .where(
+      and(
+        eq(offer.tripRequestId, requestId),
+        inArray(offer.status, ["sent", "viewed", "shortlisted", "accepted", "revision_requested"])
+      )
+    )
+    .orderBy(asc(offer.rank), asc(offer.totalAmount));
+
+  return { ok: true as const, offers: rows };
+}
+
+export async function acceptOffer(accountId: string, offerId: string) {
+  const [profile] = await db.select().from(traveller).where(eq(traveller.accountId, accountId)).limit(1);
+  if (!profile) return { ok: false as const, reason: "forbidden" };
+
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .select({
+        id: offer.id,
+        tripRequestId: offer.tripRequestId,
+        vendorId: offer.vendorId,
+        totalAmount: offer.totalAmount,
+        vendorNetAmount: offer.vendorNetAmount,
+        commissionRate: offer.commissionRate,
+        currency: offer.currency,
+        status: offer.status,
+        title: offer.title,
+      })
+      .from(offer)
+      .where(eq(offer.id, offerId))
+      .limit(1)
+      .for("update");
+
+    if (!row || !row.vendorId) return { ok: false as const, reason: "offer_not_found" };
+    if (!["sent", "viewed", "shortlisted", "revision_requested"].includes(row.status)) {
+      return { ok: false as const, reason: "offer_not_open" };
+    }
+
+    const [req] = await tx
+      .select({ id: tripRequest.id, travellerId: tripRequest.travellerId, groupSize: tripRequest.groupSize })
+      .from(tripRequest)
+      .where(eq(tripRequest.id, row.tripRequestId))
+      .limit(1)
+      .for("update");
+    if (!req || req.travellerId !== profile.id) return { ok: false as const, reason: "forbidden" };
+
+    const commissionRate = Number(row.commissionRate ?? "0.15");
+    const gross = row.totalAmount;
+    const net = row.vendorNetAmount ?? Math.floor(gross * (1 - commissionRate));
+    const commissionAmount = gross - net;
+
+    await tx.update(offer).set({ status: "accepted" }).where(eq(offer.id, offerId));
+    await tx
+      .update(offer)
+      .set({ status: "declined", declineReason: "Another offer accepted" })
+      .where(and(eq(offer.tripRequestId, row.tripRequestId), ne(offer.id, offerId), ne(offer.status, "withdrawn")));
+
+    await tx
+      .update(tripRequest)
+      .set({ status: "booked", closedAt: new Date(), closeReason: "offer_accepted", updatedAt: new Date() })
+      .where(eq(tripRequest.id, row.tripRequestId));
+
+    const [created] = await tx
+      .insert(booking)
+      .values({
+        reference: newBookingReference(),
+        tripRequestId: row.tripRequestId,
+        offerId: row.id,
+        travellerId: profile.id,
+        vendorId: row.vendorId,
+        pax: req.groupSize,
+        grossAmount: gross,
+        currency: row.currency,
+        commissionRate: commissionRate.toFixed(4),
+        commissionAmount,
+        netAmount: net,
+        status: "pending_payment",
+      })
+      .returning({
+        id: booking.id,
+        reference: booking.reference,
+        grossAmount: booking.grossAmount,
+        currency: booking.currency,
+      });
+
+    // Unmask path: attach booking to existing thread if any.
+    await tx
+      .update(messageThread)
+      .set({ bookingId: created!.id })
+      .where(and(eq(messageThread.tripRequestId, row.tripRequestId), eq(messageThread.vendorId, row.vendorId)));
+
+    return { ok: true as const, booking: created!, offerTitle: row.title };
+  });
+}
+
+export async function declineOffer(accountId: string, offerId: string, reason?: string) {
+  const [profile] = await db.select({ id: traveller.id }).from(traveller).where(eq(traveller.accountId, accountId)).limit(1);
+  if (!profile) return { ok: false as const, reason: "forbidden" };
+
+  const [row] = await db
+    .select({
+      id: offer.id,
+      tripRequestId: offer.tripRequestId,
+      status: offer.status,
+      travellerId: tripRequest.travellerId,
+    })
+    .from(offer)
+    .innerJoin(tripRequest, eq(offer.tripRequestId, tripRequest.id))
+    .where(eq(offer.id, offerId))
+    .limit(1);
+
+  if (!row || row.travellerId !== profile.id) return { ok: false as const, reason: "forbidden" };
+  if (!["sent", "viewed", "shortlisted", "revision_requested"].includes(row.status)) {
+    return { ok: false as const, reason: "offer_not_open" };
+  }
+
+  const [updated] = await db
+    .update(offer)
+    .set({ status: "declined", declineReason: reason ?? "Declined by traveller" })
+    .where(eq(offer.id, offerId))
+    .returning();
+  return { ok: true as const, offer: updated };
+}
+
+export async function listMessageThreads(accountId: string, role: "traveller" | "vendor" | "admin") {
+  if (role === "admin") {
+    return db
+      .select({
+        id: messageThread.id,
+        tripRequestId: messageThread.tripRequestId,
+        vendorId: messageThread.vendorId,
+        bookingId: messageThread.bookingId,
+        status: messageThread.status,
+        createdAt: messageThread.createdAt,
+        businessName: vendor.businessName,
+      })
+      .from(messageThread)
+      .leftJoin(vendor, eq(messageThread.vendorId, vendor.id))
+      .orderBy(desc(messageThread.createdAt))
+      .limit(50);
+  }
+
+  if (role === "vendor") {
+    const vendorId = await findVendorIdForAccount(accountId);
+    if (!vendorId) return [];
+    return db
+      .select({
+        id: messageThread.id,
+        tripRequestId: messageThread.tripRequestId,
+        vendorId: messageThread.vendorId,
+        bookingId: messageThread.bookingId,
+        status: messageThread.status,
+        createdAt: messageThread.createdAt,
+        businessName: vendor.businessName,
+      })
+      .from(messageThread)
+      .leftJoin(vendor, eq(messageThread.vendorId, vendor.id))
+      .where(eq(messageThread.vendorId, vendorId))
+      .orderBy(desc(messageThread.createdAt))
+      .limit(40);
+  }
+
+  const [profile] = await db.select({ id: traveller.id }).from(traveller).where(eq(traveller.accountId, accountId)).limit(1);
+  if (!profile) return [];
+  return db
+    .select({
+      id: messageThread.id,
+      tripRequestId: messageThread.tripRequestId,
+      vendorId: messageThread.vendorId,
+      bookingId: messageThread.bookingId,
+      status: messageThread.status,
+      createdAt: messageThread.createdAt,
+      businessName: vendor.businessName,
+    })
+    .from(messageThread)
+    .innerJoin(tripRequest, eq(messageThread.tripRequestId, tripRequest.id))
+    .leftJoin(vendor, eq(messageThread.vendorId, vendor.id))
+    .where(eq(tripRequest.travellerId, profile.id))
+    .orderBy(desc(messageThread.createdAt))
+    .limit(40);
+}
+
+export async function listMessagesForThread(
+  accountId: string,
+  role: "traveller" | "vendor" | "admin",
+  threadId: string
+) {
+  if (!(await canUseThread(accountId, role, threadId))) return { ok: false as const, reason: "forbidden" };
+
+  const [thread] = await db
+    .select({
+      id: messageThread.id,
+      bookingId: messageThread.bookingId,
+      bookingStatus: booking.status,
+    })
+    .from(messageThread)
+    .leftJoin(booking, eq(messageThread.bookingId, booking.id))
+    .where(eq(messageThread.id, threadId))
+    .limit(1);
+
+  const unmasked =
+    role === "admin" ||
+    (thread?.bookingId != null &&
+      thread.bookingStatus != null &&
+      ["confirmed", "in_progress", "completed"].includes(thread.bookingStatus));
+
+  const rows = await db
+    .select({
+      id: message.id,
+      senderAccountId: message.senderAccountId,
+      bodyRaw: message.bodyRaw,
+      bodyMasked: message.bodyMasked,
+      contactAttemptDetected: message.contactAttemptDetected,
+      sentAt: message.sentAt,
+    })
+    .from(message)
+    .where(eq(message.threadId, threadId))
+    .orderBy(asc(message.sentAt))
+    .limit(200);
+
+  return {
+    ok: true as const,
+    unmasked,
+    messages: rows.map((m) => ({
+      id: m.id,
+      senderAccountId: m.senderAccountId,
+      body: unmasked ? m.bodyRaw : m.bodyMasked,
+      contactAttemptDetected: m.contactAttemptDetected,
+      sentAt: m.sentAt,
+    })),
+  };
 }

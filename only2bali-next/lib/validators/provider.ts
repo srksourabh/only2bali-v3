@@ -2,7 +2,26 @@ import { z } from "zod";
 
 const shortText = z.string().trim().min(1).max(180);
 const optionalText = z.string().trim().max(2000).optional().or(z.literal(""));
-const urlText = z.url().max(1000);
+const absoluteUrl = z.url().max(1000);
+/** Absolute https URL or a local /uploads path from the upload endpoint. */
+const storedFileUrl = z
+  .string()
+  .trim()
+  .max(1000)
+  .refine(
+    (value) =>
+      /^\/uploads\/providers\/[a-zA-Z0-9._\-/]+$/.test(value) ||
+      (() => {
+        try {
+          const u = new URL(value);
+          return u.protocol === "https:";
+        } catch {
+          return false;
+        }
+      })(),
+    "Provide an https URL or an uploaded /uploads path."
+  );
+const urlText = absoluteUrl;
 
 const currency = z.enum(["INR", "IDR"]);
 
@@ -80,10 +99,15 @@ export const serviceListingPatchSchema = serviceListingBaseSchema.partial().refi
 export const providerMediaSchema = z.object({
   listingId: z.uuid().optional(),
   kind: z.enum(["photo", "menu", "licence", "gallery", "cover"]).default("photo"),
-  fileUrl: urlText,
+  fileUrl: storedFileUrl,
   altText: z.string().trim().max(180).optional().or(z.literal("")),
   caption: z.string().trim().max(300).optional().or(z.literal("")),
   sortOrder: z.number().int().min(0).max(999).default(0),
+});
+
+export const providerDocumentSchema = z.object({
+  kind: z.enum(["business_licence", "tax_id", "insurance", "photo_id", "kitchen_certificate"]),
+  fileUrl: storedFileUrl,
 });
 
 export const providerEventSchema = z.object({
@@ -127,6 +151,7 @@ export type ProviderProfileInput = z.infer<typeof providerProfileSchema>;
 export type ServiceListingInput = z.infer<typeof serviceListingSchema>;
 export type ServiceListingPatchInput = z.infer<typeof serviceListingPatchSchema>;
 export type ProviderMediaInput = z.infer<typeof providerMediaSchema>;
+export type ProviderDocumentInput = z.infer<typeof providerDocumentSchema>;
 export type ProviderEventInput = z.infer<typeof providerEventSchema>;
 export type ProviderPromotionInput = z.infer<typeof providerPromotionSchema>;
 export type PayoutAccountInput = z.infer<typeof payoutAccountSchema>;

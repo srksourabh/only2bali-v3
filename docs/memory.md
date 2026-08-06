@@ -407,6 +407,61 @@ what to do with it; told to ignore it for now and finish the payment work.
 Noted here so a future session doesn't mistake it for a real, actioned
 request.
 
+### 2026-08-06 — Indonesia marketplace master plan + Phase A spine
+
+**Asked for:** plan, task list, and implementation of a full aggregator marketplace
+(providers in Bali/Jakarta/Indonesia, travellers book and pay Only2Bali, admin verifies,
+bidirectional ratings) with less veg-only emphasis on the landing page.
+
+**Produced:**
+- `docs/planning/indonesia-marketplace-master-plan.md` — gap analysis vs live code,
+  positioning shift, phased delivery A–F.
+- `docs/planning/indonesia-marketplace-todo.md` — sequenced tasks with done-when.
+
+**Phase A shipped in code:**
+- Landing repositioned (tourism/destinations/circuits first; food protocol as one filter).
+- Public `/services` + `/services/[id]` for active listings from verified vendors only.
+- Admin approve/reject applications + verify/suspend vendors.
+- Bidirectional review schema (migration 0005) + API + traveller review UI.
+- Bali/Jakarta destination strip + Jakarta sample listing in seed.
+
+**Still open (later phases / owner):** media upload, payouts, request
+board UI, Vercel handover, credential revocation.
+
+### 2026-08-06 (later) — Phase B book and pay
+
+**Shipped:**
+- Listing availability API; `createListingBooking` with server-priced amount and date hold.
+- Unified `POST /api/bookings` for departure + listing.
+- Service detail book+pay UI; package departure Book CTA (no longer WhatsApp-only for money).
+- Payment capture marks listing availability `booked`.
+- Provider bookings list, fulfilment status, vendor→traveller ratings.
+- Account shows listing titles; price helper tests.
+
+### 2026-08-06 (later) — Phase C media, KYC, trust
+
+**Shipped:**
+- Multipart `POST /api/provider/uploads` — Vercel Blob when `BLOB_READ_WRITE_TOKEN`
+  is set; local `public/uploads/` in non-production; 503 in production without token.
+- Provider dashboard: file upload primary for photos; KYC document upload.
+- `vendor_document` API + admin KYC approve/reject on overview.
+- Public `/[lang]/providers/[slug]` (verified only, approved media, published listings, ratings).
+- Service cards show image + rating + link to provider; verify copy broadened beyond kitchens.
+- Health reports `uploads`; ADR in `docs/decisions/2026-08-06-provider-uploads-blob.md`.
+
+**Owner still:** set `BLOB_READ_WRITE_TOKEN` on Vercel for production uploads.
+
+### 2026-08-06 (later) — Phases D–F marketplace completion slice
+
+**Shipped:**
+- Provider request board + bid compose (net → platform-derived traveller total).
+- Traveller offer comparison / accept / decline; masked messaging until booking confirmed.
+- Compliance hard-filter via `GET /api/services?protocol=` and compliance-match helpers.
+- Payment capture → held disbursement (escrow); admin release/approve/mark-paid with purpose code ledger events; platform-first refund API.
+- `/destinations` + `/destinations/[region]`; PWA manifest + service worker for account shell.
+
+**Still owner/legal:** E0 PA-CB partner, F4 Django/CRA retirement, F5 Vercel handover + live keys.
+
 ### 2026-07-30 — Razorpay verify, webhook, account pay UI
 
 **Asked for**: apply / land the Razorpay verify + webhook + booking pay UI work

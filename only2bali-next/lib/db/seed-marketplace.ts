@@ -729,6 +729,7 @@ export async function seedMarketplace() {
 
     await db.insert(review).values({
       bookingId: completed.id,
+      direction: "traveller_to_vendor",
       vendorId: vendorIds.get("demo-sattvik-by-nature")!,
       packageId: sattvik?.id ?? null,
       rating: 5,

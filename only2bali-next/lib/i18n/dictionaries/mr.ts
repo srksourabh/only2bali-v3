@@ -2,14 +2,16 @@ import type { Dictionary } from "./en";
 
 export const mr: Dictionary = {
   meta: {
-    title: "Only2Bali — बालीसाठी प्रमाणित शाकाहारी, जैन आणि व्हीगन समूह प्रवास",
+    title: "Only2Bali - Indonesia travel marketplace for Indian groups",
     description:
-      "भारतातून बालीपर्यंतचा समूह प्रवास, जो जैन, शाकाहारी आणि व्हीगन नियमांभोवती आणि तुमच्याच भाषेत उभा केला आहे. तुमचा प्रवास कार्यक्रम देण्यापूर्वीच प्रत्येक जेवण तपासले जाते.",
+      "Book verified stays, rides, guides, restaurants and group packages across Bali, Jakarta and Indonesia — built for Indian travellers, with food protocol as one clear filter.",
   },
 
   nav: {
     circuits: "सर्किट",
-    guarantee: "शाकाहाराची हमी",
+    destinations: "Destinations",
+    services: "Services",
+    guarantee: "Trip quality",
     verify: "आम्ही कशी तपासणी करतो",
     packages: "पॅकेजेस",
     plan: "माझा प्रवास आखा",
@@ -18,22 +20,35 @@ export const mr: Dictionary = {
   },
 
   hero: {
-    eyebrow: "भारत → बाली · जैन · शाकाहारी · व्हीगन",
-    headlineBefore: "तुम्ही उतरण्यापूर्वीच प्रत्येक जेवण ",
-    headlineEm: "प्रमाणित",
-    headlineAfter: " झालेले असते.",
-    sub: "बालीचा समूह प्रवास, जो भारतीय खाण्याच्या नियमांवर आणि तुमच्याच भाषेवर उभा आहे — दुसऱ्याच्या कार्यक्रमाला जोडलेला “शाकाहारी पर्याय” नाही.",
-    cta1: "माझ्या तारखा पाठवा",
-    cta2: "हमी कशी चालते ते पहा",
-    caption: "सेम्बाह — हात जोडून केले जाणारे अभिवादन, जे बाली आणि भारत दोघांचेही आहे",
+    eyebrow: "India → Indonesia · Bali · Jakarta · Circuits · Services",
+    headlineBefore: "Your Indonesia trip, ",
+    headlineEm: "built around you",
+    headlineAfter: " — with verified local providers.",
+    sub: "Browse curated circuits and book stays, rides, guides, restaurants and packages from verified partners in Bali, Jakarta and beyond. Pay Only2Bali; we pay the providers.",
+    cta1: "Explore circuits",
+    cta2: "Browse services",
+    caption: "Sembah — the folded-hand greeting shared by Bali and India",
   },
 
   rail: [
-    { value: "4", label: "विषयावर बांधलेली सर्किट, सर्वसाधारण टूर नाही" },
-    { value: "7", label: "आमचे गाइड बोलतात त्या भारतीय भाषा" },
-    { value: "10+", label: "सोबत येणाऱ्या स्वयंपाक्यासाठी समूहाचा आकार" },
-    { value: "प्रत्येक जेवण", label: "कार्यक्रम देण्यापूर्वी तपासलेले" },
+    { value: "Bali + Jakarta", label: "Destinations live now, more Indonesia next" },
+    { value: "4", label: "Temple, adventure, food and artisan circuits" },
+    { value: "7", label: "Indian languages spoken by our guides" },
+    { value: "Verified", label: "Providers go live only after admin review" },
   ],
+
+  destinations: {
+    heading: "Where do you want to go?",
+    sub: "Start with Bali or Jakarta. Every service and package is tied to a place, not a vague brochure.",
+    bali: {
+      name: "Bali",
+      blurb: "Temples, coasts, Ubud, Nusa islands — the core circuits and most of our verified supply.",
+    },
+    jakarta: {
+      name: "Jakarta",
+      blurb: "City stays, airport logistics, dining and add-on services for groups entering Indonesia.",
+    },
+  },
 
   circuits: {
     heading: "ज्या बालीसाठी तुम्ही खरोखर आला आहात, ती निवडा.",
@@ -73,9 +88,34 @@ export const mr: Dictionary = {
     },
   },
 
+  services: {
+    heading: "Book services from verified local partners.",
+    sub: "Restaurants, stays, transport, guides, activities and more — listed by providers across Bali and Jakarta, published only after Only2Bali checks them.",
+    empty: "No published services in this filter yet. Providers are onboarding — try another region or check packages.",
+    from: "from",
+    verified: "Verified provider",
+    viewCta: "View service",
+    bookCta: "Enquire to book",
+    bookNow: "Book and pay",
+    booking: "Holding…",
+    signedInRequired: "Sign in to hold this date and pay Only2Bali.",
+    signIn: "Sign in to book",
+    leadName: "Lead traveller full name",
+    pax: "Group size",
+    protocol: "Food protocol",
+    date: "Service date",
+    success: "Held — reference",
+    errGeneric: "Could not create the booking. Nothing was charged.",
+    filterAll: "All destinations",
+    filterBali: "Bali",
+    filterJakarta: "Jakarta",
+    back: "All services",
+    reviewsHeading: "Traveller reviews",
+  },
+
   guarantee: {
-    heading: "“100% शाकाहारी” हा एक दावा आहे. हा त्याचा पुरावा.",
-    sub: "प्रत्येक कार्यक्रमातील प्रत्येक जेवणाला, तुम्ही पाहण्यापूर्वीच एक रेटिंग असते. नियम बदलून पहा — हे खरे तर्कशास्त्र आहे, जाहिरातीचा फलक नाही.",
+    heading: "Food protocol is one filter. Stays, rides and budget are checked too.",
+    sub: "Vegetarian, Jain and vegan remain first-class options — disclosed meal by meal — alongside stay comfort, vehicle type, guide language and clear INR pricing.",
     protocols: { jain: "जैन", veg: "शाकाहारी", vegan: "व्हीगन" },
     legend: {
       green: "स्वतंत्र स्वयंपाकघर, प्रमाणित",
@@ -110,13 +150,13 @@ export const mr: Dictionary = {
   },
 
   verify: {
-    heading: "स्वयंपाकघर हिरवे रेटिंग कसे मिळवते.",
-    sub: "श्रद्धेवर आधारित प्रवासात कोणताही स्पर्धक आपली पद्धत जाहीर करत नाही. आम्ही करतो, कारण तीच पद्धत आमचे उत्पादन आहे.",
+    heading: "प्रदाता विश्वास कसा मिळवतो.",
+    sub: "राहण्याची जागा, सवारी, मार्गदर्शक, उपक्रम आणि स्वयंपाकघर — प्रवाशांना खरोखर मिळणारी सेवा आम्ही तपासतो, फक्त विक्रीचे वचन नाही.",
     steps: [
-      { title: "आम्ही न सांगता जातो", body: "आमच्या टीममधील कोणीतरी आधी तिथे जेवते. ठरलेली तपासणी नाही, आधी सूचना नाही." },
-      { title: "आम्ही मेनू नाही, स्वयंपाकाची रांग पाहतो", body: "वेगळे तेल, वेगळी भांडी, वेगळी जागा. कढई सामायिक असलेल्या स्वयंपाकघराचा छापील शाकाहारी मेनू अंबर आहे, हिरवा नाही." },
-      { title: "जैन नियम स्पष्टपणे विचारला जातो", body: "कांदा नाही, लसूण नाही, कंदमुळे नाहीत — त्या दिवशी प्रत्यक्ष कामावर असणाऱ्या स्वयंपाक्याकडूनच खात्री, आणि फोटो घेतला जातो." },
-      { title: "रेटिंगची मुदत संपते", body: "स्वयंपाकघरे हात बदलतात आणि कर्मचारी जातात. पुन्हा न तपासलेले रेटिंग गुपचूप जुने होण्याऐवजी आमच्या व्यवस्थेतून बाहेर पडते." },
+      { title: "आम्ही स्वतः पाहून तपासतो", body: "लिस्टिंग लाईव्ह होण्यापूर्वी आमची टीम जागा किंवा वाहन पाहते, किंवा मार्गदर्शकासोबत जाते. दाखवण्यासाठीची तपासणी नाही." },
+      { title: "आम्ही खरी सेवा पाहतो", body: "राहण्यासाठी खोली, सवारीसाठी वाहनाची स्थिती, मार्गदर्शकाची भाषा आणि मार्ग, आणि जेथे जेवण असेल तेथे स्वयंपाकघराची पद्धत." },
+      { title: "जेवण असेल तेथे प्रोटोकॉल विचारतो", body: "जेवण समाविष्ट असेल तर जैन/शाकाहारी नियम त्याच स्वयंपाकऱ्याकडे पुष्टी — कांदा, लसूण, कंदमुळे नको जेव्हा मागितले — आणि छायाचित्र." },
+      { title: "रेटिंगची मुदत संपते", body: "हॉटेल, ड्रायव्हर, मेनू आणि किंमती बदलतात. नव्याने न तपासलेली तपासणी शांतपणे जुनी होण्याऐवजी बाहेर पडते." },
     ],
   },
 
@@ -125,6 +165,7 @@ export const mr: Dictionary = {
     sub: "प्रति व्यक्ती अंदाजे, आंतरराष्ट्रीय विमानभाडे वगळून. प्रत्येक पॅकेज बदलता येते — ही सुरुवात आहे, ठरलेला मेनू नाही.",
     perPerson: "प्रति व्यक्ती · पासून",
     checkDates: "तारखा पहा",
+    bookNow: "Book this departure",
     nights: "रात्री",
     days: "दिवस",
     items: [
@@ -259,6 +300,11 @@ export const mr: Dictionary = {
     savedEmpty: "तुम्ही जतन केलेली पॅकेजेस इथे दिसतील.",
     browseCta: "पॅकेजेस पहा",
     protocolNote: "तुमचा आहार नियम एकदा ठरवा, आम्ही बनवलेला प्रत्येक कार्यक्रम तो पाळेल.",
+
+    reviewHeading: "Leave a rating",
+    reviewSubmit: "Submit rating",
+    reviewThanks: "Thank you — your rating is saved.",
+    reviewPrompt: "Rate this provider",
   },
 
 };

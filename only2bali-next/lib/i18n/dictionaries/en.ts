@@ -5,13 +5,15 @@
  */
 export const en = {
   meta: {
-    title: "Only2Bali - verified Bali trips for Indian groups",
+    title: "Only2Bali - Indonesia travel marketplace for Indian groups",
     description:
-      "Group travel from India to Bali with verified food, comfortable stays, quality rides, luxury cars, guides, and budget options from economical to premium.",
+      "Book verified stays, rides, guides, restaurants and group packages across Bali, Jakarta and Indonesia — built for Indian travellers, with food protocol as one clear filter.",
   },
 
   nav: {
     circuits: "Circuits",
+    destinations: "Destinations",
+    services: "Services",
     guarantee: "Trip quality",
     verify: "How we verify",
     packages: "Packages",
@@ -21,25 +23,38 @@ export const en = {
   },
 
   hero: {
-    eyebrow: "India to Bali · Food · Stays · Rides · Guides",
-    headlineBefore: "Every part of your Bali trip is ",
-    headlineEm: "verified",
-    headlineAfter: " before you land.",
-    sub: "Group travel to Bali built around Indian food needs, comfortable stays, quality rides, luxury cars, local guides, and clear budget options from economical to premium.",
-    cta1: "Send my dates",
-    cta2: "See how we verify providers",
+    eyebrow: "India → Indonesia · Bali · Jakarta · Circuits · Services",
+    headlineBefore: "Your Indonesia trip, ",
+    headlineEm: "built around you",
+    headlineAfter: " — with verified local providers.",
+    sub: "Browse curated circuits and book stays, rides, guides, restaurants and packages from verified partners in Bali, Jakarta and beyond. Pay Only2Bali; we pay the providers.",
+    cta1: "Explore circuits",
+    cta2: "Browse services",
     caption: "Sembah — the folded-hand greeting shared by Bali and India",
   },
 
   rail: [
-    { value: "4", label: "Food, stays, rides and experiences planned together" },
+    { value: "Bali + Jakarta", label: "Destinations live now, more Indonesia next" },
+    { value: "4", label: "Temple, adventure, food and artisan circuits" },
     { value: "7", label: "Indian languages spoken by our guides" },
-    { value: "10+", label: "Group size for an accompanying cook" },
-    { value: "3 tiers", label: "Economical, comfort and premium budgets" },
+    { value: "Verified", label: "Providers go live only after admin review" },
   ],
 
+  destinations: {
+    heading: "Where do you want to go?",
+    sub: "Start with Bali or Jakarta. Every service and package is tied to a place, not a vague brochure.",
+    bali: {
+      name: "Bali",
+      blurb: "Temples, coasts, Ubud, Nusa islands — the core circuits and most of our verified supply.",
+    },
+    jakarta: {
+      name: "Jakarta",
+      blurb: "City stays, airport logistics, dining and add-on services for groups entering Indonesia.",
+    },
+  },
+
   circuits: {
-    heading: "Choose the Bali you actually came for.",
+    heading: "Choose the Indonesia you actually came for.",
     sub: "Four circuits, each backed by real providers for kitchens, hotels, villas, cars, guides and activities. Pick your route and we match the whole trip around your comfort and budget.",
     addOn: "Add on",
     items: {
@@ -76,9 +91,34 @@ export const en = {
     },
   },
 
+  services: {
+    heading: "Book services from verified local partners.",
+    sub: "Restaurants, stays, transport, guides, activities and more — listed by providers across Bali and Jakarta, published only after Only2Bali checks them.",
+    empty: "No published services in this filter yet. Providers are onboarding — try another region or check packages.",
+    from: "from",
+    verified: "Verified provider",
+    viewCta: "View service",
+    bookCta: "Enquire to book",
+    bookNow: "Book and pay",
+    booking: "Holding…",
+    signedInRequired: "Sign in to hold this date and pay Only2Bali.",
+    signIn: "Sign in to book",
+    leadName: "Lead traveller full name",
+    pax: "Group size",
+    protocol: "Food protocol",
+    date: "Service date",
+    success: "Held — reference",
+    errGeneric: "Could not create the booking. Nothing was charged.",
+    filterAll: "All destinations",
+    filterBali: "Bali",
+    filterJakarta: "Jakarta",
+    back: "All services",
+    reviewsHeading: "Traveller reviews",
+  },
+
   guarantee: {
-    heading: "Food is verified. So are the stay, ride and budget fit.",
-    sub: "Every itinerary carries clear checks before you book: food protocol, kitchen confidence, stay comfort, vehicle type, guide language and total INR budget.",
+    heading: "Food protocol is one filter. Stays, rides and budget are checked too.",
+    sub: "Vegetarian, Jain and vegan remain first-class options — disclosed meal by meal — alongside stay comfort, vehicle type, guide language and clear INR pricing.",
     protocols: { jain: "Jain", veg: "Vegetarian", vegan: "Vegan" },
     legend: {
       green: "Dedicated kitchen, verified",
@@ -114,12 +154,12 @@ export const en = {
 
   verify: {
     heading: "How a provider earns trust.",
-    sub: "We verify the service, not just the sales pitch: kitchen practice, room fit, vehicle quality, language support, pricing clarity and response speed.",
+    sub: "We verify the service travellers actually get: stays, rides, guides, activities and kitchens — not just the sales pitch.",
     steps: [
-      { title: "We visit unannounced", body: "A member of our team eats there first. No scheduled inspection, no advance notice." },
-      { title: "We check the real service", body: "Separate oil and utensils for food, room quality for stays, vehicle condition for rides, and the actual guide or driver who will serve the group." },
-      { title: "Jain protocol is asked explicitly", body: "No onion, no garlic, no root vegetable — confirmed with the cook who will actually be on shift, and photographed." },
-      { title: "The rating expires", body: "Kitchens, hotels, drivers and prices change. A rating that is not re-checked drops out of our system rather than quietly ageing." },
+      { title: "We check in person", body: "A member of our team sees the place or vehicle, or rides with the guide, before the listing goes live. No scheduled inspection theatre." },
+      { title: "We check the real service", body: "Room fit for stays, vehicle condition for rides, language and route knowledge for guides, and kitchen practice where food is part of the trip." },
+      { title: "Food protocol when it matters", body: "Where meals are included, Jain and veg constraints are confirmed with the cook on shift — no onion, no garlic, no root vegetable when requested — and photographed." },
+      { title: "The rating expires", body: "Hotels, drivers, menus and prices change. A check that is not renewed drops out of our system rather than quietly ageing." },
     ],
   },
 
@@ -128,6 +168,7 @@ export const en = {
     sub: "Starting offers in INR, excluding international flights. Premium rates are shown only for premium partners; every plan can move between budget, comfort and luxury car options.",
     perPerson: "starting offer / person",
     checkDates: "View itinerary & offer",
+    bookNow: "Book this departure",
     nights: "nights",
     days: "days",
     items: [
@@ -183,7 +224,7 @@ export const en = {
 
   close: {
     heading: "Tell us your dates. We’ll come back with clear options.",
-    body: "We match verified food providers, stays, cars, guides and activities, then show economical, comfort and premium choices in INR so your group can decide fast.",
+    body: "We match verified providers across Bali and Jakarta — food, stays, cars, guides and activities — then show economical, comfort and premium choices in INR.",
     cta1: "Start with my dates",
     cta2: "List my business as a provider",
   },
@@ -201,7 +242,7 @@ export const en = {
   },
 
   footer: {
-    tagline: "Verified food, stays, rides and group travel to Bali.",
+    tagline: "Indonesia travel marketplace for Indian groups — Bali, Jakarta and beyond.",
     note: "Photography and palette from the existing site.",
   },
 
@@ -262,6 +303,10 @@ export const en = {
     savedEmpty: "Packages you save will show up here.",
     browseCta: "Browse packages",
     protocolNote: "Set your food protocol once and every itinerary we build respects it.",
+    reviewHeading: "Leave a rating",
+    reviewSubmit: "Submit rating",
+    reviewThanks: "Thank you — your rating is saved.",
+    reviewPrompt: "Rate this provider",
   },
 };
 

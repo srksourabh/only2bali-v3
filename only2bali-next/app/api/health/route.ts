@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
 import { deliveryChannels } from "@/lib/auth/delivery";
 import { CFG } from "@/lib/config";
+import { uploadsConfigured } from "@/lib/uploads/store";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,12 @@ export async function GET() {
       ? "stripe"
       : null;
 
+  const uploads = uploadsConfigured()
+    ? process.env.BLOB_READ_WRITE_TOKEN
+      ? "vercel_blob"
+      : "local"
+    : "none";
+
   return NextResponse.json(
     {
       status: ok ? "ok" : "degraded",
@@ -48,6 +55,7 @@ export async function GET() {
       otpDelivery: otpDelivery.length ? otpDelivery : ["none"],
       contact: { whatsapp: Boolean(CFG.whatsapp), email: Boolean(CFG.email) },
       payments: { provider: paymentProvider, configured: paymentProvider !== null },
+      uploads,
       uptimeSeconds: Math.round(process.uptime()),
       latencyMs: Date.now() - started,
     },
