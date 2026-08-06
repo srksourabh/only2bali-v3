@@ -157,39 +157,48 @@ async function main() {
 
   // ---------- payments: the rules that must hold before real money moves ----------
   console.log("\nPayment guards (no gateway wired up yet, but the rows must be safe)");
+  // Catalogue seed has no bookings. Create a disposable booking so check/unique
+  // constraints are actually exercised (an INSERT…SELECT with zero rows "succeeds").
+  const [verifyPay] = (await db.execute(sql`
+    with req as (
+      insert into trip_request (protocol, group_size, status, visibility, mobile_verified)
+      values ('vegetarian', 2, 'booked', 'private', true)
+      returning id
+    )
+    insert into booking (reference, trip_request_id, pax, gross_amount, currency, status)
+    select 'O2B-VERIFY-PAY', id, 2, 10000, 'INR', 'confirmed' from req
+    returning id, trip_request_id
+  `)) as unknown as [{ id: string; trip_request_id: string }];
+
   await mustReject(
     "a payment amount cannot be zero or negative",
     `insert into payment (booking_id, provider, amount, idempotency_key)
-     select id, 'razorpay', -100, 'verify-negative-${Date.now()}' from booking limit 1`,
+     values ('${verifyPay.id}', 'razorpay', -100, 'verify-negative-${Date.now()}')`,
     "payment_amount_positive"
   );
   await mustReject(
     "a refund cannot exceed what was captured",
     `insert into payment (booking_id, provider, amount, refunded_amount, idempotency_key)
-     select id, 'razorpay', 1000, 2000, 'verify-overrefund-${Date.now()}' from booking limit 1`,
+     values ('${verifyPay.id}', 'razorpay', 1000, 2000, 'verify-overrefund-${Date.now()}')`,
     "payment_refund_within_amount"
   );
   {
     const key = `verify-dup-${Date.now()}`;
-    const [{ id: bookingId } = {}] = (await db.execute(
-      sql`select id from booking limit 1`
-    )) as unknown as [{ id: string } | undefined];
-    if (bookingId) {
-      await db.execute(sql`
-        insert into payment (booking_id, provider, amount, idempotency_key)
-        values (${bookingId}, 'razorpay', 100, ${key})
-      `);
-      await mustReject(
-        "a retried checkout cannot create a second charge (idempotency key is unique)",
-        `insert into payment (booking_id, provider, amount, idempotency_key)
-         values ('${bookingId}', 'razorpay', 100, '${key}')`,
-        "payment_idempotency_key_unique"
-      );
-      await db.execute(sql`delete from payment where idempotency_key = ${key}`);
-    } else {
-      check("a retried checkout cannot create a second charge", false, "no booking exists to attach a payment to — seed the database first");
-    }
+    await db.execute(sql`
+      insert into payment (booking_id, provider, amount, idempotency_key)
+      values (${verifyPay.id}, 'razorpay', 100, ${key})
+    `);
+    await mustReject(
+      "a retried checkout cannot create a second charge (idempotency key is unique)",
+      `insert into payment (booking_id, provider, amount, idempotency_key)
+       values ('${verifyPay.id}', 'razorpay', 100, '${key}')`,
+      "payment_idempotency_key_unique"
+    );
+    await db.execute(sql`delete from payment where idempotency_key = ${key}`);
   }
+  await db.execute(sql`delete from booking where id = ${verifyPay.id}`);
+  await db.execute(sql`delete from trip_request where id = ${verifyPay.trip_request_id}`);
+
 
   // ---------- catalogue ----------
   console.log("\nCatalogue");
