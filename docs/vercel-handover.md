@@ -20,8 +20,11 @@ Verified 2026-07-23 against the running site, not assumed:
   `only2bali.vercel.app`. The CLI uploads the current directory, so it sidesteps
   the blank Root Directory setting — which is still blank, and still has to be
   fixed before step 1 below.
-- **The project is not connected to GitHub.** Every deployment so far was pushed
-  from a laptop by the Vercel CLI, so a push to `main` deploys nothing.
+- **The project is not connected to GitHub for `only2bali-v3`.** Historical Git
+  deploys came from `Only2bali_v3.0`. On 2026-08-06 production was updated by
+  MCP file deploy whose `installCommand` clones `only2bali-v3@main`. Connect
+  GitHub to `srksourabh/only2bali-v3` (after Root Directory is confirmed as
+  `only2bali-next`) so ordinary pushes deploy without that workaround.
 - **Connect Git only after Root Directory is set.** In that order. Connect it
   first and the next push to `main` builds `Frontend/` and puts the legacy app
   back on production automatically.

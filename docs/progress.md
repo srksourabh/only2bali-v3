@@ -175,6 +175,8 @@ Not done - this is what blocks retiring the React app:
 | 2026-07-14 | Vercel 404 + backend CORS fixes | Last upstream work. Both frontends touched same day. |
 | 2026-06-13 | Gemini 2.5 Flash planner + legacy asset integration | Next.js site buildout. |
 | 2026-06-12 | Next.js site buildout + Antigravity agent config | `AGENTS.md`, `.agent/` rules and workflows added. |
+| 2026-08-06 | Marketplace Phases A–F merged to `main` | PR #5 → `88e5f59`. |
+| 2026-08-06 | Production redeploy of marketplace `main` | `dpl_GeP2zWoUaZjvMHWchvBYeHvqy6MV` on `only2bali.vercel.app` via clone-based MCP deploy. Local migrations 0000–0005 applied; VPS migrate still blocked on credentials. |
 
 ## Blockers
 
@@ -204,7 +206,10 @@ Not done - this is what blocks retiring the React app:
 - [x] **Phase D** — request board, bids, offer compare, masked chat, compliance filter.
 - [x] **Phase E (code path)** — escrow hold, admin payout queue, refund-first; live PA-CB still owner/legal.
 - [x] **Phase F (partial)** — destinations + PWA shell. Django/CRA sunset and Vercel handover remain owner.
-- [ ] **F4/F5 / E0** — Django user migration, Vercel ownership, PA-CB partner.
+- [x] **2026-08-06 production deploy** — marketplace `main` live on `only2bali.vercel.app`
+      (`dpl_GeP2zWoUaZjvMHWchvBYeHvqy6MV`). DB still unreachable until Vercel env + VPS migrate.
+- [ ] **Run `drizzle-kit migrate` on VPS** (needs `DATABASE_URL` + `PGSSL_*`) so `0005` lands in production.
+- [ ] **F4/F5 / E0** — Django user migration, Vercel Git connect to `only2bali-v3`, PA-CB partner.
 - [ ] Decide what happens to the four legacy React routes that call the deleted FastAPI
       service.
 - [ ] Remove the demo marketplace data (`delete from booking where reference like
