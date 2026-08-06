@@ -407,6 +407,27 @@ what to do with it; told to ignore it for now and finish the payment work.
 Noted here so a future session doesn't mistake it for a real, actioned
 request.
 
+### 2026-08-06 — Indonesia marketplace master plan + Phase A spine
+
+**Asked for:** plan, task list, and implementation of a full aggregator marketplace
+(providers in Bali/Jakarta/Indonesia, travellers book and pay Only2Bali, admin verifies,
+bidirectional ratings) with less veg-only emphasis on the landing page.
+
+**Produced:**
+- `docs/planning/indonesia-marketplace-master-plan.md` — gap analysis vs live code,
+  positioning shift, phased delivery A–F.
+- `docs/planning/indonesia-marketplace-todo.md` — sequenced tasks with done-when.
+
+**Phase A shipped in code:**
+- Landing repositioned (tourism/destinations/circuits first; food protocol as one filter).
+- Public `/services` + `/services/[id]` for active listings from verified vendors only.
+- Admin approve/reject applications + verify/suspend vendors.
+- Bidirectional review schema (migration 0005) + API + traveller review UI.
+- Bali/Jakarta destination strip + Jakarta sample listing in seed.
+
+**Still open (later phases / owner):** listing checkout, media upload, payouts, request
+board UI, Vercel handover, credential revocation.
+
 ### 2026-07-30 — Razorpay verify, webhook, account pay UI
 
 **Asked for**: apply / land the Razorpay verify + webhook + booking pay UI work

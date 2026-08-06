@@ -196,6 +196,10 @@ Not done - this is what blocks retiring the React app:
       (`POST /api/payments/verify`), webhook with idempotent `payment_event`
       (`POST /api/payments/webhook`), account Pay button. Still needs
       `RAZORPAY_KEY_ID` / `KEY_SECRET` / `WEBHOOK_SECRET` in Vercel (blocked on handover).
+- [x] **Marketplace Phase A spine** — plan + public `/services`, admin vendor verify,
+      bidirectional reviews, tourism-first landing. See
+      `docs/planning/indonesia-marketplace-master-plan.md`.
+- [ ] **Phase B** — listing checkout + package Book CTA wired to booking API.
 - [ ] Decide what happens to the four legacy React routes that call the deleted FastAPI
       service.
 - [ ] Remove the demo marketplace data (`delete from booking where reference like
