@@ -201,7 +201,10 @@ Not done - this is what blocks retiring the React app:
       `docs/planning/indonesia-marketplace-master-plan.md`.
 - [x] **Phase B** — listing checkout + package Book CTA + provider fulfilment.
 - [x] **Phase C** — media upload, KYC docs, public provider profiles.
-- [ ] **Phase D** — matching / request board / bids.
+- [x] **Phase D** — request board, bids, offer compare, masked chat, compliance filter.
+- [x] **Phase E (code path)** — escrow hold, admin payout queue, refund-first; live PA-CB still owner/legal.
+- [x] **Phase F (partial)** — destinations + PWA shell. Django/CRA sunset and Vercel handover remain owner.
+- [ ] **F4/F5 / E0** — Django user migration, Vercel ownership, PA-CB partner.
 - [ ] Decide what happens to the four legacy React routes that call the deleted FastAPI
       service.
 - [ ] Remove the demo marketplace data (`delete from booking where reference like

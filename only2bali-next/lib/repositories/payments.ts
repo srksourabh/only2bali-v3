@@ -21,6 +21,7 @@ import {
   verifyRazorpayWebhookSignature,
 } from "@/lib/payments/razorpay";
 import type { PaymentIntentInput, RazorpayVerifyInput } from "@/lib/validators/payments";
+import { createHeldDisbursementForBooking } from "@/lib/repositories/disbursements";
 
 export class PaymentSetupError extends Error {
   constructor(message: string) {
@@ -313,6 +314,11 @@ async function confirmBookingFromPayment(
       pax: booking.pax,
       departureId: booking.departureId,
       tripRequestId: booking.tripRequestId,
+      vendorId: booking.vendorId,
+      grossAmount: booking.grossAmount,
+      commissionAmount: booking.commissionAmount,
+      netAmount: booking.netAmount,
+      currency: booking.currency,
     })
     .from(booking)
     .where(eq(booking.id, args.bookingId))
@@ -386,6 +392,19 @@ async function confirmBookingFromPayment(
           );
       }
     }
+  }
+
+  // Escrow: hold vendor payout until trip start / voucher (admin releases).
+  if (book.vendorId && book.netAmount != null && book.netAmount > 0) {
+    await createHeldDisbursementForBooking(tx, {
+      bookingId: book.bookingId,
+      paymentId: args.paymentId,
+      vendorId: book.vendorId,
+      grossAmount: book.grossAmount,
+      commissionAmount: book.commissionAmount ?? Math.max(book.grossAmount - book.netAmount, 0),
+      netAmount: book.netAmount,
+      travellerCurrency: book.currency,
+    });
   }
 
   return {

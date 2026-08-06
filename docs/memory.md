@@ -451,6 +451,17 @@ board UI, Vercel handover, credential revocation.
 
 **Owner still:** set `BLOB_READ_WRITE_TOKEN` on Vercel for production uploads.
 
+### 2026-08-06 (later) — Phases D–F marketplace completion slice
+
+**Shipped:**
+- Provider request board + bid compose (net → platform-derived traveller total).
+- Traveller offer comparison / accept / decline; masked messaging until booking confirmed.
+- Compliance hard-filter via `GET /api/services?protocol=` and compliance-match helpers.
+- Payment capture → held disbursement (escrow); admin release/approve/mark-paid with purpose code ledger events; platform-first refund API.
+- `/destinations` + `/destinations/[region]`; PWA manifest + service worker for account shell.
+
+**Still owner/legal:** E0 PA-CB partner, F4 Django/CRA retirement, F5 Vercel handover + live keys.
+
 ### 2026-07-30 — Razorpay verify, webhook, account pay UI
 
 **Asked for**: apply / land the Razorpay verify + webhook + booking pay UI work

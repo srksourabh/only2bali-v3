@@ -102,30 +102,36 @@ profiles and ratings are visible. Blob token still owner-gated for production.
 
 ## Phase D — Matching and custom trips
 
-- [ ] **D1** Provider request board UI — L
-- [ ] **D2** Bid compose UI (vendor sets net; platform derives traveller price) — L
-- [ ] **D3** Traveller offer comparison — L
-- [ ] **D4** Masked messaging UI — M
-- [ ] **D5** Wire compliance hard-filter into matching — M
+- [x] **D1** Provider request board UI — L
+- [x] **D2** Bid compose UI (vendor sets net; platform derives traveller price) — L
+- [x] **D3** Traveller offer comparison — L
+- [x] **D4** Masked messaging UI — M
+- [x] **D5** Wire compliance hard-filter into matching — M
+
+**Checkpoint:** providers see open requests and bid; travellers compare/accept offers;
+messages stay masked until booking confirmed; `?protocol=` hard-filters listings.
 
 ---
 
 ## Phase E — Payouts (⚖️ gated)
 
 - [ ] **🧑⚖️ E0** PA-CB / AD bank partner chosen and contracted
-- [ ] **E1** Admin disbursement queue UI + approve action — M
-- [ ] **E2** Escrow hold until voucher / trip start policy — M
-- [ ] **E3** Gateway transfer + purpose code + ledger entries — L
-- [ ] **E4** Refund-first-from-platform path — M
+- [x] **E1** Admin disbursement queue UI + approve action — M
+- [x] **E2** Escrow hold until voucher / trip start policy — M
+- [x] **E3** Gateway transfer + purpose code + ledger entries — L *(manual mark-paid + purpose code on payment_event; live PA-CB still E0)*
+- [x] **E4** Refund-first-from-platform path — M
+
+**Checkpoint:** capture creates held disbursement; admin can release/approve/mark paid;
+refunds cancel unpaid payouts and ledger clawback if already paid. Live rail = E0.
 
 ---
 
 ## Phase F — Expansion and retirement
 
-- [ ] **F1** Destination pages + more regions — M
-- [ ] **F2** Design polish / LCP / motion pass — M
-- [ ] **F3** PWA shell for vouchers — M
-- [ ] **F4** Migrate remaining Django users; sunset CRA — L
+- [x] **F1** Destination pages + more regions — M
+- [x] **F2** Design polish / LCP / motion pass — M *(nav + destination routes; no identity rewrite)*
+- [x] **F3** PWA shell for vouchers — M
+- [ ] **F4** Migrate remaining Django users; sunset CRA — L *(product decision; out of scope for this PR)*
 - [ ] **🧑 F5** Vercel handover + real contact + OTP + Razorpay live keys
 
 ---

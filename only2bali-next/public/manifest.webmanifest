@@ -1,0 +1,17 @@
+{
+  "name": "Only2Bali",
+  "short_name": "Only2Bali",
+  "description": "Indonesia travel marketplace for Indian groups — vouchers and bookings offline-ready.",
+  "start_url": "/en/account",
+  "display": "standalone",
+  "background_color": "#0f3d2e",
+  "theme_color": "#0f3d2e",
+  "icons": [
+    {
+      "src": "/brand/mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

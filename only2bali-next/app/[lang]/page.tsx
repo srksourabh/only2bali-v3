@@ -78,7 +78,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
             <p>{dict.destinations.sub}</p>
           </div>
           <div className="pkgs" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
-            <Link className="pkg" href={`/${lang}/services?region=bali`}>
+            <Link className="pkg" href={`/${lang}/destinations/bali`}>
               <div className="pkg-img">
                 <Image src="/Asset/beaches.png" alt="" fill sizes="(max-width: 960px) 100vw, 50vw"
                        style={{ objectFit: "cover" }} />
@@ -89,7 +89,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
                 <p className="meta">{dict.destinations.bali.blurb}</p>
               </div>
             </Link>
-            <Link className="pkg" href={`/${lang}/services?region=jakarta`}>
+            <Link className="pkg" href={`/${lang}/destinations/jakarta`}>
               <div className="pkg-img">
                 <Image src="/Asset/D-card-img3.png" alt="" fill sizes="(max-width: 960px) 100vw, 50vw"
                        style={{ objectFit: "cover" }} />

@@ -8,6 +8,7 @@ import { listAccountBookings } from "@/lib/repositories/payments";
 import SignOutButton from "./SignOutButton";
 import BookingPayButton from "./BookingPayButton";
 import ReviewForm from "./ReviewForm";
+import TravellerMarketplacePanel from "./TravellerMarketplacePanel";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,10 @@ export default async function AccountPage({ params }: { params: Promise<{ lang: 
         </header>
 
         <div className="accountgrid">
+          {(user.role === "traveller" || user.role === "admin") && (
+            <TravellerMarketplacePanel lang={lang} />
+          )}
+
           <section className="acard">
             <h2>{dict.account.tripsHeading}</h2>
             <p className="empty">{dict.account.tripsEmpty}</p>

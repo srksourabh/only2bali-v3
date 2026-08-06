@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import ReviewForm from "../account/ReviewForm";
+import ProviderBoardPanel from "./ProviderBoardPanel";
 
 type ApiState = "idle" | "saving" | "saved" | "error";
 
@@ -130,6 +131,7 @@ export default function ProviderDashboard() {
         {state === "saved" && <p className="okbox">Saved. Changes that affect travelers are pending review before publishing.</p>}
 
         <div className="accountgrid">
+          <ProviderBoardPanel />
           <section className="acard">
             <h2>Incoming bookings</h2>
             <p className="empty">{bookings.length} bookings assigned to your services.</p>
