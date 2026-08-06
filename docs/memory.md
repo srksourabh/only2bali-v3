@@ -462,6 +462,29 @@ board UI, Vercel handover, credential revocation.
 
 **Still owner/legal:** E0 PA-CB partner, F4 Django/CRA retirement, F5 Vercel handover + live keys.
 
+### 2026-08-06 (evening) — migrate + production deploy
+
+**Migrations:** `npx drizzle-kit migrate` against the agent-local Postgres
+(`127.0.0.1/only2bali`) reports all six journal entries applied, including
+`0005_bidirectional_reviews`. **Production VPS was not migrated from here** —
+this environment has no VPS `DATABASE_URL` / `PGSSL_*`. Live
+`/api/health` still reports `"database":"unreachable"`.
+
+**Deploy:** production `only2bali` on team `srksourabhs-projects` redeployed
+successfully as `dpl_GeP2zWoUaZjvMHWchvBYeHvqy6MV` (READY, aliased to
+`https://only2bali.vercel.app`). Method: MCP `deploy_to_vercel` with a thin
+`only2bali-next/` stub whose `installCommand` `git clone`s
+`srksourabh/only2bali-v3@main` and copies `only2bali-next/` (bypasses the
+80MB Asset upload limit and the CLI OAuth hang). Verified live:
+`/api/health` includes `"uploads":"none"` (Phase C), `/en/destinations` 200,
+PWA `manifest.webmanifest` + `sw.js` 200. `/en/services` 500 until Postgres
+env is set on Vercel.
+
+**Still owner:** paste `DATABASE_URL` + `PGSSL_*` on Vercel, run
+`npx drizzle-kit migrate` against the VPS (or SSH tunnel per
+`infra/postgres/README.md`), connect GitHub repo `only2bali-v3` so pushes
+deploy without the clone hack, set `BLOB_READ_WRITE_TOKEN` / OTP provider.
+
 ### 2026-07-30 — Razorpay verify, webhook, account pay UI
 
 **Asked for**: apply / land the Razorpay verify + webhook + booking pay UI work

@@ -15,7 +15,7 @@
 | Django API | **Live**, being retired | Azure App Service. Accounts, OTP, journey wizard. Zoho removed 2026-07-23. |
 | React site | **Live**, legacy | Now has a 404 route. Four routes still call the deleted FastAPI service. |
 | Next.js site | **Live** | Accounts, OTP login, sessions, catalogue, package pages, lead capture, booking. |
-| Postgres (VPS) | **Live** | `o2b-postgres`, own container, port 5433, mTLS. 45 tables, migrations 0000-0002 applied, catalogue + demo marketplace data seeded. |
+| Postgres (VPS) | **Live, schema lag** | `o2b-postgres` on VPS. Agent-local DB has migrations 0000–0005. Production migrate of `0005_bidirectional_reviews` still needs VPS `DATABASE_URL` + `PGSSL_*` (not in this agent env). Live health: DB unreachable from Vercel. |
 | Booking flow | **Shipped with Razorpay path** | `POST /api/bookings` holds seats. Checkout, verify (HMAC), webhook (`payment_event`), and account Pay UI are wired for Razorpay. Needs live keys in Vercel. |
 | FastAPI layer | **Deleted** | Removed 2026-07-22. Its chat widget removed from the CRA 2026-07-23. |
 | Migration CRA → Next.js | **In progress** | Accounts and booking no longer block it. Live Razorpay credentials and Vercel handover still do. |
