@@ -154,12 +154,12 @@ export const en = {
 
   verify: {
     heading: "How a provider earns trust.",
-    sub: "We verify the service, not just the sales pitch: kitchen practice, room fit, vehicle quality, language support, pricing clarity and response speed.",
+    sub: "We verify the service travellers actually get: stays, rides, guides, activities and kitchens — not just the sales pitch.",
     steps: [
-      { title: "We visit unannounced", body: "A member of our team eats there first. No scheduled inspection, no advance notice." },
-      { title: "We check the real service", body: "Separate oil and utensils for food, room quality for stays, vehicle condition for rides, and the actual guide or driver who will serve the group." },
-      { title: "Jain protocol is asked explicitly", body: "No onion, no garlic, no root vegetable — confirmed with the cook who will actually be on shift, and photographed." },
-      { title: "The rating expires", body: "Kitchens, hotels, drivers and prices change. A rating that is not re-checked drops out of our system rather than quietly ageing." },
+      { title: "We check in person", body: "A member of our team sees the place or vehicle, or rides with the guide, before the listing goes live. No scheduled inspection theatre." },
+      { title: "We check the real service", body: "Room fit for stays, vehicle condition for rides, language and route knowledge for guides, and kitchen practice where food is part of the trip." },
+      { title: "Food protocol when it matters", body: "Where meals are included, Jain and veg constraints are confirmed with the cook on shift — no onion, no garlic, no root vegetable when requested — and photographed." },
+      { title: "The rating expires", body: "Hotels, drivers, menus and prices change. A check that is not renewed drops out of our system rather than quietly ageing." },
     ],
   },
 

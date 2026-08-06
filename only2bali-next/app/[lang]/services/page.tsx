@@ -71,15 +71,25 @@ export default async function ServicesPage({
             <p className="empty">{dict.services.empty}</p>
           ) : (
             <div className="pkgs">
-              {services.map((s) => (
+              {services.map((s) => {
+                const image = s.images?.[0] ?? s.coverImage;
+                return (
                 <article className="pkg" key={s.id}>
+                  {image && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={image}
+                      alt=""
+                      style={{ width: "100%", height: "160px", objectFit: "cover" }}
+                    />
+                  )}
                   <div className="pkg-body">
                     <span className="pkg-tag" style={{ position: "static", marginBottom: ".4rem" }}>
                       {s.serviceType.replaceAll("_", " ")}
                     </span>
                     <h3>{s.title}</h3>
                     <div className="meta">
-                      {s.businessName}
+                      <Link href={`/${lang}/providers/${s.vendorSlug}`}>{s.businessName}</Link>
                       {(s.city || s.area || s.vendorArea) &&
                         ` · ${s.city || s.area || s.vendorArea}`}
                     </div>
@@ -110,7 +120,8 @@ export default async function ServicesPage({
                     </div>
                   </div>
                 </article>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -31,6 +31,7 @@ Thumbs.db
 .next/
 only2bali-next/.e2e/
 only2bali-next/.next-dev*.log
+only2bali-next/public/uploads/
 next-env.d.ts
 *.tsbuildinfo
 

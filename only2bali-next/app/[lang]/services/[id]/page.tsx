@@ -89,7 +89,7 @@ export default async function ServiceDetailPage({
               </span>
               <h1>{service.title}</h1>
               <p className="empty">
-                {service.businessName}
+                <Link href={`/${lang}/providers/${service.vendorSlug}`}>{service.businessName}</Link>
                 {service.ratingCount > 0 && service.ratingAvg
                   ? ` · ★ ${service.ratingAvg} (${service.ratingCount})`
                   : ""}

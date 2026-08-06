@@ -200,7 +200,8 @@ Not done - this is what blocks retiring the React app:
       bidirectional reviews, tourism-first landing. See
       `docs/planning/indonesia-marketplace-master-plan.md`.
 - [x] **Phase B** — listing checkout + package Book CTA + provider fulfilment.
-- [ ] **Phase C** — media upload, KYC docs, public provider profiles.
+- [x] **Phase C** — media upload, KYC docs, public provider profiles.
+- [ ] **Phase D** — matching / request board / bids.
 - [ ] Decide what happens to the four legacy React routes that call the deleted FastAPI
       service.
 - [ ] Remove the demo marketplace data (`delete from booking where reference like

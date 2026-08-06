@@ -17,18 +17,20 @@ import type {
   AdminPromotionPatchInput,
   AdminVendorVerificationInput,
 } from "@/lib/validators/admin";
+import { listRecentDocuments } from "@/lib/repositories/vendor-documents";
 
 export async function getAdminOverview() {
-  const [vendors, applications, listings, media, events, promotions] = await Promise.all([
+  const [vendors, applications, listings, media, events, promotions, documents] = await Promise.all([
     db.select().from(vendor).orderBy(desc(vendor.createdAt)).limit(50),
     db.select().from(vendorApplication).orderBy(desc(vendorApplication.createdAt)).limit(50),
     db.select().from(serviceListing).orderBy(desc(serviceListing.updatedAt)).limit(80),
     db.select().from(vendorMedia).orderBy(desc(vendorMedia.uploadedAt)).limit(80),
     db.select().from(vendorEvent).orderBy(desc(vendorEvent.createdAt)).limit(80),
     db.select().from(vendorPromotion).orderBy(desc(vendorPromotion.createdAt)).limit(80),
+    listRecentDocuments(80),
   ]);
 
-  return { vendors, applications, listings, media, events, promotions };
+  return { vendors, applications, listings, media, events, promotions, documents };
 }
 
 async function audit(adminId: string, action: string, resourceType: string, resourceId: string, details: unknown) {

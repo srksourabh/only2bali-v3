@@ -16,6 +16,14 @@ const nextConfig = {
   ...(process.env.DOCKER_BUILD ? { output: "standalone" } : {}),
   poweredByHeader: false,
   compress: true,
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.public.blob.vercel-storage.com",
+      },
+    ],
+  },
 };
 
 export default nextConfig;

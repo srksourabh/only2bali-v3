@@ -91,13 +91,14 @@ owner-gated.
 
 ## Phase C — Media, KYC, trust
 
-- [ ] **C1** Multipart photo upload to blob store; replace URL-paste as primary path — L
-- [ ] **C2** `vendor_document` upload + admin KYC review — M
-- [ ] **C3** Public `/providers/[slug]` profile — M
-- [ ] **C4** Broaden `/verify` copy beyond kitchens — S
-- [ ] **C5** Show ratings on service cards and provider profile — S
+- [x] **C1** Multipart photo upload to blob store; replace URL-paste as primary path — L
+- [x] **C2** `vendor_document` upload + admin KYC review — M
+- [x] **C3** Public `/providers/[slug]` profile — M
+- [x] **C4** Broaden `/verify` copy beyond kitchens — S
+- [x] **C5** Show ratings on service cards and provider profile — S
 
----
+**Checkpoint:** providers can upload photos/docs; admin reviews KYC; public provider
+profiles and ratings are visible. Blob token still owner-gated for production.
 
 ## Phase D — Matching and custom trips
 

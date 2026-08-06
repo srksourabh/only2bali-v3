@@ -9,6 +9,7 @@ interface Overview {
   media: Array<{ id: string; fileUrl: string; kind: string; approved: boolean }>;
   events: Array<{ id: string; title: string; status: string }>;
   promotions: Array<{ id: string; title: string; priceAmount: number | null; status: string }>;
+  documents: Array<{ id: string; kind: string; fileUrl: string; status: string; vendorId: string }>;
 }
 
 async function patch(path: string, body: unknown) {
@@ -100,6 +101,27 @@ export default function AdminDashboard() {
                     <button onClick={() => run("Listing published.", () => patch(`/api/admin/listings/${item.id}`, { status: "active", active: true }))}>Publish</button>
                     <button onClick={() => run("Listing paused.", () => patch(`/api/admin/listings/${item.id}`, { status: "paused", active: false }))}>Pause</button>
                   </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="acard">
+            <h2>KYC documents</h2>
+            <p className="empty">
+              {(data?.documents.filter((d) => d.status === "pending").length ?? 0)} pending review.
+            </p>
+            <ul className="admin-list">
+              {data?.documents.slice(0, 12).map((item) => (
+                <li key={item.id}>
+                  <b>{item.kind.replaceAll("_", " ")}</b>
+                  <span>{item.status} - {item.fileUrl}</span>
+                  {item.status === "pending" && (
+                    <div className="mini-actions">
+                      <button onClick={() => run("Document approved.", () => patch(`/api/admin/documents/${item.id}`, { status: "approved" }))}>Approve</button>
+                      <button onClick={() => run("Document rejected.", () => patch(`/api/admin/documents/${item.id}`, { status: "rejected" }))}>Reject</button>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

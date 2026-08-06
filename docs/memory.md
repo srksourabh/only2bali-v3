@@ -438,6 +438,19 @@ board UI, Vercel handover, credential revocation.
 - Provider bookings list, fulfilment status, vendor→traveller ratings.
 - Account shows listing titles; price helper tests.
 
+### 2026-08-06 (later) — Phase C media, KYC, trust
+
+**Shipped:**
+- Multipart `POST /api/provider/uploads` — Vercel Blob when `BLOB_READ_WRITE_TOKEN`
+  is set; local `public/uploads/` in non-production; 503 in production without token.
+- Provider dashboard: file upload primary for photos; KYC document upload.
+- `vendor_document` API + admin KYC approve/reject on overview.
+- Public `/[lang]/providers/[slug]` (verified only, approved media, published listings, ratings).
+- Service cards show image + rating + link to provider; verify copy broadened beyond kitchens.
+- Health reports `uploads`; ADR in `docs/decisions/2026-08-06-provider-uploads-blob.md`.
+
+**Owner still:** set `BLOB_READ_WRITE_TOKEN` on Vercel for production uploads.
+
 ### 2026-07-30 — Razorpay verify, webhook, account pay UI
 
 **Asked for**: apply / land the Razorpay verify + webhook + booking pay UI work
