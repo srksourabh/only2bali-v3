@@ -1,5 +1,5 @@
 import type { Dictionary } from "@/lib/i18n";
-import { getContactConfig } from "@/lib/config";
+import { getContactConfig } from "@/lib/config-server";
 import Mark from "./Mark";
 
 export default async function SiteFooter({ dict }: { dict: Dictionary }) {
