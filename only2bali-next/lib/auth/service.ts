@@ -266,16 +266,35 @@ export async function signInWithPassword(
   return { ok: true, accountId: row.id, token, expiresAt, isNewAccount: false };
 }
 
-export async function signInWithGoogleProfile(
-  profile: { providerAccountId: string; email: string; name?: string | null },
+/**
+ * Link an external OAuth identity (Google, Clerk, …) to a Postgres account and
+ * issue an `o2b_session`. App authorization stays on `account.role`.
+ */
+export async function signInWithOAuthProfile(
+  profile: {
+    provider: string;
+    providerAccountId: string;
+    email: string;
+    name?: string | null;
+  },
   role: "traveller" | "vendor",
   meta: { ip?: string; userAgent?: string } = {}
 ): Promise<PasswordAuthResult> {
+  const email = profile.email.trim().toLowerCase();
+  if (!email || !profile.providerAccountId) {
+    return { ok: false, reason: "invalid" };
+  }
+
   const linked = await db
     .select({ accountId: oauthAccount.accountId, role: account.role, status: account.status })
     .from(oauthAccount)
     .innerJoin(account, eq(oauthAccount.accountId, account.id))
-    .where(and(eq(oauthAccount.provider, "google"), eq(oauthAccount.providerAccountId, profile.providerAccountId)))
+    .where(
+      and(
+        eq(oauthAccount.provider, profile.provider),
+        eq(oauthAccount.providerAccountId, profile.providerAccountId)
+      )
+    )
     .limit(1);
 
   let accountId = linked[0]?.accountId;
@@ -289,18 +308,21 @@ export async function signInWithGoogleProfile(
     const existing = await db
       .select()
       .from(account)
-      .where(eq(account.email, profile.email))
+      .where(eq(account.email, email))
       .limit(1);
 
     if (existing[0]) {
       if (existing[0].role !== role) return { ok: false, reason: "role_mismatch" };
       accountId = existing[0].id;
-      await db.update(account).set({ emailVerifiedAt: new Date(), lastLoginAt: new Date() }).where(eq(account.id, accountId));
+      await db
+        .update(account)
+        .set({ emailVerifiedAt: new Date(), lastLoginAt: new Date() })
+        .where(eq(account.id, accountId));
     } else {
       const [created] = await db
         .insert(account)
         .values({
-          email: profile.email,
+          email,
           role,
           emailVerifiedAt: new Date(),
           lastLoginAt: new Date(),
@@ -310,16 +332,24 @@ export async function signInWithGoogleProfile(
       isNewAccount = true;
     }
 
-    await db.insert(oauthAccount).values({
-      accountId,
-      provider: "google",
-      providerAccountId: profile.providerAccountId,
-      email: profile.email,
-    }).onConflictDoNothing();
+    await db
+      .insert(oauthAccount)
+      .values({
+        accountId,
+        provider: profile.provider,
+        providerAccountId: profile.providerAccountId,
+        email,
+      })
+      .onConflictDoNothing();
+  } else {
+    await db
+      .update(account)
+      .set({ lastLoginAt: new Date() })
+      .where(eq(account.id, accountId));
   }
 
   if (role === "vendor") {
-    await createVendorIfMissing(accountId, profile.name || profile.email.split("@")[0]);
+    await createVendorIfMissing(accountId, profile.name || email.split("@")[0]);
   } else {
     await createTravellerIfMissing(accountId);
   }
@@ -327,14 +357,31 @@ export async function signInWithGoogleProfile(
   const { token, expiresAt } = await createSession(accountId, meta);
   await db.insert(auditLog).values({
     accountId,
-    action: "auth.google_login",
+    action: `auth.${profile.provider}_login`,
     resourceType: "account",
     resourceId: accountId,
-    details: { role },
+    details: { role, provider: profile.provider },
     ip: meta.ip,
   });
 
   return { ok: true, accountId, token, expiresAt, isNewAccount };
+}
+
+export async function signInWithGoogleProfile(
+  profile: { providerAccountId: string; email: string; name?: string | null },
+  role: "traveller" | "vendor",
+  meta: { ip?: string; userAgent?: string } = {}
+): Promise<PasswordAuthResult> {
+  return signInWithOAuthProfile(
+    {
+      provider: "google",
+      providerAccountId: profile.providerAccountId,
+      email: profile.email,
+      name: profile.name,
+    },
+    role,
+    meta
+  );
 }
 
 export async function createSession(

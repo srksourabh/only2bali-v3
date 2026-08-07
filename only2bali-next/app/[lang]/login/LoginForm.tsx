@@ -2,8 +2,13 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import type { Dictionary } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n/config";
+
+const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim());
+
+const ClerkOAuthButtons = dynamic(() => import("./ClerkOAuthButtons"), { ssr: false });
 
 type Channel = "email" | "mobile";
 type Step = "password" | "identifier" | "code";
@@ -205,11 +210,21 @@ export default function LoginForm({
             </div>
           )}
 
-          {role !== "admin" && (
+          {role !== "admin" && clerkEnabled && (
+            <ClerkOAuthButtons role={role} lang={lang} next={next} />
+          )}
+
+          {role !== "admin" && !clerkEnabled && (
             <a className="googlebtn" href={googleHref}>
               <span aria-hidden="true">G</span>
               Continue with Google
             </a>
+          )}
+
+          {role !== "admin" && clerkEnabled && (
+            <p className="empty" style={{ fontSize: ".85rem" }}>
+              Or use password / OTP below.
+            </p>
           )}
 
           <label htmlFor="username">Username</label>

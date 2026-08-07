@@ -204,7 +204,9 @@ Not done - this is what blocks retiring the React app:
 - [x] **Phase D** — request board, bids, offer compare, masked chat, compliance filter.
 - [x] **Phase E (code path)** — escrow hold, admin payout queue, refund-first; live PA-CB still owner/legal.
 - [x] **Phase F (partial)** — destinations + PWA shell. Django/CRA sunset and Vercel handover remain owner.
+- [x] **Clerk OAuth** — social login via Clerk → `o2b_session` bridge (`provider=clerk`).
 - [ ] **F4/F5 / E0** — Django user migration, Vercel ownership, PA-CB partner.
+- [ ] **Set Clerk keys on Vercel** and enable Google/Apple in Clerk Dashboard.
 - [ ] Decide what happens to the four legacy React routes that call the deleted FastAPI
       service.
 - [ ] Remove the demo marketplace data (`delete from booking where reference like

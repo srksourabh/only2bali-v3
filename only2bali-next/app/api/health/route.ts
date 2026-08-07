@@ -46,6 +46,8 @@ export async function GET() {
       : "local"
     : "none";
 
+  const { clerkConfigured } = await import("@/lib/auth/clerk");
+
   return NextResponse.json(
     {
       status: ok ? "ok" : "degraded",
@@ -56,6 +58,7 @@ export async function GET() {
       contact: { whatsapp: Boolean(CFG.whatsapp), email: Boolean(CFG.email) },
       payments: { provider: paymentProvider, configured: paymentProvider !== null },
       uploads,
+      clerk: clerkConfigured(),
       uptimeSeconds: Math.round(process.uptime()),
       latencyMs: Date.now() - started,
     },

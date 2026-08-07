@@ -462,6 +462,14 @@ board UI, Vercel handover, credential revocation.
 
 **Still owner/legal:** E0 PA-CB partner, F4 Django/CRA retirement, F5 Vercel handover + live keys.
 
+### 2026-08-07 — Clerk OAuth
+
+**Shipped:** Clerk social OAuth (Google / Apple) with bridge to existing
+`o2b_session` + Postgres `account.role`. Login shows Clerk buttons when
+`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` + `CLERK_SECRET_KEY` are set; otherwise
+password / OTP / legacy Google remain. Admin stays password-only.
+ADR: `docs/decisions/2026-08-07-clerk-oauth-bridge.md`.
+
 ### 2026-07-30 — Razorpay verify, webhook, account pay UI
 
 **Asked for**: apply / land the Razorpay verify + webhook + booking pay UI work
