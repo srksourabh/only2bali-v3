@@ -41,8 +41,13 @@ export type StoredUpload = {
   backend: "vercel_blob" | "local";
 };
 
-export function uploadsConfigured(): boolean {
-  if (process.env.BLOB_READ_WRITE_TOKEN) return true;
+async function blobToken(): Promise<string | null> {
+  const { getSetting } = await import("@/lib/repositories/settings");
+  return getSetting("blob.read_write_token");
+}
+
+export async function uploadsConfigured(): Promise<boolean> {
+  if (await blobToken()) return true;
   // Local filesystem fallback — never in production.
   return process.env.NODE_ENV !== "production";
 }
@@ -74,11 +79,12 @@ export async function storeUpload(
   const pathname = `providers/${opts.vendorId}/${opts.folder}/${filename}`;
   const bytes = Buffer.from(await file.arrayBuffer());
 
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
+  const token = await blobToken();
+  if (token) {
     const blob = await put(pathname, bytes, {
       access: "public",
       contentType: file.type,
-      token: process.env.BLOB_READ_WRITE_TOKEN,
+      token,
     });
     return {
       url: blob.url,
@@ -91,7 +97,7 @@ export async function storeUpload(
 
   if (process.env.NODE_ENV === "production") {
     throw new UploadSetupError(
-      "File uploads are not configured. Set BLOB_READ_WRITE_TOKEN (Vercel Blob)."
+      "File uploads are not configured. Set BLOB_READ_WRITE_TOKEN (Vercel Blob) or paste it under Admin → Integration settings."
     );
   }
 

@@ -204,7 +204,9 @@ Not done - this is what blocks retiring the React app:
 - [x] **Phase D** — request board, bids, offer compare, masked chat, compliance filter.
 - [x] **Phase E (code path)** — escrow hold, admin payout queue, refund-first; live PA-CB still owner/legal.
 - [x] **Phase F (partial)** — destinations + PWA shell. Django/CRA sunset and Vercel handover remain owner.
+- [x] **Admin integration settings** — `/admin/settings` (encrypted API keys; migration 0006).
 - [ ] **F4/F5 / E0** — Django user migration, Vercel ownership, PA-CB partner.
+- [ ] **Run VPS migrate** for `0005`/`0006` once `DATABASE_URL` + `PGSSL_*` are available.
 - [ ] Decide what happens to the four legacy React routes that call the deleted FastAPI
       service.
 - [ ] Remove the demo marketplace data (`delete from booking where reference like

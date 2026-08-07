@@ -88,7 +88,8 @@ export async function POST(req: Request) {
       : parsedEnd;
     const dayCount = dayCountBetween(start, end);
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const { getSetting } = await import("@/lib/repositories/settings");
+    const apiKey = await getSetting("gemini.api_key");
 
     if (!apiKey) {
       console.warn("GEMINI_API_KEY not configured, returning mock fallback itinerary");

@@ -22,9 +22,9 @@ export async function POST(req: Request) {
     if (!provider) {
       return NextResponse.json({ success: false, error: "Provider profile not found." }, { status: 404 });
     }
-    if (!uploadsConfigured()) {
+    if (!(await uploadsConfigured())) {
       throw new UploadSetupError(
-        "File uploads are not configured. Set BLOB_READ_WRITE_TOKEN (Vercel Blob)."
+        "File uploads are not configured. Set BLOB_READ_WRITE_TOKEN or paste it under Admin → Integration settings."
       );
     }
 

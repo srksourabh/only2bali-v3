@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
 
 interface Overview {
   vendors: Array<{ id: string; businessName: string; verificationStatus: string }>;
@@ -34,6 +36,8 @@ async function patch(path: string, body: unknown) {
 }
 
 export default function AdminDashboard() {
+  const params = useParams();
+  const lang = String(params.lang ?? "en");
   const [data, setData] = useState<Overview | null>(null);
   const [disbursements, setDisbursements] = useState<Disbursement[]>([]);
   const [error, setError] = useState("");
@@ -76,6 +80,9 @@ export default function AdminDashboard() {
             <span className="eyebrow">Admin control</span>
             <h1>Verify providers, rates, pictures and offers</h1>
             <p className="empty">Approve applications, verify providers, then publish listings travellers can book. All changes are audit logged.</p>
+            <p className="empty">
+              <Link href={`/${lang}/admin/settings`}>Integration settings (API keys)</Link>
+            </p>
           </div>
         </header>
 

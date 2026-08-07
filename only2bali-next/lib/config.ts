@@ -10,27 +10,58 @@
  * only when a real destination is configured. An unconfigured site shows no
  * contact button rather than a broken one.
  *
- * Set these in Vercel (Project → Settings → Environment Variables). They are
- * public by nature — they appear on the page — so `NEXT_PUBLIC_` is right here,
- * and would be wrong for anything secret.
+ * Prefer Admin → Integration settings (or Vercel NEXT_PUBLIC_*). Env remains
+ * the sync fallback for client components; server code should use
+ * `getContactConfig()` so database-saved values apply.
  */
 const PLACEHOLDER_WHATSAPP = "6281200000000";
 const PLACEHOLDER_EMAIL = "hello@only2bali.com";
 
-/** Digits only, no leading `+`, which is what wa.me expects. */
-const rawWhatsapp = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "").replace(/\D/g, "");
-const rawEmail = (process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "").trim().toLowerCase();
+function normalizeContact(whatsappRaw: string | null | undefined, emailRaw: string | null | undefined) {
+  const rawWhatsapp = (whatsappRaw ?? "").replace(/\D/g, "");
+  const rawEmail = (emailRaw ?? "").trim().toLowerCase();
+  const whatsappOk = rawWhatsapp.length >= 8 && rawWhatsapp !== PLACEHOLDER_WHATSAPP;
+  const emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(rawEmail) && rawEmail !== PLACEHOLDER_EMAIL;
+  return {
+    whatsapp: whatsappOk ? rawWhatsapp : null,
+    email: emailOk ? rawEmail : null,
+    configured: whatsappOk || emailOk,
+  };
+}
 
-const whatsappOk = rawWhatsapp.length >= 8 && rawWhatsapp !== PLACEHOLDER_WHATSAPP;
-const emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(rawEmail) && rawEmail !== PLACEHOLDER_EMAIL;
+const envContact = normalizeContact(
+  process.env.NEXT_PUBLIC_WHATSAPP_NUMBER,
+  process.env.NEXT_PUBLIC_CONTACT_EMAIL
+);
 
+/** Sync env-based contact — used by client components. */
 export const CFG = {
   brand: "Only2Bali",
-  whatsapp: whatsappOk ? rawWhatsapp : null,
-  email: emailOk ? rawEmail : null,
-  /** True when at least one channel is real. Gate contact links on this. */
-  configured: whatsappOk || emailOk,
+  ...envContact,
 } as const;
+
+/** Server-side: database settings win, then env. */
+export async function getContactConfig(): Promise<{
+  brand: string;
+  whatsapp: string | null;
+  email: string | null;
+  configured: boolean;
+}> {
+  try {
+    const { getSetting } = await import("@/lib/repositories/settings");
+    const [wa, email] = await Promise.all([
+      getSetting("contact.whatsapp_number"),
+      getSetting("contact.email"),
+    ]);
+    const fromDb = normalizeContact(wa, email);
+    if (fromDb.configured) {
+      return { brand: "Only2Bali", ...fromDb };
+    }
+  } catch {
+    // fall through to env
+  }
+  return { brand: "Only2Bali", ...envContact };
+}
 
 export const wa = (text: string): string | null =>
   CFG.whatsapp ? `https://wa.me/${CFG.whatsapp}?text=${encodeURIComponent(text)}` : null;
@@ -39,3 +70,8 @@ export const mailto = (subject: string, body: string): string | null =>
   CFG.email
     ? `mailto:${CFG.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
     : null;
+
+export async function waFromSettings(text: string): Promise<string | null> {
+  const c = await getContactConfig();
+  return c.whatsapp ? `https://wa.me/${c.whatsapp}?text=${encodeURIComponent(text)}` : null;
+}

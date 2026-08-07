@@ -462,6 +462,13 @@ board UI, Vercel handover, credential revocation.
 
 **Still owner/legal:** E0 PA-CB partner, F4 Django/CRA retirement, F5 Vercel handover + live keys.
 
+### 2026-08-07 — Admin integration settings
+
+**Shipped:** `/[lang]/admin/settings` for Resend, SpringEdge, Gemini, Razorpay,
+Blob, public contact, and Zoho (store-only). Encrypted `app_setting` table
+(migration `0006`). Runtime `getSetting()` prefers DB then env. Zoho is not
+wired — CRM was removed; UI says so.
+
 ### 2026-07-30 — Razorpay verify, webhook, account pay UI
 
 **Asked for**: apply / land the Razorpay verify + webhook + booking pay UI work

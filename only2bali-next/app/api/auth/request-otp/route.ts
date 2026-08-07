@@ -44,7 +44,7 @@ export async function POST(req: Request) {
     // read. The alternative — a generic 500 after the visitor has waited — is
     // how "login is quietly broken" goes unnoticed for a week.
     const channel = parsed.data.email ? "email" : "sms";
-    if (!canDeliver(channel)) {
+    if (!(await canDeliver(channel))) {
       return NextResponse.json(
         {
           success: false,

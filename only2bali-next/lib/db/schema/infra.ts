@@ -1,4 +1,17 @@
-import { pgTable, text, integer, timestamp, index } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, index, uuid } from "drizzle-orm/pg-core";
+import { account } from "./identity";
+
+/**
+ * Admin-managed integration settings (API keys, contact, CRM placeholders).
+ * Values are AES-GCM ciphertext keyed by AUTH_SECRET. Never return plaintext
+ * on list endpoints — use mask + configured flags.
+ */
+export const appSetting = pgTable("app_setting", {
+  key: text("key").primaryKey(),
+  valueEnc: text("value_enc").notNull(),
+  updatedBy: uuid("updated_by").references(() => account.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 /**
  * Rate-limit counters, shared across every serverless instance.

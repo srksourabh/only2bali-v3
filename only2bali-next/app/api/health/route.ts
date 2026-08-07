@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
 import { deliveryChannels } from "@/lib/auth/delivery";
-import { CFG } from "@/lib/config";
 import { uploadsConfigured } from "@/lib/uploads/store";
+import { getSetting } from "@/lib/repositories/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -27,33 +27,39 @@ export async function GET() {
     console.error("health: database check failed", err);
   }
 
-  const otpDelivery = deliveryChannels();
+  const otpDelivery = await deliveryChannels();
   const ok = database === "connected";
 
-  // Payments are live when RAZORPAY_KEY_ID is set. Checkout creates gateway
-  // orders; capture still needs RAZORPAY_KEY_SECRET (verify) and
-  // RAZORPAY_WEBHOOK_SECRET (webhook). Same pattern as otpDelivery: report
-  // the fact plainly rather than let a booking silently have nowhere to pay.
-  const paymentProvider = process.env.RAZORPAY_KEY_ID
-    ? "razorpay"
-    : process.env.STRIPE_SECRET_KEY
-      ? "stripe"
-      : null;
+  const [whatsapp, email, razorpayKeyId, stripeKey, blobToken] = await Promise.all([
+    getSetting("contact.whatsapp_number"),
+    getSetting("contact.email"),
+    getSetting("razorpay.key_id"),
+    Promise.resolve(process.env.STRIPE_SECRET_KEY?.trim() || null),
+    getSetting("blob.read_write_token"),
+  ]);
 
-  const uploads = uploadsConfigured()
-    ? process.env.BLOB_READ_WRITE_TOKEN
-      ? "vercel_blob"
-      : "local"
-    : "none";
+  const paymentProvider = razorpayKeyId ? "razorpay" : stripeKey ? "stripe" : null;
+
+  const uploadsReady = await uploadsConfigured();
+  const uploads = uploadsReady ? (blobToken ? "vercel_blob" : "local") : "none";
+
+  const PLACEHOLDER_WHATSAPP = "6281200000000";
+  const PLACEHOLDER_EMAIL = "hello@only2bali.com";
+  const waOk =
+    Boolean(whatsapp) &&
+    whatsapp!.replace(/\D/g, "").length >= 8 &&
+    whatsapp!.replace(/\D/g, "") !== PLACEHOLDER_WHATSAPP;
+  const emailOk =
+    Boolean(email) &&
+    /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email!) &&
+    email!.toLowerCase() !== PLACEHOLDER_EMAIL;
 
   return NextResponse.json(
     {
       status: ok ? "ok" : "degraded",
       database,
-      // Not part of the pass/fail verdict: the site serves its catalogue
-      // perfectly well without either. They are here to be monitored.
       otpDelivery: otpDelivery.length ? otpDelivery : ["none"],
-      contact: { whatsapp: Boolean(CFG.whatsapp), email: Boolean(CFG.email) },
+      contact: { whatsapp: waOk, email: emailOk },
       payments: { provider: paymentProvider, configured: paymentProvider !== null },
       uploads,
       uptimeSeconds: Math.round(process.uptime()),

@@ -1,11 +1,11 @@
 /**
  * OTP delivery.
  *
- * No provider is wired yet — the SpringEdge key is being rotated and no email
- * sender has been chosen. Rather than pretend, this logs the code in
- * development and refuses loudly in production, so nobody ships a login screen
- * that silently sends nothing.
+ * Providers can be configured via Vercel env or Admin → Integration settings
+ * (encrypted in Postgres). Database values win; env is the fallback.
  */
+
+import { getSetting } from "@/lib/repositories/settings";
 
 export interface DeliveryResult {
   delivered: boolean;
@@ -26,16 +26,16 @@ export class DeliveryNotConfiguredError extends Error {
  * visible from a monitoring check rather than discovered by a visitor who has
  * already typed their email and waited for a code that was never sent.
  */
-export function deliveryChannels(): Array<"email" | "sms" | "console"> {
+export async function deliveryChannels(): Promise<Array<"email" | "sms" | "console">> {
   if (process.env.NODE_ENV !== "production") return ["console"];
   const channels: Array<"email" | "sms"> = [];
-  if (process.env.RESEND_API_KEY) channels.push("email");
-  if (process.env.SPRINGEDGE_API_KEY) channels.push("sms");
+  if (await getSetting("resend.api_key")) channels.push("email");
+  if (await getSetting("springedge.api_key")) channels.push("sms");
   return channels;
 }
 
-export function canDeliver(channel: "email" | "sms"): boolean {
-  const available = deliveryChannels();
+export async function canDeliver(channel: "email" | "sms"): Promise<boolean> {
+  const available = await deliveryChannels();
   return available.includes("console") || available.includes(channel);
 }
 
@@ -53,21 +53,28 @@ export async function deliverOtp(
     return { delivered: true, channel: "console" };
   }
 
-  if (channel === "sms" && process.env.SPRINGEDGE_API_KEY) {
-    return sendSms(identifier.mobile!, code);
+  const smsKey = await getSetting("springedge.api_key");
+  if (channel === "sms" && smsKey) {
+    return sendSms(identifier.mobile!, code, smsKey);
   }
 
-  if (channel === "email" && process.env.RESEND_API_KEY) {
-    return sendEmail(identifier.email!, code);
+  const emailKey = await getSetting("resend.api_key");
+  if (channel === "email" && emailKey) {
+    return sendEmail(identifier.email!, code, emailKey);
   }
 
   throw new DeliveryNotConfiguredError(channel);
 }
 
-async function sendSms(mobileNumber: string, code: string): Promise<DeliveryResult> {
+async function sendSms(
+  mobileNumber: string,
+  code: string,
+  apiKey: string
+): Promise<DeliveryResult> {
+  const sender = (await getSetting("springedge.sender_id")) ?? "STRPAT";
   const url = new URL("https://instantalerts.co/api/web/send");
-  url.searchParams.set("apikey", process.env.SPRINGEDGE_API_KEY!);
-  url.searchParams.set("sender", process.env.SPRINGEDGE_SENDER_ID ?? "STRPAT");
+  url.searchParams.set("apikey", apiKey);
+  url.searchParams.set("sender", sender);
   url.searchParams.set("to", mobileNumber);
   url.searchParams.set(
     "message",
@@ -83,15 +90,21 @@ async function sendSms(mobileNumber: string, code: string): Promise<DeliveryResu
   return { delivered: true, channel: "sms" };
 }
 
-async function sendEmail(address: string, code: string): Promise<DeliveryResult> {
+async function sendEmail(
+  address: string,
+  code: string,
+  apiKey: string
+): Promise<DeliveryResult> {
+  const from =
+    (await getSetting("email.from")) ?? "Only2Bali <hello@only2bali.com>";
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: process.env.EMAIL_FROM ?? "Only2Bali <hello@only2bali.com>",
+      from,
       to: address,
       subject: `${code} is your Only2Bali code`,
       text: `Your Only2Bali sign-in code is ${code}.\n\nIt expires in 10 minutes and can be used once.\nIf you did not request it, you can ignore this email.`,

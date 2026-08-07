@@ -576,3 +576,20 @@ a.chip-on, .chip-on { background: var(--emerald); color: var(--ivory); }
   font-size: .76rem; font-weight: 700; cursor: pointer;
 }
 .mini-actions button:hover { border-color: var(--emerald); color: var(--emerald); }
+
+.settings-list label { display: flex; flex-direction: column; gap: .2rem; width: 100%; }
+.settings-list input[type="text"],
+.settings-list input[type="password"] {
+  width: 100%;
+  max-width: 28rem;
+  margin-top: .35rem;
+}
+.settings-clear {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: .45rem;
+  margin-top: .35rem;
+  font-size: .82rem;
+  color: var(--text-2);
+}

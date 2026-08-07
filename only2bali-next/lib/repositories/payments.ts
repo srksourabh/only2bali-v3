@@ -109,10 +109,13 @@ async function createCashfreeOrder(args: {
 }
 
 async function createRazorpayOrder(args: { reference: string; amount: number; currency: string }) {
-  const keyId = process.env.RAZORPAY_KEY_ID;
-  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  const { getSetting } = await import("@/lib/repositories/settings");
+  const keyId = await getSetting("razorpay.key_id");
+  const keySecret = await getSetting("razorpay.key_secret");
   if (!keyId || !keySecret) {
-    throw new PaymentSetupError("Razorpay is not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.");
+    throw new PaymentSetupError(
+      "Razorpay is not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET (env or Admin → Integration settings)."
+    );
   }
 
   const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
@@ -187,6 +190,9 @@ export async function createPaymentIntent(
     .returning();
 
   if (created.providerOrderId) {
+    const { getSetting } = await import("@/lib/repositories/settings");
+    const razorpayKeyId =
+      input.provider === "razorpay" ? await getSetting("razorpay.key_id") : null;
     return {
       paymentId: created.id,
       bookingId: input.bookingId,
@@ -196,7 +202,7 @@ export async function createPaymentIntent(
       currency: "INR",
       checkout:
         input.provider === "razorpay"
-          ? { mode: "razorpay", orderId: created.providerOrderId, keyId: process.env.RAZORPAY_KEY_ID }
+          ? { mode: "razorpay", orderId: created.providerOrderId, keyId: razorpayKeyId ?? undefined }
           : { mode: "cashfree", orderId: created.providerOrderId },
     };
   }
@@ -422,9 +428,12 @@ export async function verifyRazorpayCheckout(
   accountId: string,
   input: RazorpayVerifyInput
 ): Promise<CaptureResult> {
-  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  const { getSetting } = await import("@/lib/repositories/settings");
+  const keySecret = await getSetting("razorpay.key_secret");
   if (!keySecret) {
-    throw new PaymentSetupError("Razorpay is not configured. Set RAZORPAY_KEY_SECRET.");
+    throw new PaymentSetupError(
+      "Razorpay is not configured. Set RAZORPAY_KEY_SECRET (env or Admin → Integration settings)."
+    );
   }
 
   const ok = verifyRazorpayPaymentSignature({
@@ -504,9 +513,12 @@ export async function ingestRazorpayWebhook(args: {
   signatureHeader: string | null;
   eventIdHeader: string | null;
 }): Promise<WebhookIngestResult> {
-  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  const { getSetting } = await import("@/lib/repositories/settings");
+  const webhookSecret = await getSetting("razorpay.webhook_secret");
   if (!webhookSecret) {
-    throw new PaymentSetupError("Razorpay webhooks are not configured. Set RAZORPAY_WEBHOOK_SECRET.");
+    throw new PaymentSetupError(
+      "Razorpay webhooks are not configured. Set RAZORPAY_WEBHOOK_SECRET (env or Admin → Integration settings)."
+    );
   }
 
   const signatureVerified = Boolean(
