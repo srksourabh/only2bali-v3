@@ -20,6 +20,7 @@ import {
   verifyRazorpayPaymentSignature,
   verifyRazorpayWebhookSignature,
 } from "@/lib/payments/razorpay";
+import { razorpayConfig } from "@/lib/payments/config";
 import type { PaymentIntentInput, RazorpayVerifyInput } from "@/lib/validators/payments";
 import { createHeldDisbursementForBooking } from "@/lib/repositories/disbursements";
 
@@ -109,13 +110,14 @@ async function createCashfreeOrder(args: {
 }
 
 async function createRazorpayOrder(args: { reference: string; amount: number; currency: string }) {
-  const keyId = process.env.RAZORPAY_KEY_ID;
-  const keySecret = process.env.RAZORPAY_KEY_SECRET;
-  if (!keyId || !keySecret) {
-    throw new PaymentSetupError("Razorpay is not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.");
+  const config = razorpayConfig();
+  if (!config.acceptingPayments || !config.keyId || !config.keySecret) {
+    throw new PaymentSetupError(
+      "Razorpay checkout is paused until the separate dashboard webhook secret is configured."
+    );
   }
 
-  const auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
+  const auth = Buffer.from(`${config.keyId}:${config.keySecret}`).toString("base64");
   const res = await fetch("https://api.razorpay.com/v1/orders", {
     method: "POST",
     headers: {
@@ -139,7 +141,7 @@ async function createRazorpayOrder(args: { reference: string; amount: number; cu
     throw new Error(json?.error?.description ?? "Razorpay order creation failed.");
   }
 
-  return { providerOrderId: String(json.id), keyId };
+  return { providerOrderId: String(json.id), keyId: config.keyId };
 }
 
 export async function createPaymentIntent(
@@ -166,6 +168,11 @@ export async function createPaymentIntent(
   if (!row) throw new PaymentContactError("Booking not found for this account.");
   if (row.status !== "pending_payment") throw new PaymentContactError("This booking is not waiting for payment.");
   if (row.currency !== "INR") throw new PaymentSetupError("Only INR traveler checkout is enabled.");
+  if (input.provider === "razorpay" && !razorpayConfig().acceptingPayments) {
+    throw new PaymentSetupError(
+      "Razorpay checkout is paused until the separate dashboard webhook secret is configured."
+    );
+  }
 
   const idempotencyKey = input.idempotencyKey ?? `pay_${input.bookingId}_${input.purpose}_${randomUUID()}`;
   const [created] = await db
@@ -422,8 +429,8 @@ export async function verifyRazorpayCheckout(
   accountId: string,
   input: RazorpayVerifyInput
 ): Promise<CaptureResult> {
-  const keySecret = process.env.RAZORPAY_KEY_SECRET;
-  if (!keySecret) {
+  const { keySecret, checkoutConfigured } = razorpayConfig();
+  if (!checkoutConfigured || !keySecret) {
     throw new PaymentSetupError("Razorpay is not configured. Set RAZORPAY_KEY_SECRET.");
   }
 
@@ -504,9 +511,11 @@ export async function ingestRazorpayWebhook(args: {
   signatureHeader: string | null;
   eventIdHeader: string | null;
 }): Promise<WebhookIngestResult> {
-  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
-  if (!webhookSecret) {
-    throw new PaymentSetupError("Razorpay webhooks are not configured. Set RAZORPAY_WEBHOOK_SECRET.");
+  const { webhookSecret, webhookConfigured } = razorpayConfig();
+  if (!webhookConfigured || !webhookSecret) {
+    throw new PaymentSetupError(
+      "Razorpay webhooks are paused until a separate dashboard webhook secret is configured."
+    );
   }
 
   const signatureVerified = Boolean(

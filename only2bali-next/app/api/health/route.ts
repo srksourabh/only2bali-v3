@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { deliveryChannels } from "@/lib/auth/delivery";
 import { CFG } from "@/lib/config";
 import { uploadsConfigured } from "@/lib/uploads/store";
+import { razorpayConfig } from "@/lib/payments/config";
 
 export const dynamic = "force-dynamic";
 
@@ -30,15 +31,8 @@ export async function GET() {
   const otpDelivery = deliveryChannels();
   const ok = database === "connected";
 
-  // Payments are live when RAZORPAY_KEY_ID is set. Checkout creates gateway
-  // orders; capture still needs RAZORPAY_KEY_SECRET (verify) and
-  // RAZORPAY_WEBHOOK_SECRET (webhook). Same pattern as otpDelivery: report
-  // the fact plainly rather than let a booking silently have nowhere to pay.
-  const paymentProvider = process.env.RAZORPAY_KEY_ID
-    ? "razorpay"
-    : process.env.STRIPE_SECRET_KEY
-      ? "stripe"
-      : null;
+  const razorpay = razorpayConfig();
+  const paymentProvider = razorpay.checkoutConfigured ? "razorpay" : null;
 
   const uploads = uploadsConfigured()
     ? process.env.BLOB_READ_WRITE_TOKEN
@@ -56,7 +50,13 @@ export async function GET() {
       // perfectly well without either. They are here to be monitored.
       otpDelivery: otpDelivery.length ? otpDelivery : ["none"],
       contact: { whatsapp: Boolean(CFG.whatsapp), email: Boolean(CFG.email) },
-      payments: { provider: paymentProvider, configured: paymentProvider !== null },
+      payments: {
+        provider: paymentProvider,
+        mode: razorpay.mode,
+        checkoutConfigured: razorpay.checkoutConfigured,
+        webhookConfigured: razorpay.webhookConfigured,
+        acceptingPayments: razorpay.acceptingPayments,
+      },
       uploads,
       clerk: clerkConfigured(),
       uptimeSeconds: Math.round(process.uptime()),
