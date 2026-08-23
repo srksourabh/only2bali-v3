@@ -1,30 +1,48 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { isSchemaLagError } from "@/lib/db/schema-lag";
 import { booking, review, traveller, vendor } from "@/lib/db/schema";
 import type { CreateReviewInput } from "@/lib/validators/reviews";
 
 const RATEABLE = new Set(["completed", "confirmed"]);
 
 export async function listPublishedVendorReviews(vendorId: string, limit = 20) {
-  return db
-    .select({
-      id: review.id,
-      rating: review.rating,
-      comment: review.comment,
-      foodComplianceKept: review.foodComplianceKept,
-      createdAt: review.createdAt,
-      direction: review.direction,
-    })
-    .from(review)
-    .where(
-      and(
-        eq(review.vendorId, vendorId),
-        eq(review.direction, "traveller_to_vendor"),
-        eq(review.published, true)
+  try {
+    return await db
+      .select({
+        id: review.id,
+        rating: review.rating,
+        comment: review.comment,
+        foodComplianceKept: review.foodComplianceKept,
+        createdAt: review.createdAt,
+        direction: review.direction,
+      })
+      .from(review)
+      .where(
+        and(
+          eq(review.vendorId, vendorId),
+          eq(review.direction, "traveller_to_vendor"),
+          eq(review.published, true)
+        )
       )
-    )
-    .orderBy(desc(review.createdAt))
-    .limit(limit);
+      .orderBy(desc(review.createdAt))
+      .limit(limit);
+  } catch (err) {
+    if (!isSchemaLagError(err)) throw err;
+    const rows = await db
+      .select({
+        id: review.id,
+        rating: review.rating,
+        comment: review.comment,
+        foodComplianceKept: review.foodComplianceKept,
+        createdAt: review.createdAt,
+      })
+      .from(review)
+      .where(and(eq(review.vendorId, vendorId), eq(review.published, true)))
+      .orderBy(desc(review.createdAt))
+      .limit(limit);
+    return rows.map((row) => ({ ...row, direction: "traveller_to_vendor" as const }));
+  }
 }
 
 async function rollupVendorRating(vendorId: string) {
