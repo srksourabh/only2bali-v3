@@ -1,14 +1,15 @@
 /**
  * Provider file storage.
  *
- * Production: Vercel Blob when `BLOB_READ_WRITE_TOKEN` is set.
- * Local/dev: writes under `public/uploads/` so `next dev` can serve them.
- * Production without a blob token refuses uploads rather than pretending.
+ * Production: public Vercel Blob for marketplace media and a separate private
+ * Blob store for identity/KYC documents. A public store must never receive KYC.
+ * Local/dev: media is written under `public/uploads/`; documents live in
+ * `.uploads/`, which Next.js cannot serve directly.
  */
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { list, put } from "@vercel/blob";
+import { get, put } from "@vercel/blob";
 
 export class UploadSetupError extends Error {
   constructor(message: string) {
@@ -53,10 +54,23 @@ export type PrivateStoredUpload = {
   access: "private";
 };
 
-export function uploadsConfigured(): boolean {
-  if (process.env.BLOB_READ_WRITE_TOKEN) return true;
+export type UploadFolder = "media" | "documents";
+
+function blobToken(folder: UploadFolder): string | undefined {
+  return folder === "documents"
+    ? process.env.BLOB_PRIVATE_READ_WRITE_TOKEN
+    : process.env.BLOB_READ_WRITE_TOKEN;
+}
+
+export function uploadsConfigured(folder: UploadFolder = "media"): boolean {
+  if (blobToken(folder)) return true;
   // Local filesystem fallback — never in production.
   return process.env.NODE_ENV !== "production";
+}
+
+export function uploadBackend(folder: UploadFolder): "vercel_blob" | "local" | "none" {
+  if (blobToken(folder)) return "vercel_blob";
+  return process.env.NODE_ENV !== "production" ? "local" : "none";
 }
 
 function safeName(original: string, ext: string): string {
@@ -139,7 +153,7 @@ export function verifyDocumentHandle(
 
 export async function storeUpload(
   file: File,
-  opts: { folder: "media" | "documents"; vendorId: string }
+  opts: { folder: UploadFolder; vendorId: string }
 ): Promise<StoredUpload | PrivateStoredUpload> {
   if (file.size <= 0 || file.size > MAX_BYTES) {
     throw new UploadValidationError("File must be between 1 byte and 8 MB.");
@@ -153,11 +167,13 @@ export async function storeUpload(
   const pathname = `providers/${opts.vendorId}/${opts.folder}/${filename}`;
   const bytes = Buffer.from(await file.arrayBuffer());
 
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
+  const token = blobToken(opts.folder);
+  if (token) {
+    const access = opts.folder === "documents" ? "private" : "public";
     const blob = await put(pathname, bytes, {
-      access: "public",
+      access,
       contentType: file.type,
-      token: process.env.BLOB_READ_WRITE_TOKEN,
+      token,
     });
     if (opts.folder === "documents") {
       return {
@@ -184,7 +200,9 @@ export async function storeUpload(
 
   if (process.env.NODE_ENV === "production") {
     throw new UploadSetupError(
-      "File uploads are not configured. Set BLOB_READ_WRITE_TOKEN (Vercel Blob)."
+      opts.folder === "documents"
+        ? "Private document uploads are not configured. Set BLOB_PRIVATE_READ_WRITE_TOKEN."
+        : "Media uploads are not configured. Set BLOB_READ_WRITE_TOKEN."
     );
   }
 
@@ -228,15 +246,13 @@ const LEGACY_PUBLIC_UPLOADS = "public/uploads";
 export async function readDocumentBytes(fileUrl: string): Promise<{ bytes: Buffer; contentType: string } | null> {
   if (/^providers\/[a-zA-Z0-9._-]+\/documents\/[a-z0-9-]+\.(jpg|png|webp|pdf)$/.test(fileUrl)) {
     const ext = fileUrl.split(".").pop()!;
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
-      const matches = await list({ prefix: fileUrl, limit: 1 });
-      const blob = matches.blobs.find((b) => b.pathname === fileUrl);
-      if (!blob) return null;
-      const res = await fetch(blob.url);
-      if (!res.ok) return null;
+    const token = process.env.BLOB_PRIVATE_READ_WRITE_TOKEN;
+    if (token) {
+      const blob = await get(fileUrl, { access: "private", token });
+      if (!blob || blob.statusCode !== 200) return null;
       return {
-        bytes: Buffer.from(await res.arrayBuffer()),
-        contentType: EXT_CONTENT_TYPE.get(ext) ?? "application/octet-stream",
+        bytes: Buffer.from(await new Response(blob.stream).arrayBuffer()),
+        contentType: blob.blob.contentType || EXT_CONTENT_TYPE.get(ext) || "application/octet-stream",
       };
     }
     if (process.env.NODE_ENV === "production") return null;

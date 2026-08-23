@@ -33,6 +33,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Production dependency audit
+        run: npm audit --omit=dev
+
       - name: Typecheck
         run: npm run typecheck
 

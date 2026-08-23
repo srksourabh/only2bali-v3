@@ -121,7 +121,11 @@ ERR="$LOG_DIR/server.err.log"
 : > "$OUT"
 : > "$ERR"
 
-DATABASE_URL="$URL" npx next dev --port "$APP_PORT" >"$OUT" 2>"$ERR" &
+# Force the deliberately incomplete webhook placeholder so this local audit can
+# prove checkout fails closed without ever creating a live Razorpay order.
+DATABASE_URL="$URL" \
+RAZORPAY_WEBHOOK_SECRET="replace-with-razorpay-dashboard-webhook-secret" \
+npx next dev --port "$APP_PORT" >"$OUT" 2>"$ERR" &
 SERVER_PID=$!
 
 stop_server() {
@@ -167,5 +171,14 @@ E2E_SERVER_LOG="$OUT" \
 npx tsx scripts/e2e.ts
 STATUS=$?
 set -e
+
+if [ "$STATUS" -ne 0 ]; then
+  echo
+  echo "E2E failed. Last server stdout lines:" >&2
+  tail -80 "$OUT" >&2 || true
+  echo
+  echo "E2E failed. Last server stderr lines:" >&2
+  tail -120 "$ERR" >&2 || true
+fi
 
 exit "$STATUS"

@@ -1,11 +1,30 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterEach, vi } from "vitest";
 import { createHmac } from "node:crypto";
-import { mintDocumentHandle, verifyDocumentHandle, isAllowedStoredUrl, readDocumentBytes } from "./store";
+import {
+  mintDocumentHandle,
+  verifyDocumentHandle,
+  isAllowedStoredUrl,
+  readDocumentBytes,
+  uploadsConfigured,
+  uploadBackend,
+} from "./store";
+
+const blobMocks = vi.hoisted(() => ({
+  get: vi.fn(),
+  put: vi.fn(),
+}));
+
+vi.mock("@vercel/blob", () => blobMocks);
 
 const VENDOR = "11111111-2222-3333-4444-555555555555";
 
 beforeAll(() => {
   process.env.AUTH_SECRET = process.env.AUTH_SECRET ?? "test-secret-that-is-at-least-32-characters-long!!";
+});
+
+afterEach(() => {
+  vi.clearAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe("document handles", () => {
@@ -60,6 +79,95 @@ describe("document handles", () => {
 });
 
 describe("private document storage contract", () => {
+  it("requires an independent private token in production", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("BLOB_READ_WRITE_TOKEN", "public-store-token");
+    vi.stubEnv("BLOB_PRIVATE_READ_WRITE_TOKEN", "");
+    try {
+      expect(uploadsConfigured("media")).toBe(true);
+      expect(uploadBackend("media")).toBe("vercel_blob");
+      expect(uploadsConfigured("documents")).toBe(false);
+      expect(uploadBackend("documents")).toBe("none");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("writes KYC documents only to the private Blob store", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("BLOB_READ_WRITE_TOKEN", "public-store-token");
+    vi.stubEnv("BLOB_PRIVATE_READ_WRITE_TOKEN", "private-store-token");
+    blobMocks.put.mockResolvedValue({
+      url: "https://private.example/document.pdf",
+      downloadUrl: "https://private.example/document.pdf?download=1",
+      pathname: `providers/${VENDOR}/documents/document.pdf`,
+      contentType: "application/pdf",
+      contentDisposition: "inline",
+    });
+
+    const stored = await import("./store").then(({ storeUpload }) =>
+      storeUpload(new File(["private"], "document.pdf", { type: "application/pdf" }), {
+        folder: "documents",
+        vendorId: VENDOR,
+      })
+    );
+
+    expect(blobMocks.put).toHaveBeenCalledOnce();
+    expect(blobMocks.put.mock.calls[0][2]).toMatchObject({
+      access: "private",
+      token: "private-store-token",
+    });
+    expect(stored).toMatchObject({ access: "private" });
+    expect(stored).not.toHaveProperty("url");
+  });
+
+  it("keeps marketplace media in the public Blob store", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("BLOB_READ_WRITE_TOKEN", "public-store-token");
+    vi.stubEnv("BLOB_PRIVATE_READ_WRITE_TOKEN", "private-store-token");
+    blobMocks.put.mockResolvedValue({
+      url: "https://public.example/photo.jpg",
+      downloadUrl: "https://public.example/photo.jpg?download=1",
+      pathname: `providers/${VENDOR}/media/photo.jpg`,
+      contentType: "image/jpeg",
+      contentDisposition: "inline",
+    });
+
+    const stored = await import("./store").then(({ storeUpload }) =>
+      storeUpload(new File(["photo"], "photo.jpg", { type: "image/jpeg" }), {
+        folder: "media",
+        vendorId: VENDOR,
+      })
+    );
+
+    expect(blobMocks.put.mock.calls[0][2]).toMatchObject({
+      access: "public",
+      token: "public-store-token",
+    });
+    expect(stored).toMatchObject({ backend: "vercel_blob", url: "https://public.example/photo.jpg" });
+  });
+
+  it("reads current KYC references through authenticated private Blob access", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("BLOB_PRIVATE_READ_WRITE_TOKEN", "private-store-token");
+    const pathname = `providers/${VENDOR}/documents/passport-abc123.jpg`;
+    blobMocks.get.mockResolvedValue({
+      statusCode: 200,
+      stream: new Response("private-bytes").body,
+      headers: new Headers(),
+      blob: { contentType: "image/jpeg" },
+    });
+
+    const stored = await readDocumentBytes(pathname);
+
+    expect(blobMocks.get).toHaveBeenCalledWith(pathname, {
+      access: "private",
+      token: "private-store-token",
+    });
+    expect(stored?.bytes.toString()).toBe("private-bytes");
+    expect(stored?.contentType).toBe("image/jpeg");
+  });
+
   it("document refs are pathname references, never fetchable URLs", () => {
     // The upload response shape is enforced by the route; here we pin the
     // invariant that the DB-stored reference format cannot be an https URL

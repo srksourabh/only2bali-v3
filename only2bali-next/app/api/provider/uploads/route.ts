@@ -22,12 +22,6 @@ export async function POST(req: Request) {
     if (!provider) {
       return NextResponse.json({ success: false, error: "Provider profile not found." }, { status: 404 });
     }
-    if (!uploadsConfigured()) {
-      throw new UploadSetupError(
-        "File uploads are not configured. Set BLOB_READ_WRITE_TOKEN (Vercel Blob)."
-      );
-    }
-
     const form = await req.formData();
     const file = form.get("file");
     if (!(file instanceof File)) {
@@ -35,6 +29,13 @@ export async function POST(req: Request) {
     }
     const folderRaw = String(form.get("folder") ?? "media");
     const folder = folderRaw === "documents" ? "documents" : "media";
+    if (!uploadsConfigured(folder)) {
+      throw new UploadSetupError(
+        folder === "documents"
+          ? "Private document uploads are not configured. Set BLOB_PRIVATE_READ_WRITE_TOKEN."
+          : "Media uploads are not configured. Set BLOB_READ_WRITE_TOKEN."
+      );
+    }
     const stored = await storeUpload(file, { folder, vendorId: provider.id });
     return NextResponse.json({ success: true, data: { upload: stored } }, { status: 201 });
   } catch (err) {
