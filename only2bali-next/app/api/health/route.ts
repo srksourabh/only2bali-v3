@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
 import { deliveryChannels } from "@/lib/auth/delivery";
 import { CFG } from "@/lib/config";
+import { emptySchemaStatus, readSchemaStatus } from "@/lib/db/schema-status";
 import { uploadBackend } from "@/lib/uploads/store";
 import { razorpayConfig } from "@/lib/payments/config";
 
@@ -19,11 +20,17 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const started = Date.now();
   let database: "connected" | "unreachable" = "unreachable";
+  let schema = emptySchemaStatus();
 
   try {
     const { db } = await import("@/lib/db");
     await db.execute(sql`select 1`);
     database = "connected";
+    try {
+      schema = await readSchemaStatus(db);
+    } catch (err) {
+      console.error("health: schema probe failed", err);
+    }
   } catch (err) {
     console.error("health: database check failed", err);
   }
@@ -48,6 +55,7 @@ export async function GET() {
       // Not part of the pass/fail verdict: the site serves its catalogue
       // perfectly well without either. They are here to be monitored.
       otpDelivery: otpDelivery.length ? otpDelivery : ["none"],
+      schema,
       contact: { whatsapp: Boolean(CFG.whatsapp), email: Boolean(CFG.email) },
       payments: {
         provider: paymentProvider,

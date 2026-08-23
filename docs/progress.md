@@ -9,6 +9,23 @@
 >
 > This tracks the **real project**, not a greenfield build. The product is already live.
 
+## Marketplace portal (2026-08-23)
+
+Verified live at https://only2bali.vercel.app:
+
+- `/api/health` — database connected, clerk true, otpDelivery none, acceptingPayments false
+- `/en/services`, `/en/providers`, `/api/services` — catalogue HTTP 200
+- `/en/login` — password + Clerk UI renders
+
+Still blocked:
+
+- Apply Drizzle 0003–0005 on the VPS (SSH tunnel, then `npm run db:migrate`)
+- Set a real Razorpay webhook secret (≥32 characters, not a URL) on Vercel
+- Then e2e login, booking, and admin moderation against production
+
+This session: health reports schema lag; password/Clerk failures on a lagged
+schema map to HTTP 503 `schema_lag`. Vitest 166 passed; `tsc --noEmit` passed.
+
 ## Status overview
 
 > Status overview last verified **2026-07-23** by running the build, the tests and the

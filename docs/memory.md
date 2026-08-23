@@ -5,6 +5,20 @@
 >
 > Agent config lives in `CLAUDE.md` (Claude Code / Cursor) and `AGENTS.md` (Antigravity).
 
+## Current product (2026-08-23)
+
+The live product is **only2bali-next** at https://only2bali.vercel.app
+(GitHub `srksourabh/only2bali-v3`). Django/CRA copies are not in this repo.
+
+Production Postgres is connected and serves the catalogue through a schema-lag
+retry (journal 0000–0002 live; 0003–0005 pending). Clerk keys are present.
+Password and Clerk login still need migration 0004 (`username`, `password_hash`,
+`oauth_account`). Razorpay checkout keys are set; the webhook secret is not, so
+`acceptingPayments` is false. OTP delivery is none; Resend is not required.
+
+`GET /api/health` now reports `schema.{applied,expected,current,authReady,catalogueColumns}`.
+Auth writes against a lagged schema return HTTP 503 with `code: "schema_lag"`.
+
 ## Project metadata
 
 - **Product**: Vegetarian / Jain / vegan group travel packages, India → Bali
