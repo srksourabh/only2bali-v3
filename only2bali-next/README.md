@@ -35,7 +35,8 @@ verification.
 - Vercel Root Directory: `only2bali-next`
 - Production alias: `https://only2bali.vercel.app`
 
-Do not deploy the old `Only2bali_v3.0` fork or the archived Django/React apps.
+Do not deploy anything under
+`C:\Users\soura\Dropbox\AI\Projects\Only2Bali_ARCHIVE_2026-08-23`.
 Required configuration keys are documented in `.env.example`; secrets must be
 set in Vercel and never committed.
 

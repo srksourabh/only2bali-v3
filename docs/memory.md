@@ -9,7 +9,7 @@
 
 - **Product**: Vegetarian / Jain / vegan group travel packages, India → Bali
 - **Live site**: https://only2bali-v3-0.vercel.app
-- **Repository**: https://github.com/srksourabh/Only2bali_v3.0
+- **Repository**: https://github.com/srksourabh/only2bali-v3
 - **Origin**: Forked from `caloganathan/Only2bali_v3.0` on 2026-07-15. Now being taken
   forward as Sourabh's own product rather than as an upstream contribution.
 - **Stack**: Django 5.1 + DRF (live API) · Create React App (live, legacy) ·

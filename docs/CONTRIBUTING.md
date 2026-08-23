@@ -21,8 +21,8 @@ You need Python 3.12, Node 18+, and access to the Azure Postgres and Redis insta
 
 ### 1. Clone
 ```bash
-git clone https://github.com/srksourabh/Only2bali_v3.0.git
-cd Only2bali_v3.0
+git clone https://github.com/srksourabh/only2bali-v3.git
+cd only2bali-v3
 ```
 
 ### 2. Next.js site - start here, it is the easiest

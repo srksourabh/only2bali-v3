@@ -1,5 +1,8 @@
 # Only2Bali consolidation audit — 23 August 2026
 
+**Final status:** merged into canonical `main`, deployed from the canonical
+GitHub repository, and legacy copies archived.
+
 ## Simple answer
 
 Use this folder:
@@ -10,8 +13,9 @@ Use this GitHub repository:
 
 `https://github.com/srksourabh/only2bali-v3`
 
-Build and deploy only `only2bali-next/`. Do not develop in the other local
-folders or the `Only2bali_v3.0` GitHub fork.
+Build and deploy only `only2bali-next/`. Recovery copies are stored in
+`C:\Users\soura\Dropbox\AI\Projects\Only2Bali_ARCHIVE_2026-08-23` and must not
+be used for development or deployment.
 
 ## What was checked
 
@@ -25,11 +29,11 @@ from source comparisons because they are downloaded or rebuilt artifacts.
 
 | Location | What it really is | Source files checked | Markdown result | Decision |
 |---|---|---:|---:|---|
-| `Only2Bali` | Current canonical Git repo | 349 tracked app files before consolidation; 353 in this candidate | 37 active tracked docs before consolidation; all reviewed | **Keep** |
+| `Only2Bali` | Current canonical Git repo | 349 tracked app files before consolidation; 353 after consolidation | 37 active tracked docs before consolidation; all reviewed | **Keep** |
 | `Only2Bali/only2bali-next` | App inside the canonical repo, not a separate repo | 352 meaningful files before consolidation; 4 verified files added | One app README, rewritten current | **Build/deploy this** |
-| `Only2Bali_legacy_archive_2026-08-22` | Source-only archive of retired Django/CRA/static apps | 304 | One generic CRA README | Archive only |
-| `Only2bali_v3.0` | Older clone of the GitHub fork | 1,169 non-generated files | 25 docs, mostly agent rules/licences plus an obsolete production runbook | Archive only |
-| `Only2Bali/.claude/worktrees/codebase-review-architecture-8d3bb1` | Clean detached July planning snapshot at `9a5212f` | Duplicate historical tree | 43 of the 80 physical docs in the canonical folder are here | Remove after final branch is accepted |
+| `Only2Bali_ARCHIVE_2026-08-23/legacy-django-cra-static` | Source-only archive of retired Django/CRA/static apps | 304 | One generic CRA README | Archived |
+| `Only2Bali_ARCHIVE_2026-08-23/old-github-fork-workspace` | Older clone of the GitHub fork | 1,169 non-generated files | 25 docs, mostly agent rules/licences plus an obsolete production runbook | Archived |
+| `Only2Bali_ARCHIVE_2026-08-23/hidden-july-worktree-9a5212f.zip` | Tracked snapshot of detached July worktree at `9a5212f` | Duplicate historical tree | July snapshot preserved | Archived as ZIP; worktree registration removed |
 
 The two supplied nested paths did not exist. Their actual folders were siblings:
 `Only2Bali_legacy_archive_2026-08-22` and `Only2bali_v3.0`.
@@ -104,14 +108,13 @@ The legacy CRA README is only the default Create React App help page.
 
 | Repository | Current role | Decision |
 |---|---|---|
-| `srksourabh/only2bali-v3` | Original project, 283-commit history, full marketplace, CI, open consolidation/auth PR | **Canonical** |
-| `srksourabh/Only2bali_v3.0` | Older public fork, 232-commit history, no Actions runs, 56 commits behind on the useful branch | Archive after final merge |
+| `srksourabh/only2bali-v3` | Full marketplace, CI, consolidated `main`, connected to Vercel | **Canonical** |
+| `srksourabh/Only2bali_v3.0` | Older public fork retained as recovery evidence | **Archived on GitHub** |
 
-The canonical repo's `main` is not protected. PR #8 contains the earlier Clerk
-and repo-pruning branch. Draft PR #9 is the complete consolidation candidate on
-top of that work; its app, schema/seed, end-to-end and secret-scan checks all
-pass. The old Azure workflows still targeted retired apps and were removed from
-this consolidation branch.
+PR #9, including the earlier Clerk and repository-pruning work, was merged into
+canonical `main`. Superseded PRs #4, #6, #7 and #8 were closed. The app,
+schema/seed, end-to-end and secret-scan checks passed. The old Azure workflows
+targeted retired apps and were removed.
 
 Historical secret scanning found 27 redacted findings in the shared Git history,
 all in retired Django/React files. Current CI's committed-secret check passes, but
@@ -125,14 +128,14 @@ tested upgrade rather than hidden with a forced dependency change.
 
 ## Verification evidence
 
-| Check | Current canonical candidate | Old fork app |
+| Check | Current canonical application | Old fork app |
 |---|---|---|
 | TypeScript | Pass | Pass |
 | Unit tests | 139/139 pass | 19/19 pass |
 | Production build | Pass; 127 static pages generated | Pass; 16 static pages generated |
 | Database-backed end-to-end | 75/75 pass | Not available |
 | Dependency audit after Next.js patch | Next.js 15.5.21; 10 transitive findings remain: 5 moderate, 5 high | 5 findings: 1 low, 4 high |
-| GitHub CI | All four jobs pass on draft PR #9 | No Actions runs |
+| GitHub CI | All four jobs passed on PR #9 | No Actions runs |
 | Live home/planner | HTTP 200 | Not the chosen deployment |
 | Live health | HTTP 503, database unreachable | Not applicable |
 | Live services | HTTP 500 because DB is down | Feature absent |
@@ -148,14 +151,13 @@ tested upgrade rather than hidden with a forced dependency change.
    known security and deployment traps.
 4. Stale deploy-status docs — current live checks supersede them.
 
-## Simple finish order
+## Remaining launch order
 
-1. Review this consolidation branch and its final green verification.
-2. Merge the Clerk/repo-prune work and this consolidation into canonical `main`.
-3. Fix the production PostgreSQL connection until `/api/health` is HTTP 200.
-4. Configure OTP/contact values and run a test-mode Razorpay booking end to end.
-5. Protect `main`, connect required CI checks, and deploy from GitHub.
-6. Smoke home, planner, services, login, booking, payment verify/webhook and admin
-   authorization in production.
-7. Archive the old GitHub fork and move/remove the old local worktrees only after
-   the new production release is proven.
+1. Replace the rejected Hostinger API token or supply an existing PostgreSQL
+   server, password and mTLS client certificates.
+2. Add `DATABASE_URL`, `PGSSL_CA`, `PGSSL_CERT` and `PGSSL_KEY` to Vercel.
+3. Apply migrations and seed data, then require `/api/health` to report the
+   database connected.
+4. Configure OTP delivery and run a test-mode Razorpay booking end to end.
+5. Smoke services, login, booking, payment verification/webhook and direct admin
+   URLs before accepting real bookings.

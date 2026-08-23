@@ -56,8 +56,9 @@ stripped). The product lives entirely in `only2bali-next/`.
 
 **Canonical GitHub repo:** `srksourabh/only2bali-v3`
 
-**Do not develop in:** `Only2bali_v3.0`, the legacy archive, or the hidden
-July Claude worktree. See the [consolidation audit](docs/consolidation-audit-2026-08-23.md).
+**Do not develop in:** anything under
+`C:\Users\soura\Dropbox\AI\Projects\Only2Bali_ARCHIVE_2026-08-23`. See the
+[consolidation audit](docs/consolidation-audit-2026-08-23.md).
 
 ## Architecture
 
@@ -126,7 +127,7 @@ Start at [`docs/README.md`](docs/README.md).
 | [`docs/planning/marketplace-spec.md`](docs/planning/marketplace-spec.md) | The full product specification |
 | [`docs/planning/todo.md`](docs/planning/todo.md) | Sequenced execution list |
 | [`docs/adr/`](docs/adr/) | Architecture decision records |
-| [`docs/consolidation-audit-2026-08-23.md`](docs/consolidation-audit-2026-08-23.md) | Which folder/repo won and what remains to merge |
+| [`docs/consolidation-audit-2026-08-23.md`](docs/consolidation-audit-2026-08-23.md) | Final folder, GitHub and Vercel consolidation record |
 
 ## Status
 
