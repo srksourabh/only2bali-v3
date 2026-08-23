@@ -1,0 +1,3 @@
+# Dedicated mTLS client for database backups
+
+The Hostinger backup container must use a dedicated client certificate when it connects to PostgreSQL over the Docker network. The production `pg_hba.conf` correctly requires mTLS for every network connection, so a password-only `pg_dump` was rejected and left empty partial files. The backup service now mounts `backup.crt`, `backup.key`, and the CA certificate, connects with `sslmode=verify-ca` because the internal Docker hostname is not part of the public server certificate, and removes partial output on failure. This preserves the external mTLS security boundary without sharing Vercel's private client key with the backup process.

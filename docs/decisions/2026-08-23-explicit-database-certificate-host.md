@@ -1,0 +1,3 @@
+# Verify the database certificate against the configured host
+
+The PostgreSQL client must verify the server certificate against the hostname or IP in `DATABASE_URL`. When postgres.js upgrades an existing TCP socket and the target is a raw IP, it omits TLS SNI and Node can otherwise validate the certificate against `localhost`, rejecting a valid IP certificate. The database TLS options now provide `checkServerIdentity` explicitly bound to the parsed `DATABASE_URL` host. Certificate-chain validation and `rejectUnauthorized` remain enabled, so this fixes the runtime mismatch without weakening mutual TLS.

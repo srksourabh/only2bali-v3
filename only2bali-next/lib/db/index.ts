@@ -1,4 +1,5 @@
 import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import { checkServerIdentity, type PeerCertificate } from "node:tls";
 import postgres from "postgres";
 import * as schema from "./schema";
 
@@ -24,19 +25,10 @@ function pem(name: string): string | undefined {
  *
  * A stolen DATABASE_URL on its own is therefore not enough to connect.
  */
-function sslConfig(url: string): postgres.Options<{}>["ssl"] {
+export function sslConfig(url: string): postgres.Options<{}>["ssl"] {
   const ca = pem("PGSSL_CA");
   const cert = pem("PGSSL_CERT");
   const key = pem("PGSSL_KEY");
-
-  if (ca && cert && key) return { ca, cert, key, rejectUnauthorized: true };
-
-  if (ca || cert || key) {
-    throw new Error(
-      "Partial TLS configuration: PGSSL_CA, PGSSL_CERT and PGSSL_KEY must all be set, or none of them."
-    );
-  }
-
   const host = (() => {
     try {
       return new URL(url).hostname;
@@ -44,6 +36,27 @@ function sslConfig(url: string): postgres.Options<{}>["ssl"] {
       return "";
     }
   })();
+
+  if (ca && cert && key) {
+    return {
+      ca,
+      cert,
+      key,
+      rejectUnauthorized: true,
+      // postgres.js upgrades an existing TCP socket to TLS. For a raw IP it
+      // deliberately omits SNI, and Node otherwise checks the certificate
+      // against `localhost`. Verify against the DATABASE_URL host explicitly.
+      checkServerIdentity: (_hostname: string, certificate: PeerCertificate) =>
+        checkServerIdentity(host, certificate),
+    };
+  }
+
+  if (ca || cert || key) {
+    throw new Error(
+      "Partial TLS configuration: PGSSL_CA, PGSSL_CERT and PGSSL_KEY must all be set, or none of them."
+    );
+  }
+
   const isLocal = host === "localhost" || host === "127.0.0.1" || host === "::1";
 
   if (!isLocal && process.env.NODE_ENV === "production") {

@@ -89,10 +89,20 @@ services:
       PGUSER: ${POSTGRES_USER:?}
       PGPASSWORD: ${POSTGRES_PASSWORD:?}
       PGDATABASE: ${POSTGRES_DB:-only2bali}
+      # The backup still crosses the Docker network, so it must authenticate
+      # with mTLS just like Vercel. verify-ca is intentional here: the service
+      # name `postgres` is internal and is not in the public server cert SAN.
+      PGSSLMODE: verify-ca
+      PGSSLROOTCERT: /certs/ca.crt
+      PGSSLCERT: /certs/backup.crt
+      PGSSLKEY: /certs/backup.key
       RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
     volumes:
       - ./postgres/backups:/backups
       - ./postgres/backup.sh:/usr/local/bin/backup.sh:ro
+      - ./postgres/certs/ca.crt:/certs/ca.crt:ro
+      - ./postgres/certs/backup.crt:/certs/backup.crt:ro
+      - ./postgres/certs/backup.key:/certs/backup.key:ro
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |

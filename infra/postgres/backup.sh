@@ -4,16 +4,23 @@ set -eu
 
 STAMP=$(date -u +%Y%m%dT%H%M%SZ)
 OUT="/backups/only2bali-${STAMP}.dump"
+PARTIAL="${OUT}.partial"
 RETENTION="${RETENTION_DAYS:-14}"
+
+cleanup_partial() {
+  rm -f "${PARTIAL}"
+}
+trap cleanup_partial EXIT INT TERM
 
 echo "[backup] starting ${STAMP}"
 
 # -Fc is the custom format: compressed, and restorable selectively with pg_restore.
-pg_dump --format=custom --no-owner --no-privileges --file="${OUT}.partial"
+pg_dump --format=custom --no-owner --no-privileges --file="${PARTIAL}"
 
 # Only publish under the real name once the dump completed, so a half-written
 # file is never mistaken for a good backup.
-mv "${OUT}.partial" "${OUT}"
+mv "${PARTIAL}" "${OUT}"
+trap - EXIT INT TERM
 
 SIZE=$(wc -c < "${OUT}")
 if [ "${SIZE}" -lt 1024 ]; then
