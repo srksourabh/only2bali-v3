@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getDictionary } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n/config";
-import { getPublicProviderBySlug } from "@/lib/repositories/providers-public";
+import { getPublicProviderBySlugForPage } from "@/lib/repositories/providers-public";
 
 export const revalidate = 120;
 
@@ -20,7 +20,7 @@ export async function generateMetadata({
   params: Promise<{ lang: string; slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const provider = await getPublicProviderBySlug(slug);
+  const provider = await getPublicProviderBySlugForPage(slug);
   if (!provider) return { title: "Provider — Only2Bali" };
   return {
     title: `${provider.businessName} — Only2Bali`,
@@ -36,7 +36,7 @@ export default async function ProviderProfilePage({
   const { lang: langRaw, slug } = await params;
   const lang = langRaw as Locale;
   const dict = await getDictionary(lang);
-  const provider = await getPublicProviderBySlug(slug);
+  const provider = await getPublicProviderBySlugForPage(slug);
   if (!provider) notFound();
 
   return (

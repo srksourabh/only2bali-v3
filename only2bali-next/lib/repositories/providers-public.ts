@@ -56,6 +56,16 @@ export async function listPublicProviders(filters: PublicProviderFilters = {}) {
     .limit(filters.limit ?? 60);
 }
 
+/** Browse pages must render when production schema is behind. */
+export async function listPublicProvidersForPage(filters: PublicProviderFilters = {}) {
+  try {
+    return await listPublicProviders(filters);
+  } catch (err) {
+    console.warn("[providers] directory unavailable", err);
+    return [];
+  }
+}
+
 /** Public provider profile — verified vendors only. */
 export async function getPublicProviderBySlug(slug: string) {
   const [row] = await db
@@ -133,4 +143,13 @@ export async function getPublicProviderBySlug(slug: string) {
   ]);
 
   return { ...row, highlights, media, listings, reviews };
+}
+
+export async function getPublicProviderBySlugForPage(slug: string) {
+  try {
+    return await getPublicProviderBySlug(slug);
+  } catch (err) {
+    console.warn("[provider] profile unavailable", err);
+    return null;
+  }
 }
