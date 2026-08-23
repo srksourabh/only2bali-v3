@@ -73,20 +73,23 @@ export default async function AccountPage({ params }: { params: Promise<{ lang: 
             <TravellerMarketplacePanel lang={lang} />
           )}
 
-          <section className="acard">
-            <h2>{dict.account.tripsHeading}</h2>
-            <p className="empty">{dict.account.tripsEmpty}</p>
-            <Link className="btn btn-solid btn-sm" href={`/${lang}/planner`}>
-              {dict.account.tripsEmptyCta}
-            </Link>
-          </section>
+          {(user.role === "traveller" || user.role === "admin") && (
+            <section className="acard">
+              <h2>{dict.account.tripsHeading}</h2>
+              <p className="empty">{dict.account.tripsEmpty}</p>
+              <Link className="btn btn-solid btn-sm" href={`/${lang}/planner`}>
+                {dict.account.tripsEmptyCta}
+              </Link>
+            </section>
+          )}
 
-          <section className="acard">
-            <h2>{dict.account.bookingsHeading}</h2>
-            {bookings.length === 0 ? (
-              <p className="empty">{dict.account.bookingsEmpty}</p>
-            ) : (
-              <ul className="bookinglist">
+          {(user.role === "traveller" || user.role === "admin") && (
+            <section className="acard">
+              <h2>{dict.account.bookingsHeading}</h2>
+              {bookings.length === 0 ? (
+                <p className="empty">{dict.account.bookingsEmpty}</p>
+              ) : (
+                <ul className="bookinglist">
                 {bookings.map((b) => (
                   <li key={b.bookingId} className="bookingrow">
                     <div>
@@ -135,17 +138,20 @@ export default async function AccountPage({ params }: { params: Promise<{ lang: 
                     )}
                   </li>
                 ))}
-              </ul>
-            )}
-          </section>
+                </ul>
+              )}
+            </section>
+          )}
 
-          <section className="acard">
-            <h2>{dict.account.savedHeading}</h2>
-            <p className="empty">{dict.account.savedEmpty}</p>
-            <Link className="btn btn-ghost btn-sm" href={`/${lang}#packages`}>
-              {dict.account.browseCta}
-            </Link>
-          </section>
+          {(user.role === "traveller" || user.role === "admin") && (
+            <section className="acard">
+              <h2>{dict.account.savedHeading}</h2>
+              <p className="empty">{dict.account.savedEmpty}</p>
+              <Link className="btn btn-ghost btn-sm" href={`/${lang}#packages`}>
+                {dict.account.browseCta}
+              </Link>
+            </section>
+          )}
 
           {user.role === "vendor" && (
             <section className="acard">

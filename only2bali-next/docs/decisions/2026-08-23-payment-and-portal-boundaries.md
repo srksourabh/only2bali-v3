@@ -1,0 +1,3 @@
+# Payment and portal boundaries
+
+Razorpay readiness is now fail-closed: an API key pair can be installed without exposing secrets, but live order creation remains paused until a separate 32-character-or-longer webhook secret is configured. URLs and the documented placeholder are rejected as webhook secrets, while checkout verification remains available for recovery of any previously opened order. The traveller portal remains `/[lang]/account` and owns trip, booking, saved-item and payment views; the vendor portal remains `/[lang]/provider` and owns profile, catalogue, booking operations, media, promotions and payout details. Page routing and API role checks both enforce that separation so hiding a menu is never treated as authorization.

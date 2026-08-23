@@ -6,6 +6,7 @@ import { getSessionUser } from "@/lib/auth";
 import { safeNextPath } from "@/lib/auth/redirect";
 import Mark from "../components/Mark";
 import LoginForm from "./LoginForm";
+import { portalHomePath } from "@/lib/auth/portal";
 
 export const dynamic = "force-dynamic";
 
@@ -31,9 +32,11 @@ export default async function LoginPage({
   const dict = await getDictionary(lang);
   const { next } = await searchParams;
 
-  const target = safeNextPath(next, `/${lang}/account`);
+  const user = await getSessionUser();
+  const fallback = user ? portalHomePath(user.role, lang) : `/${lang}/account`;
+  const target = safeNextPath(next, fallback);
 
-  if (await getSessionUser()) redirect(target);
+  if (user) redirect(target);
 
   return (
     <main className="authpage">
