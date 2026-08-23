@@ -16,6 +16,15 @@ describe("isSchemaLagError", () => {
     expect(isSchemaLagError({ message: 'column vendor.city does not exist' })).toBe(true);
   });
 
+  it("matches a Drizzle wrapper around undefined_table", () => {
+    expect(
+      isSchemaLagError({
+        message: "Failed query: select 1 from drizzle.__drizzle_migrations",
+        cause: { code: "42P01", message: 'relation "drizzle.__drizzle_migrations" does not exist' },
+      })
+    ).toBe(true);
+  });
+
   it("ignores unrelated failures", () => {
     expect(isSchemaLagError({ code: "ECONNREFUSED", message: "connect ECONNREFUSED" })).toBe(false);
     expect(isSchemaLagError(new Error("timeout"))).toBe(false);
