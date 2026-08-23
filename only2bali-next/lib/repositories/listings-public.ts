@@ -103,6 +103,16 @@ export async function listPublicServices(filters: PublicListingFilters = {}) {
   return rows;
 }
 
+/** Browse pages must render when production schema is behind. */
+export async function listPublicServicesForPage(filters: PublicListingFilters = {}) {
+  try {
+    return await listPublicServices(filters);
+  } catch (err) {
+    console.warn("[services] catalogue unavailable", err);
+    return [];
+  }
+}
+
 export async function getPublicServiceById(id: string) {
   const [row] = await db
     .select({

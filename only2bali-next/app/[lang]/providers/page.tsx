@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getDictionary } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n/config";
-import { listPublicProviders } from "@/lib/repositories/providers-public";
+import { listPublicProvidersForPage } from "@/lib/repositories/providers-public";
 
 export const revalidate = 120;
 
@@ -31,7 +31,7 @@ export default async function ProvidersPage({
   const dict = await getDictionary(lang);
   const region =
     sp.region === "bali" || sp.region === "jakarta" ? sp.region : "all";
-  const providers = await listPublicProviders({ region, limit: 60 });
+  const providers = await listPublicProvidersForPage({ region, limit: 60 });
 
   const filters = [
     { key: "all", label: dict.services.filterAll, href: `/${lang}/providers` },

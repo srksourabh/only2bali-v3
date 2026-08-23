@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getDictionary } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n/config";
-import { listPublicServices } from "@/lib/repositories/listings-public";
+import { listPublicServicesForPage } from "@/lib/repositories/listings-public";
 
 export const revalidate = 120;
 
@@ -49,7 +49,7 @@ export default async function DestinationRegionPage({
   if (!meta?.filter) notFound();
 
   const dict = await getDictionary(lang);
-  const services = await listPublicServices({ region: meta.filter, limit: 24 });
+  const services = await listPublicServicesForPage({ region: meta.filter, limit: 24 });
 
   return (
     <main>
