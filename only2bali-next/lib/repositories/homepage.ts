@@ -61,13 +61,14 @@ export function formatDeparture(iso: string, locale: Locale): string {
  */
 export async function getHomePackages(
   dict: Dictionary,
-  locale: Locale
+  locale: Locale,
+  options: { limit?: number } = {}
 ): Promise<{ packages: HomePackage[]; source: "database" | "fallback" }> {
   const fromDict = new Map(dict.packages.items.map((i) => [i.slug, i]));
 
   let rows: PackageCard[] = [];
   try {
-    rows = await listPackageCards({ limit: 3 });
+    rows = await listPackageCards({ limit: options.limit ?? 3 });
   } catch (err) {
     console.warn("[homepage] catalogue unavailable, using dictionary content", err);
     return {

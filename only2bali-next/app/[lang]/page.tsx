@@ -254,6 +254,11 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
               </article>
             ))}
           </div>
+          <p style={{ marginTop: "1.25rem" }}>
+            <Link className="btn btn-ghost btn-sm" href={`/${lang}/packages`}>
+              {dict.nav.packages} →
+            </Link>
+          </p>
         </div>
       </section>
 

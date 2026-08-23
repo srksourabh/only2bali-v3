@@ -14,6 +14,7 @@ export const hi: Dictionary = {
     guarantee: "Trip quality",
     verify: "हम जाँच कैसे करते हैं",
     packages: "पैकेज",
+    providers: "प्रदाता",
     plan: "मेरी यात्रा बनाएँ",
     language: "भाषा",
     theme: "उजाला और अँधेरा बदलें",
@@ -113,6 +114,14 @@ export const hi: Dictionary = {
     reviewsHeading: "Traveller reviews",
   },
 
+  providers: {
+    heading: "सत्यापित बाली और जकार्ता प्रदाता।",
+    sub: "केवल एडमिन-सत्यापित साझेदार यहाँ दिखते हैं। प्रोफ़ाइल खोलकर स्वीकृत फ़ोटो और सेवाएँ देखें।",
+    empty: "अभी कोई सत्यापित प्रदाता सार्वजनिक नहीं है।",
+    viewCta: "प्रदाता देखें",
+    verified: "सत्यापित",
+  },
+
   guarantee: {
     heading: "Food protocol is one filter. Stays, rides and budget are checked too.",
     sub: "Vegetarian, Jain and vegan remain first-class options — disclosed meal by meal — alongside stay comfort, vehicle type, guide language and clear INR pricing.",
@@ -168,6 +177,7 @@ export const hi: Dictionary = {
     bookNow: "Book this departure",
     nights: "रातें",
     days: "दिन",
+    empty: "अभी कोई प्रकाशित पैकेज नहीं है।",
     items: [
       {
         slug: "sattvik-serenity",
