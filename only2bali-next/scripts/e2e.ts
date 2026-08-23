@@ -192,6 +192,16 @@ async function main() {
         ["vercel_blob", "local", "none"].includes(body?.uploads?.documents),
       `media=${body?.uploads?.media} documents=${body?.uploads?.documents}`
     );
+    check(
+      "health reports how far Postgres trails the Drizzle journal",
+      Number(body?.schema?.expected) >= 6 && typeof body?.schema?.current === "boolean",
+      `applied=${body?.schema?.applied} expected=${body?.schema?.expected} current=${body?.schema?.current}`
+    );
+    check(
+      "local Postgres has every committed migration",
+      body?.schema?.current === true && body?.schema?.authReady === true,
+      `applied=${body?.schema?.applied}/${body?.schema?.expected} authReady=${body?.schema?.authReady}`
+    );
   }
 
   // ---------- routing and language ----------

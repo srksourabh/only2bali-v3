@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:migrate:mtls": "tsx --env-file-if-exists=.env.local scripts/migrate-mtls.ts",
     "db:studio": "drizzle-kit studio",
     "db:check": "drizzle-kit check",
     "db:seed": "tsx --env-file-if-exists=.env.local lib/db/seed.ts",

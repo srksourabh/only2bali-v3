@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ForbiddenError, UnauthorizedError } from "@/lib/auth";
+import { isSchemaLagError, SCHEMA_LAG_CODE, SCHEMA_LAG_MESSAGE } from "@/lib/db/schema-lag";
 
 export async function readJson(req: Request, maxBytes = 16_384): Promise<unknown> {
   const raw = await req.text();
@@ -30,7 +31,18 @@ export function apiError(err: unknown, fallback: string) {
     return NextResponse.json({ success: false, error: err.message }, { status: 403 });
   }
   if (err instanceof Error && "status" in err && typeof err.status === "number") {
-    return NextResponse.json({ success: false, error: err.message }, { status: err.status });
+    const status = err.status;
+    const code = "code" in err && typeof err.code === "string" ? err.code : undefined;
+    return NextResponse.json(
+      { success: false, error: err.message, ...(code ? { code } : {}) },
+      { status }
+    );
+  }
+  if (isSchemaLagError(err)) {
+    return NextResponse.json(
+      { success: false, error: SCHEMA_LAG_MESSAGE, code: SCHEMA_LAG_CODE },
+      { status: 503 }
+    );
   }
   console.error(fallback, err);
   return NextResponse.json({ success: false, error: fallback }, { status: 500 });
