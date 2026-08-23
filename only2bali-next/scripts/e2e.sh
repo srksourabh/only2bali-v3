@@ -121,7 +121,11 @@ ERR="$LOG_DIR/server.err.log"
 : > "$OUT"
 : > "$ERR"
 
-DATABASE_URL="$URL" npx next dev --port "$APP_PORT" >"$OUT" 2>"$ERR" &
+# Force the deliberately incomplete webhook placeholder so this local audit can
+# prove checkout fails closed without ever creating a live Razorpay order.
+DATABASE_URL="$URL" \
+RAZORPAY_WEBHOOK_SECRET="replace-with-razorpay-dashboard-webhook-secret" \
+npx next dev --port "$APP_PORT" >"$OUT" 2>"$ERR" &
 SERVER_PID=$!
 
 stop_server() {

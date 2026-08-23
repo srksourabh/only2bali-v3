@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
 import { deliveryChannels } from "@/lib/auth/delivery";
 import { CFG } from "@/lib/config";
-import { uploadsConfigured } from "@/lib/uploads/store";
+import { uploadBackend } from "@/lib/uploads/store";
 import { razorpayConfig } from "@/lib/payments/config";
 
 export const dynamic = "force-dynamic";
@@ -34,11 +34,10 @@ export async function GET() {
   const razorpay = razorpayConfig();
   const paymentProvider = razorpay.checkoutConfigured ? "razorpay" : null;
 
-  const uploads = uploadsConfigured()
-    ? process.env.BLOB_READ_WRITE_TOKEN
-      ? "vercel_blob"
-      : "local"
-    : "none";
+  const uploads = {
+    media: uploadBackend("media"),
+    documents: uploadBackend("documents"),
+  };
 
   const { clerkConfigured } = await import("@/lib/auth/clerk");
 

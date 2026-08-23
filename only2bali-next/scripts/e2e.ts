@@ -20,6 +20,7 @@
  * at the end.
  */
 import { readFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { db } from "../lib/db";
 import { SESSION_COOKIE } from "../lib/auth";
@@ -60,8 +61,19 @@ const IP_FLOOD = `198.51.100.${(Number(`0x${run.slice(-2)}`) % 200) + 1}`;
 
 const EMAIL = `e2e-${run}@only2bali.test`;
 const FLOOD_EMAIL = `e2e-flood-${run}@only2bali.test`;
+const VENDOR_EMAIL = `e2e-vendor-${run}@only2bali.test`;
+const VENDOR_USERNAME = `vendor-${run}`;
+const VENDOR_PASSWORD = `Only2Bali-${run}-Secure!`;
+const VENDOR_BUSINESS = `E2E Jain Kitchen ${run}`;
+const MARKETPLACE_LISTING = `E2E Jain Dining ${run}`;
+const ADMIN_EMAIL = `e2e-admin-${run}@only2bali.test`;
+const ADMIN_USERNAME = `admin-${run}`;
 
 let sessionCookie = "";
+let vendorCookie = "";
+let adminCookie = "";
+let marketplaceListingId = "";
+let marketplaceBookingId = "";
 /** Set once a booking has taken seats, so cleanup can give them back. */
 let bookedDepartureId = "";
 
@@ -161,6 +173,12 @@ async function main() {
       "health reports whether contact details are configured",
       typeof body?.contact?.whatsapp === "boolean" && typeof body?.contact?.email === "boolean",
       `whatsapp=${body?.contact?.whatsapp} email=${body?.contact?.email}`
+    );
+    check(
+      "health separates public media from private documents",
+      ["vercel_blob", "local", "none"].includes(body?.uploads?.media) &&
+        ["vercel_blob", "local", "none"].includes(body?.uploads?.documents),
+      `media=${body?.uploads?.media} documents=${body?.uploads?.documents}`
     );
   }
 
@@ -431,6 +449,244 @@ async function main() {
     check("the sign-in is audited", Number(row.n) === 1, `${row.n} rows`);
   }
 
+  // ---------- vendor -> admin -> public listing -> traveller booking ----------
+  console.log("\nMarketplace lifecycle");
+  let vendorId = "";
+  let marketplaceMediaId = "";
+  const marketplacePrice = 250_000;
+
+  {
+    const res = await call("/api/auth/password/signup", {
+      body: {
+        username: VENDOR_USERNAME,
+        password: VENDOR_PASSWORD,
+        email: VENDOR_EMAIL,
+        role: "vendor",
+        businessName: VENDOR_BUSINESS,
+      },
+    });
+    const body = await json(res);
+    vendorCookie = cookieFrom(res);
+    check("a provider can create a vendor account", res.status === 201 && body?.success === true, `HTTP ${res.status}`);
+    check("the provider receives a secure session", vendorCookie.length > `${SESSION_COOKIE}=`.length);
+
+    const [row] = (await db.execute(sql`
+      select v.id, v.verification_status from vendor v
+      join account a on a.id = v.account_id
+      where a.email = ${VENDOR_EMAIL}
+    `)) as unknown as [{ id: string; verification_status: string } | undefined];
+    vendorId = row?.id ?? "";
+    check("vendor onboarding creates an isolated provider profile", Boolean(vendorId));
+    check("a new vendor is not trusted automatically", row?.verification_status === "draft", row?.verification_status);
+  }
+
+  {
+    const res = await call("/api/provider/catalog", { cookie: sessionCookie });
+    check("a traveller cannot read the vendor API", res.status === 403, `HTTP ${res.status}`);
+  }
+  {
+    const res = await call("/en/provider", { cookie: sessionCookie });
+    const location = res.headers.get("location") ?? "";
+    check(
+      "a traveller opening the provider URL is redirected",
+      [307, 308].includes(res.status) && location.includes("/en/account"),
+      `HTTP ${res.status} → ${location || "(none)"}`
+    );
+  }
+  {
+    const res = await call("/en/admin", { cookie: vendorCookie });
+    const location = res.headers.get("location") ?? "";
+    check(
+      "a vendor opening the admin URL is redirected",
+      [307, 308].includes(res.status) && location.includes("/en/account"),
+      `HTTP ${res.status} → ${location || "(none)"}`
+    );
+  }
+  {
+    const res = await call("/en/account", { cookie: vendorCookie });
+    const html = await res.text();
+    check("the vendor account shows only the provider workspace", res.status === 200 && html.includes("Provider workspace"));
+    check("the vendor account does not expose traveller bookings", !html.includes("My bookings"));
+  }
+  {
+    const res = await call("/en/provider", { cookie: vendorCookie });
+    const html = await res.text();
+    check("the provider dashboard opens for the vendor", res.status === 200 && /Provider dashboard/i.test(html), `HTTP ${res.status}`);
+  }
+
+  {
+    const res = await call("/api/provider/listings", {
+      cookie: vendorCookie,
+      body: {
+        title: MARKETPLACE_LISTING,
+        serviceType: "restaurant",
+        description: "Fresh Jain and vegetarian dining in Ubud with no onion or garlic on request.",
+        area: "Ubud",
+        city: "Bali",
+        capacityMin: 1,
+        capacityMax: 12,
+        tier: "comfort",
+        priceAmount: marketplacePrice,
+        priceCurrency: "INR",
+        priceUnit: "per_person",
+        images: ["https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1200&q=80"],
+        inclusions: ["Jain meal", "Filtered drinking water"],
+        cancellationPolicy: "Free cancellation until 24 hours before service.",
+      },
+    });
+    const body = await json(res);
+    marketplaceListingId = body?.data?.listing?.id ?? "";
+    check("the vendor can add a priced food listing", res.status === 201 && Boolean(marketplaceListingId), `HTTP ${res.status}`);
+    check(
+      "a new listing waits for review",
+      body?.data?.listing?.status === "pending_review" && body?.data?.listing?.active === false,
+      `${body?.data?.listing?.status} active=${body?.data?.listing?.active}`
+    );
+  }
+  {
+    const res = await call("/api/provider/media", {
+      cookie: vendorCookie,
+      body: {
+        listingId: marketplaceListingId,
+        kind: "photo",
+        fileUrl: "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1200&q=80",
+        altText: "Jain meal served in Ubud",
+      },
+    });
+    const body = await json(res);
+    marketplaceMediaId = body?.data?.media?.id ?? "";
+    check("the vendor can attach a listing photo", res.status === 201 && Boolean(marketplaceMediaId), `HTTP ${res.status}`);
+    check("vendor photos also wait for moderation", body?.data?.media?.approved === false);
+  }
+  {
+    const res = await call(`/api/services/${marketplaceListingId}`);
+    check("an unapproved listing is invisible to travellers", res.status === 404, `HTTP ${res.status}`);
+  }
+
+  {
+    const rawToken = randomBytes(32).toString("base64url");
+    const [admin] = (await db.execute(sql`
+      insert into account (email, username, role, status, email_verified_at)
+      values (${ADMIN_EMAIL}, ${ADMIN_USERNAME}, 'admin', 'active', now())
+      returning id
+    `)) as unknown as [{ id: string }];
+    await db.execute(sql`
+      insert into session (account_id, token_hash, expires_at, user_agent)
+      values (${admin.id}, ${hashSessionToken(rawToken)}, now() + interval '1 day', 'only2bali-e2e-admin')
+    `);
+    adminCookie = `${SESSION_COOKIE}=${rawToken}`;
+
+    const res = await call("/en/admin", { cookie: adminCookie });
+    const html = await res.text();
+    check("the admin control opens for an admin", res.status === 200 && /Admin control/i.test(html), `HTTP ${res.status}`);
+  }
+  {
+    const res = await call(`/api/admin/vendors/${vendorId}`, {
+      method: "PATCH",
+      cookie: adminCookie,
+      body: { verificationStatus: "verified" },
+    });
+    check("admin can verify the real vendor record", res.status === 200, `HTTP ${res.status}`);
+  }
+  {
+    const res = await call(`/api/admin/listings/${marketplaceListingId}`, {
+      method: "PATCH",
+      cookie: adminCookie,
+      body: { status: "active", active: true },
+    });
+    check("admin can publish and activate the listing", res.status === 200, `HTTP ${res.status}`);
+  }
+  {
+    const res = await call(`/api/admin/media/${marketplaceMediaId}`, {
+      method: "PATCH",
+      cookie: adminCookie,
+      body: { status: "published", approved: true },
+    });
+    check("admin can approve the vendor photo", res.status === 200, `HTTP ${res.status}`);
+  }
+  {
+    const res = await call(`/api/services/${marketplaceListingId}`);
+    const body = await json(res);
+    check("the verified listing becomes public", res.status === 200 && body?.data?.service?.title === MARKETPLACE_LISTING, `HTTP ${res.status}`);
+    check("the public API shows the server-stored price", body?.data?.service?.priceAmount === marketplacePrice);
+  }
+  {
+    const res = await call(`/en/services/${marketplaceListingId}`);
+    const html = await res.text();
+    check("the marketplace detail page renders", res.status === 200 && html.includes(MARKETPLACE_LISTING), `HTTP ${res.status}`);
+    check("a signed-out visitor is prompted to sign in before booking", /Sign in/i.test(html));
+  }
+  {
+    const res = await call("/api/bookings", {
+      body: {
+        listingId: marketplaceListingId,
+        serviceDate: new Date(Date.now() + 40 * 86_400_000).toISOString().slice(0, 10),
+        pax: 1,
+        protocol: "jain",
+        travellers: [{ fullName: `E2E Anonymous ${run}` }],
+      },
+    });
+    check("the public listing still cannot be booked anonymously", res.status === 401, `HTTP ${res.status}`);
+  }
+  {
+    const res = await call("/api/payments/checkout", {
+      cookie: vendorCookie,
+      body: {
+        bookingId: "00000000-0000-4000-8000-000000000000",
+        provider: "razorpay",
+        purpose: "full",
+      },
+    });
+    check("a vendor cannot enter traveller checkout", res.status === 403, `HTTP ${res.status}`);
+  }
+  {
+    const serviceDate = new Date(Date.now() + 40 * 86_400_000).toISOString().slice(0, 10);
+    const res = await call("/api/bookings", {
+      cookie: sessionCookie,
+      body: {
+        listingId: marketplaceListingId,
+        serviceDate,
+        pax: 2,
+        protocol: "jain",
+        grossAmount: 1,
+        travellers: [
+          { fullName: `E2E Marketplace Lead ${run}`, dietaryNotes: "Jain, no root vegetables" },
+          { fullName: `E2E Marketplace Guest ${run}` },
+        ],
+      },
+    });
+    const body = await json(res);
+    marketplaceBookingId = body?.data?.bookingId ?? "";
+    check("a signed-in traveller can book the marketplace listing", res.status === 201 && Boolean(marketplaceBookingId), `HTTP ${res.status}`);
+    check(
+      "listing price is computed on the server",
+      body?.data?.grossAmount === marketplacePrice * 2,
+      `${body?.data?.grossAmount} vs ${marketplacePrice * 2}`
+    );
+    check("the listing date is held while payment is pending", Boolean(body?.data?.holdExpiresAt));
+  }
+  {
+    const res = await call("/api/payments/checkout", {
+      cookie: sessionCookie,
+      body: {
+        bookingId: marketplaceBookingId,
+        provider: "razorpay",
+        purpose: "full",
+        idempotencyKey: `marketplace-${run}-checkout`,
+      },
+    });
+    const body = await json(res);
+    check(
+      "checkout fails closed while the real webhook secret is absent",
+      res.status === 503 && body?.reason === "payment_setup_required",
+      `HTTP ${res.status} reason=${body?.reason}`
+    );
+    const [rows] = (await db.execute(sql`
+      select count(*)::int as n from payment where booking_id = ${marketplaceBookingId}
+    `)) as unknown as [{ n: number }];
+    check("the paused checkout creates no gateway payment row", Number(rows.n) === 0, `${rows.n} rows`);
+  }
+
   // ---------- booking, seat inventory and the price boundary ----------
   //
   // Run while the session is still live, because a booking without a signed-in
@@ -627,6 +883,12 @@ async function cleanup() {
       join account a on a.id = t.account_id
       where a.email = ${EMAIL})
   `);
+  await db.execute(sql`
+    delete from trip_request where traveller_id in (
+      select t.id from traveller t
+      join account a on a.id = t.account_id
+      where a.email = ${EMAIL})
+  `);
   if (bookedDepartureId) {
     // Recomputed from the holds that remain rather than decremented by what
     // this run took, so a half-finished run cannot leave the count drifting.
@@ -638,7 +900,7 @@ async function cleanup() {
     `);
   }
 
-  await db.execute(sql`delete from account where email = ${EMAIL}`);
+  await db.execute(sql`delete from account where email in (${EMAIL}, ${VENDOR_EMAIL}, ${ADMIN_EMAIL})`);
   await db.execute(sql`delete from otp_code where identifier in (${`email:${EMAIL}`}, ${`email:${FLOOD_EMAIL}`})`);
   await db.execute(sql`delete from lead where name = ${`E2E ${run}`}`);
   await db.execute(sql`delete from vendor_application where business_name = ${`E2E Kitchen ${run}`}`);
@@ -647,9 +909,10 @@ async function cleanup() {
 
   const [left] = (await db.execute(sql`
     select
-      (select count(*) from account where email in (${EMAIL}, ${FLOOD_EMAIL}))
+      (select count(*) from account where email in (${EMAIL}, ${FLOOD_EMAIL}, ${VENDOR_EMAIL}, ${ADMIN_EMAIL}))
     + (select count(*) from lead where name = ${`E2E ${run}`})
     + (select count(*) from vendor_application where business_name = ${`E2E Kitchen ${run}`})
+    + (select count(*) from service_listing where title = ${MARKETPLACE_LISTING})
     + (select count(*) from booking_traveller where full_name like ${`E2E %${run}%`}) as n
   `)) as unknown as [{ n: number }];
   check("the test leaves nothing behind", Number(left.n) === 0, `${left.n} rows remain`);

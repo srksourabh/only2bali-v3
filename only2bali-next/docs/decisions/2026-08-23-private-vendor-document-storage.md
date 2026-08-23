@@ -1,0 +1,3 @@
+# Private vendor document storage
+
+Provider media and identity documents use separate Vercel Blob stores and credentials: `BLOB_READ_WRITE_TOKEN` is limited to public marketplace media, while `BLOB_PRIVATE_READ_WRITE_TOKEN` is limited to private KYC documents. A store has one access level, so sharing the original public token would make a document fetchable even though the application returned an HMAC-signed handle. Production now fails closed when the credential for the requested upload class is absent, private reads use the authenticated Blob `get()` path after the existing role check, and `/api/health` reports media and document readiness independently. Local development preserves the same boundary by keeping documents outside `public/`.
