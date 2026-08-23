@@ -132,7 +132,8 @@ export default function AdminDashboard() {
               {data?.documents.slice(0, 12).map((item) => (
                 <li key={item.id}>
                   <b>{item.kind.replaceAll("_", " ")}</b>
-                  <span>{item.status} - {item.fileUrl}</span>
+                  <span>{item.status} - </span>
+                  <a href={`/api/documents/${item.id}/file`} target="_blank" rel="noopener noreferrer">view file</a>
                   {item.status === "pending" && (
                     <div className="mini-actions">
                       <button onClick={() => run("Document approved.", () => patch(`/api/admin/documents/${item.id}`, { status: "approved" }))}>Approve</button>

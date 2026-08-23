@@ -11,6 +11,7 @@ project, and by the AI agents that work in it.
 | [`memory.md`](memory.md) | Project context and decision log. **Read at the start of every session** |
 | [`progress.md`](progress.md) | What is done, what is next, what is blocked |
 | [`SECURITY.md`](SECURITY.md) | Threat model, current posture, outstanding risk |
+| [`consolidation-audit-2026-08-23.md`](consolidation-audit-2026-08-23.md) | Which local folder and GitHub repo are canonical |
 
 ## Building
 

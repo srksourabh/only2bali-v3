@@ -549,12 +549,18 @@ function PlannerWizardComponent() {
                     <h4 style={{ color: "var(--emerald-d)", margin: "2rem 0 1rem", textAlign: "center" }}>Tell us about your incredible crew!</h4>
                     <div className="selection-grid">
                       {CREW_OPTIONS.map((crew) => (
-                        <div key={crew.id} className={`selection-card ${crewType === crew.id ? "selected" : ""}`} onClick={() => setCrewType(crew.id)}>
-                          <div className="selection-card-icon">{crew.icon}</div>
-                          <h3>{crew.title}</h3>
-                          <p>{crew.desc}</p>
-                          <button className="selection-card-btn">{crewType === crew.id ? "✓ Selected" : "+ Choose"}</button>
-                        </div>
+                        <button
+                          key={crew.id}
+                          type="button"
+                          aria-pressed={crewType === crew.id}
+                          className={`selection-card ${crewType === crew.id ? "selected" : ""}`}
+                          onClick={() => setCrewType(crew.id)}
+                        >
+                          <span className="selection-card-icon">{crew.icon}</span>
+                          <span className="selection-card-title">{crew.title}</span>
+                          <span className="selection-card-description">{crew.desc}</span>
+                          <span className="selection-card-btn">{crewType === crew.id ? "✓ Selected" : "+ Choose"}</span>
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -610,11 +616,17 @@ function PlannerWizardComponent() {
                       {INTERESTS.map((i) => {
                         const isSel = selectedInterests.includes(i.id);
                         return (
-                          <div key={i.id} className={`selection-card ${isSel ? "selected" : ""}`} onClick={() => handleInterestToggle(i.id)}>
-                            <div className="selection-card-icon">{i.icon}</div>
-                            <h3>{i.name}</h3>
-                            <button className="selection-card-btn">{isSel ? "✓ Selected" : "+ Add"}</button>
-                          </div>
+                          <button
+                            key={i.id}
+                            type="button"
+                            aria-pressed={isSel}
+                            className={`selection-card ${isSel ? "selected" : ""}`}
+                            onClick={() => handleInterestToggle(i.id)}
+                          >
+                            <span className="selection-card-icon">{i.icon}</span>
+                            <span className="selection-card-title">{i.name}</span>
+                            <span className="selection-card-btn">{isSel ? "✓ Selected" : "+ Add"}</span>
+                          </button>
                         );
                       })}
                     </div>
@@ -624,11 +636,17 @@ function PlannerWizardComponent() {
                       {STAYS.map((s) => {
                         const isSel = selectedStays.includes(s.id);
                         return (
-                          <div key={s.id} className={`selection-card ${isSel ? "selected" : ""}`} onClick={() => handleStayToggle(s.id)}>
-                            <div className="selection-card-icon">{s.icon}</div>
-                            <h3>{s.name}</h3>
-                            <button className="selection-card-btn">{isSel ? "✓ Selected" : "+ Add"}</button>
-                          </div>
+                          <button
+                            key={s.id}
+                            type="button"
+                            aria-pressed={isSel}
+                            className={`selection-card ${isSel ? "selected" : ""}`}
+                            onClick={() => handleStayToggle(s.id)}
+                          >
+                            <span className="selection-card-icon">{s.icon}</span>
+                            <span className="selection-card-title">{s.name}</span>
+                            <span className="selection-card-btn">{isSel ? "✓ Selected" : "+ Add"}</span>
+                          </button>
                         );
                       })}
                     </div>
@@ -735,11 +753,17 @@ function PlannerWizardComponent() {
                     <h4 style={{ color: "var(--emerald-d)", margin: "1rem 0", fontWeight: 700 }}>1. Type of transport?</h4>
                     <div className="selection-grid">
                       {VEHICLES.map((v) => (
-                        <div key={v.id} className={`selection-card ${vehicleType === v.id ? "selected" : ""}`} onClick={() => setVehicleType(v.id)}>
-                          <div className="selection-card-icon">{v.icon}</div>
-                          <h3>{v.name}</h3>
-                          <button className="selection-card-btn">{vehicleType === v.id ? "✓ Selected" : "+ Select"}</button>
-                        </div>
+                        <button
+                          key={v.id}
+                          type="button"
+                          aria-pressed={vehicleType === v.id}
+                          className={`selection-card ${vehicleType === v.id ? "selected" : ""}`}
+                          onClick={() => setVehicleType(v.id)}
+                        >
+                          <span className="selection-card-icon">{v.icon}</span>
+                          <span className="selection-card-title">{v.name}</span>
+                          <span className="selection-card-btn">{vehicleType === v.id ? "✓ Selected" : "+ Select"}</span>
+                        </button>
                       ))}
                     </div>
 

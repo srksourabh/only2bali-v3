@@ -1,5 +1,9 @@
 # Architecture - Only2Bali v3.0
 
+> **Historical snapshot:** this file describes the July 2026 transition. For the
+> current canonical workspace and application decision, read
+> [`consolidation-audit-2026-08-23.md`](consolidation-audit-2026-08-23.md).
+
 > How the system actually fits together, as of 2026-07-16.
 > This describes what **is**, not what should be. For the target architecture and
 > performance budgets, see `AGENTS.md` at the repo root.

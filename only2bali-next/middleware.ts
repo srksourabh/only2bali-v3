@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { clerkMiddleware } from "@clerk/nextjs/server";
 import { locales, defaultLocale, isLocale } from "@/lib/i18n/config";
+import { clerkConfigured } from "@/lib/auth/clerk";
 
 /**
  * Every page lives under /{locale}. This sends a bare path to the reader's
@@ -28,13 +30,14 @@ function pickLocale(req: NextRequest): string {
   return defaultLocale;
 }
 
-export function middleware(req: NextRequest) {
+function localeResponse(req: NextRequest): NextResponse | null {
   const { pathname } = req.nextUrl;
+  if (pathname.startsWith("/api") || pathname.startsWith("/_next")) return null;
 
   const hasLocale = locales.some(
     (l) => pathname === `/${l}` || pathname.startsWith(`/${l}/`)
   );
-  if (hasLocale) return NextResponse.next();
+  if (hasLocale) return null;
 
   const locale = pickLocale(req);
   const url = req.nextUrl.clone();
@@ -42,7 +45,24 @@ export function middleware(req: NextRequest) {
   return NextResponse.redirect(url);
 }
 
+function localeOnlyMiddleware(req: NextRequest) {
+  return localeResponse(req) ?? NextResponse.next();
+}
+
+const withClerk = clerkMiddleware(async (_auth, req) => {
+  return localeResponse(req) ?? NextResponse.next();
+});
+
+/**
+ * Clerk middleware only when keys are set. Otherwise keep the original
+ * locale-only behaviour so deploys without Clerk stay healthy.
+ */
+export default clerkConfigured() ? withClerk : localeOnlyMiddleware;
+
 export const config = {
-  // Everything except API routes, Next internals and files with an extension.
-  matcher: ["/((?!api|_next|.*\\..*).*)"],
+  matcher: [
+    // Pages + API (Clerk needs API for session); skip static assets.
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest|json)).*)",
+    "/(api|trpc)(.*)",
+  ],
 };

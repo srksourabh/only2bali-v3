@@ -49,3 +49,10 @@ infra/postgres/certs/
 # Vercel CLI link (contains project/org ids)
 .vercel
 only2bali-next/.vercel
+
+# Agent state - local tooling only, never in git
+.agent/
+.serena/
+.claude/
+.qodo/
+saas-audit-output/

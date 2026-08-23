@@ -14,6 +14,7 @@ import CustomCursor from "./components/CustomCursor";
 import SiteNav from "./components/SiteNav";
 import SiteFooter from "./components/SiteFooter";
 import PwaRegister from "./components/PwaRegister";
+import ClerkAppProvider from "@/lib/auth/clerk-provider";
 import "../globals.css";
 import "./brand.css";
 
@@ -87,11 +88,13 @@ export default async function LangLayout({
   return (
     <html lang={lang} suppressHydrationWarning>
       <body className={bodyClass}>
-        <CustomCursor />
-        <PwaRegister />
-        <SiteNav lang={lang} dict={dict} />
-        {children}
-        <SiteFooter dict={dict} />
+        <ClerkAppProvider>
+          <CustomCursor />
+          <PwaRegister />
+          <SiteNav lang={lang} dict={dict} />
+          {children}
+          <SiteFooter dict={dict} />
+        </ClerkAppProvider>
       </body>
     </html>
   );

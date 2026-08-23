@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
     headers: { authorization: `Bearer ${token.access_token}` },
   });
   const profile = await profileRes.json().catch(() => null);
-  if (!profileRes.ok || !profile?.sub || !profile?.email || profile.email_verified === false) return failure;
+  if (!profileRes.ok || !profile?.sub || !profile?.email || profile.email_verified !== true) return failure;
 
   const result = await signInWithGoogleProfile(
     {
