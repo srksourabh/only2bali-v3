@@ -1,5 +1,9 @@
 # Progress - Only2Bali v3.0
 
+> **Historical tracker:** for the verified 23 August 2026 folder, GitHub and
+> deployment status, read
+> [`consolidation-audit-2026-08-23.md`](consolidation-audit-2026-08-23.md).
+
 > Task and milestone tracker. Updated whenever work completes or blockers arise.
 > AI agents: read this at session start to know where work left off.
 >

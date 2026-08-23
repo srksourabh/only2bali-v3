@@ -1,58 +1,46 @@
-# Only2Bali — Next.js Reference Implementation
+# Only2Bali application
 
-Production-grade scaffold matching the @FullStackLead rules pack (AGENTS.md + `.agent/`).
+This is the only active Only2Bali application. It is a Next.js 15 App Router
+marketplace with seven languages, PostgreSQL/Drizzle, Clerk plus OTP/password
+auth, traveller and provider dashboards, admin operations, Razorpay payments,
+and a PWA shell.
 
-## Run
+## Start locally
 
 ```bash
 npm install
-npm run dev        # http://localhost:3000
-npm test           # vitest — recommendation engine tests
-npm run typecheck  # tsc --noEmit
+npm run dev:local
 ```
 
-## Structure
+The local command starts Postgres, applies migrations, seeds sample data and
+starts Next.js. Use `npm run dev:down` when finished.
 
-| Path | Purpose |
-|---|---|
-| `app/page.tsx` | Homepage (server component): hero, USP, package catalog |
-| `app/planner/page.tsx` | Client-side rules-based itinerary recommendation engine |
-| `app/vendors/page.tsx` | Vendor onboarding form (WhatsApp payload submission) |
-| `app/inquiry/page.tsx` | Group inquiry / lead capture form (WhatsApp + mailto) |
-| `lib/catalog.ts` | Typed package catalog (single source of truth) |
-| `lib/recommend.ts` | Deterministic scoring engine — food protocol is a HARD filter |
-| `lib/recommend.test.ts` | Vitest persona + edge-case tests |
-| `lib/config.ts` | WhatsApp/email config — **replace placeholders before launch** |
+## Verify before a merge
 
-## Real vs mocked
+```bash
+npm run typecheck
+npm test
+npm run build
+npm run test:e2e
+```
 
-| Item | Status |
-|---|---|
-| Recommendation engine | Real, client-side, tested |
-| Form validation | Real |
-| Form delivery | WhatsApp deep-link + mailto (by design for v1; Zoho CRM = marked TODO) |
-| Pricing | Indicative bands — placeholder until confirmed |
-| Testimonials | Sample, labeled — replace before launch |
-| WhatsApp number | Placeholder `6281200000000` in `lib/config.ts` — **must replace** |
+As of 2026-08-23, type-check, 139 unit tests, a 127-page production build and
+75 database-backed end-to-end checks pass. GitHub CI also runs schema/seed
+verification.
 
-## Deploy to Vercel
+## Deploy
 
-This Next.js app lives in the **`only2bali-next/` subdirectory** of the repo (the
-repo root also contains a legacy Create-React-App in `Frontend/`). Vercel must be
-told to build this subdirectory, or the deployment will fail:
+- GitHub source: `srksourabh/only2bali-v3`
+- Vercel project: `srksourabhs-projects/only2bali`
+- Vercel Root Directory: `only2bali-next`
+- Production alias: `https://only2bali.vercel.app`
 
-1. Vercel Project → **Settings → Build & Deployment → Root Directory** → set to
-   **`only2bali-next`** and save.
-2. Framework Preset: **Next.js** (auto-detected; also pinned in `vercel.json`).
-3. Add environment variable **`GEMINI_API_KEY`** (Production + Preview) for live
-   AI itineraries. Without it the `/api/planner` route returns a structured mock
-   itinerary — the site still deploys and works, just with template days.
-4. Redeploy.
+Do not deploy the old `Only2bali_v3.0` fork or the archived Django/React apps.
+Required configuration keys are documented in `.env.example`; secrets must be
+set in Vercel and never committed.
 
-Build/install commands and framework are pinned in [`vercel.json`](./vercel.json).
+Production is not healthy until `/api/health` returns HTTP 200 with
+`"database":"connected"`. A configured payment gateway alone is not enough.
 
-## For Antigravity
-
-Open this folder as the workspace (with `AGENTS.md` + `.agent/` from the agent pack at root), then paste `ONLY2BALI-MASTER-PROMPT-v2.md` into agent chat. Remaining build-out: About, FAQ, Stays/Guides detail pages, privacy/terms, image assets, analytics, Vercel deploy.
-
-A pixel-complete single-file preview of the full site (all sections) is in `only2bali-site/index.html` — use it as the design benchmark.
+See [`../docs/consolidation-audit-2026-08-23.md`](../docs/consolidation-audit-2026-08-23.md)
+for the folder and repository comparison.

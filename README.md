@@ -52,6 +52,13 @@ The legacy Create React App frontend and the Django backend were retired in
 August 2026 and archived outside the repository (with their `node_modules`
 stripped). The product lives entirely in `only2bali-next/`.
 
+**Canonical workspace:** `C:\Users\soura\Dropbox\AI\Projects\Only2Bali`
+
+**Canonical GitHub repo:** `srksourabh/only2bali-v3`
+
+**Do not develop in:** `Only2bali_v3.0`, the legacy archive, or the hidden
+July Claude worktree. See the [consolidation audit](docs/consolidation-audit-2026-08-23.md).
+
 ## Architecture
 
 ```
@@ -69,9 +76,9 @@ its own gets an attacker nothing.
 | Frontend | Next.js 15 App Router, server components by default |
 | Languages | English, हिन्दी, தமிழ், ગુજરાતી, తెలుగు, ಕನ್ನಡ, मराठी |
 | Database | PostgreSQL 17, Drizzle ORM, 41 tables |
-| Auth | Passwordless OTP, hashed sessions in httpOnly cookies |
+| Auth | Clerk social login plus password/OTP, bridged to hashed httpOnly sessions |
 | Hosting | Vercel (app) + Hostinger VPS (database) |
-| Tests | Vitest — 79 unit tests, plus a 38-check database verifier |
+| Tests | Vitest — 139 unit tests, plus database and HTTP end-to-end suites |
 
 ## Commands
 
@@ -79,7 +86,7 @@ its own gets an attacker nothing.
 |---|---|
 | `npm run dev:local` | Everything: database, schema, seed, dev server |
 | `npm run dev:down` | Remove the local database |
-| `npm test` | 79 unit tests |
+| `npm test` | 139 unit tests |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run build` | Production build |
 | `npm run db:verify` | 38 checks against whatever `DATABASE_URL` points at |
@@ -103,9 +110,9 @@ into Vercel. Everything runs on that machine — no password travels anywhere el
 Full runbook, including server hardening and the restore drill:
 [`infra/DEPLOY.md`](infra/DEPLOY.md).
 
-> **Trap:** the root `vercel.json` builds `Frontend/`, the legacy CRA. If you
-> connect Vercel to Git without setting Root Directory to `only2bali-next`, you
-> will deploy the old site.
+The Vercel project is owned by `srksourabh`, connected to GitHub, and its Root
+Directory is `only2bali-next`. The old root-level Vercel configuration has been
+removed.
 
 ## Documentation
 
@@ -119,15 +126,18 @@ Start at [`docs/README.md`](docs/README.md).
 | [`docs/planning/marketplace-spec.md`](docs/planning/marketplace-spec.md) | The full product specification |
 | [`docs/planning/todo.md`](docs/planning/todo.md) | Sequenced execution list |
 | [`docs/adr/`](docs/adr/) | Architecture decision records |
+| [`docs/consolidation-audit-2026-08-23.md`](docs/consolidation-audit-2026-08-23.md) | Which folder/repo won and what remains to merge |
 
 ## Status
 
-Working: the site in seven languages, the design system, the database schema and
-seed, passwordless auth, login and `/account`, and the deployment tooling.
+Working in code: the seven-language site, marketplace catalogue, package and
+service booking, Razorpay verify/webhook flow, traveller/provider/admin areas,
+Clerk social login, PWA shell, and deployment tooling.
 
-Not yet working in production: **login cannot deliver codes** until an email or
-SMS provider is configured. That refusal is deliberate — it fails loudly rather
-than silently sending nothing.
+Not final-ready in production as verified on 2026-08-23: the database is
+unreachable, OTP delivery and contact values are unset, and database-backed
+routes such as `/en/services` fail. Razorpay reports configured, but no live
+payment was attempted because the database must be healthy first.
 
 > ### Security notice
 >

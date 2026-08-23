@@ -1,5 +1,9 @@
 # Getting the right app deployed on your own Vercel account
 
+> **Historical handover:** the GitHub connection is now working. For the current
+> deployment status and remaining database blocker, read
+> [`consolidation-audit-2026-08-23.md`](consolidation-audit-2026-08-23.md).
+
 > Written 2026-07-23, corrected the same day after checking the live site.
 > Everything here is a human action — it cannot be done from the codebase, which
 > is why it has stayed open.
