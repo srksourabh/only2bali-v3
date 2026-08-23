@@ -44,16 +44,13 @@ npm run dev:down     # remove the local database when you are done
 
 ```
 only2bali-next/     The product — Next.js 15, 7 languages, Postgres, passwordless auth
-Backend/            Django 5.1 + DRF — live on Azure, being retired
-Frontend/           Create React App — the old site, legacy
-only2bali-site/     A single static index.html, kept as a design benchmark
 infra/              Postgres on the VPS: compose, mutual TLS, backups, bootstrap
 docs/               Architecture, security, planning, decisions
 ```
 
-Two frontends still exist. `only2bali-next/` is the destination; `Frontend/` is
-kept only until Django's users are migrated off. Neither should be deleted to
-"resolve" the duplication — that is a product decision, not a cleanup.
+The legacy Create React App frontend and the Django backend were retired in
+August 2026 and archived outside the repository (with their `node_modules`
+stripped). The product lives entirely in `only2bali-next/`.
 
 ## Architecture
 

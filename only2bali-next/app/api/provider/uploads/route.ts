@@ -35,7 +35,6 @@ export async function POST(req: Request) {
     }
     const folderRaw = String(form.get("folder") ?? "media");
     const folder = folderRaw === "documents" ? "documents" : "media";
-
     const stored = await storeUpload(file, { folder, vendorId: provider.id });
     return NextResponse.json({ success: true, data: { upload: stored } }, { status: 201 });
   } catch (err) {

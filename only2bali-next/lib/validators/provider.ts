@@ -104,10 +104,16 @@ export const providerMediaSchema = z.object({
   caption: z.string().trim().max(300).optional().or(z.literal("")),
   sortOrder: z.number().int().min(0).max(999).default(0),
 });
-
 export const providerDocumentSchema = z.object({
   kind: z.enum(["business_licence", "tax_id", "insurance", "photo_id", "kitchen_certificate"]),
-  fileUrl: storedFileUrl,
+  ref: z
+    .string()
+    .trim()
+    .regex(
+      /^providers\/[a-zA-Z0-9._-]+\/documents\/[a-z0-9-]+\.(jpg|png|webp|pdf)$/,
+      "Upload a document through /api/provider/uploads first."
+    ),
+  handle: z.string().trim().min(20).max(2000),
 });
 
 export const providerEventSchema = z.object({

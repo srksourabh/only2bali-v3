@@ -4,6 +4,7 @@ import { apiError, readJson, validationError } from "@/lib/api";
 import { providerDocumentSchema } from "@/lib/validators/provider";
 import { getVendorByAccount } from "@/lib/repositories/provider";
 import { addVendorDocument, listDocumentsForVendor } from "@/lib/repositories/vendor-documents";
+import { verifyDocumentHandle } from "@/lib/uploads/store";
 
 export const dynamic = "force-dynamic";
 
@@ -28,10 +29,18 @@ export async function POST(req: Request) {
     const parsed = providerDocumentSchema.safeParse(await readJson(req));
     if (!parsed.success) return validationError(parsed.error);
 
+    const handle = verifyDocumentHandle(parsed.data.handle, provider.id);
+    if (!handle || handle.p !== parsed.data.ref) {
+      return NextResponse.json(
+        { success: false, error: "Upload handle invalid or expired. Upload the file again." },
+        { status: 400 }
+      );
+    }
+
     const document = await addVendorDocument({
       vendorId: provider.id,
       kind: parsed.data.kind,
-      fileUrl: parsed.data.fileUrl,
+      fileUrl: handle.p,
     });
     return NextResponse.json({ success: true, data: { document } }, { status: 201 });
   } catch (err) {

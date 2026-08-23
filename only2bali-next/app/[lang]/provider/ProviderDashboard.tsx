@@ -54,7 +54,7 @@ async function uploadFile(file: File, folder: "media" | "documents") {
   const res = await fetch("/api/provider/uploads", { method: "POST", body: form });
   const json = await res.json().catch(() => null);
   if (!res.ok || !json?.success) throw new Error(json?.error ?? "Upload failed.");
-  return json.data.upload as { url: string };
+  return json.data.upload as { url?: string; ref?: string; handle?: string; access?: string };
 }
 
 export default function ProviderDashboard() {
@@ -313,9 +313,11 @@ export default function ProviderDashboard() {
                 if (!file) return;
                 run(async () => {
                   const uploaded = await uploadFile(file, "documents");
+                  if (!uploaded.ref || !uploaded.handle) throw new Error("Upload did not return a document handle.");
                   await postJson("/api/provider/documents", "POST", {
                     kind: docKind,
-                    fileUrl: uploaded.url,
+                    ref: uploaded.ref,
+                    handle: uploaded.handle,
                   });
                 });
               }}

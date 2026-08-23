@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { sessionCookieOptions, SESSION_COOKIE } from "@/lib/auth";
-import { clerkConfigured } from "@/lib/auth/clerk";
+import { clerkConfigured, pickVerifiedEmail } from "@/lib/auth/clerk";
 import { signInWithOAuthProfile } from "@/lib/auth/service";
 import { apiError } from "@/lib/api";
 
@@ -31,14 +31,11 @@ export async function POST(req: Request) {
     }
 
     const user = await currentUser();
-    const email =
-      user?.primaryEmailAddress?.emailAddress ??
-      user?.emailAddresses?.[0]?.emailAddress ??
-      null;
+    const email = pickVerifiedEmail(user?.emailAddresses ?? undefined, user?.primaryEmailAddressId ?? null);
     if (!email) {
       return NextResponse.json(
         { success: false, error: "Your Clerk account needs a verified email." },
-        { status: 400 }
+        { status: 403 }
       );
     }
 
