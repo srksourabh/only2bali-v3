@@ -64,11 +64,19 @@ printf 'basicConstraints=CA:FALSE\nkeyUsage=digitalSignature,keyEncipherment\nex
 openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
   -out client.crt -days "$DAYS_LEAF" -sha256 -extfile client.ext
 
-rm -f server.csr client.csr server.ext client.ext ca.srl
+echo "==> backup certificate (dedicated key, same database role)"
+openssl req -new -nodes -newkey rsa:2048 \
+  -keyout backup.key -out backup.csr \
+  -subj "/CN=${CLIENT_CN}"
+
+openssl x509 -req -in backup.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
+  -out backup.crt -days "$DAYS_LEAF" -sha256 -extfile client.ext
+
+rm -f server.csr client.csr backup.csr server.ext client.ext ca.srl
 
 # Postgres refuses to start if the server key is group- or world-readable.
-chmod 600 server.key client.key ca.key
-chmod 644 server.crt client.crt ca.crt
+chmod 600 server.key client.key backup.key ca.key
+chmod 644 server.crt client.crt backup.crt ca.crt
 # postgres:17-alpine runs as uid 70. (The Debian-based postgres:17 image uses
 # 999 instead — if you switch images you must change this, or Postgres refuses
 # to start with "private key file must be owned by the database user or root".)
