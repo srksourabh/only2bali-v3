@@ -6,6 +6,7 @@
  */
 import { and, eq, gte, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { isSchemaLagError } from "@/lib/db/schema-lag";
 import { listingCompliance, serviceListing, vendor } from "@/lib/db/schema";
 import { isPubliclyVisibleListing } from "@/lib/repositories/listings-public";
 
@@ -22,55 +23,67 @@ export function passesComplianceHardFilter(rating: string): boolean {
   return rating === "green" || rating === "amber";
 }
 
+const compliantCoreSelect = {
+  id: serviceListing.id,
+  title: serviceListing.title,
+  serviceType: serviceListing.serviceType,
+  description: serviceListing.description,
+  area: serviceListing.area,
+  priceAmount: serviceListing.priceAmount,
+  priceCurrency: serviceListing.priceCurrency,
+  priceUnit: serviceListing.priceUnit,
+  images: serviceListing.images,
+  status: serviceListing.status,
+  active: serviceListing.active,
+  vendorId: vendor.id,
+  vendorSlug: vendor.slug,
+  businessName: vendor.businessName,
+  vendorVerificationStatus: vendor.verificationStatus,
+  ratingAvg: vendor.ratingAvg,
+  ratingCount: vendor.ratingCount,
+  complianceRating: listingCompliance.rating,
+  guaranteeLevel: listingCompliance.guaranteeLevel,
+  expiresAt: listingCompliance.expiresAt,
+};
+
 export async function listCompliantPublicServices(opts: {
   protocol: ProtocolFilter;
   region?: "bali" | "jakarta" | "all";
   limit?: number;
 }) {
   const now = new Date();
-  const rows = await db
-    .select({
-      id: serviceListing.id,
-      title: serviceListing.title,
-      serviceType: serviceListing.serviceType,
-      description: serviceListing.description,
-      area: serviceListing.area,
-      city: serviceListing.city,
-      priceAmount: serviceListing.priceAmount,
-      priceCurrency: serviceListing.priceCurrency,
-      priceUnit: serviceListing.priceUnit,
-      images: serviceListing.images,
-      status: serviceListing.status,
-      active: serviceListing.active,
-      vendorId: vendor.id,
-      vendorSlug: vendor.slug,
-      businessName: vendor.businessName,
-      vendorVerificationStatus: vendor.verificationStatus,
-      ratingAvg: vendor.ratingAvg,
-      ratingCount: vendor.ratingCount,
-      complianceRating: listingCompliance.rating,
-      guaranteeLevel: listingCompliance.guaranteeLevel,
-      expiresAt: listingCompliance.expiresAt,
-    })
-    .from(serviceListing)
-    .innerJoin(vendor, eq(serviceListing.vendorId, vendor.id))
-    .innerJoin(
-      listingCompliance,
-      and(
-        eq(listingCompliance.listingId, serviceListing.id),
-        eq(listingCompliance.protocol, opts.protocol)
-      )
-    )
-    .where(
-      and(
-        eq(serviceListing.status, "active"),
-        eq(serviceListing.active, true),
-        eq(vendor.verificationStatus, "verified"),
-        or(isNull(listingCompliance.expiresAt), gte(listingCompliance.expiresAt, now)),
-        sql`${listingCompliance.rating} in ('green', 'amber')`
-      )
-    )
-    .limit(opts.limit ?? 60);
+  const where = and(
+    eq(serviceListing.status, "active"),
+    eq(serviceListing.active, true),
+    eq(vendor.verificationStatus, "verified"),
+    or(isNull(listingCompliance.expiresAt), gte(listingCompliance.expiresAt, now)),
+    sql`${listingCompliance.rating} in ('green', 'amber')`
+  );
+  const joinOn = and(
+    eq(listingCompliance.listingId, serviceListing.id),
+    eq(listingCompliance.protocol, opts.protocol)
+  );
+
+  let rows;
+  try {
+    rows = await db
+      .select({ ...compliantCoreSelect, city: serviceListing.city })
+      .from(serviceListing)
+      .innerJoin(vendor, eq(serviceListing.vendorId, vendor.id))
+      .innerJoin(listingCompliance, joinOn)
+      .where(where)
+      .limit(opts.limit ?? 60);
+  } catch (err) {
+    if (!isSchemaLagError(err)) throw err;
+    const legacy = await db
+      .select(compliantCoreSelect)
+      .from(serviceListing)
+      .innerJoin(vendor, eq(serviceListing.vendorId, vendor.id))
+      .innerJoin(listingCompliance, joinOn)
+      .where(where)
+      .limit(opts.limit ?? 60);
+    rows = legacy.map((row) => ({ ...row, city: null as string | null }));
+  }
 
   return rows.filter((r) =>
     isPubliclyVisibleListing({
