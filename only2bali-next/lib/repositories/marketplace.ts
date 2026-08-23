@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 import { db } from "@/lib/db";
 import {
@@ -271,7 +271,7 @@ export async function listOpenRequestBoard(vendorId: string, limit = 40) {
       and(
         eq(tripRequest.visibility, "open_to_verified"),
         inArray(tripRequest.status, ["submitted", "quoted"]),
-        or(isNull(tripRequest.bidsCloseAt), sql`${tripRequest.bidsCloseAt} > ${now}`)
+        or(isNull(tripRequest.bidsCloseAt), gt(tripRequest.bidsCloseAt, now))
       )
     )
     .orderBy(desc(tripRequest.publishedAt))
