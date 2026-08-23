@@ -90,8 +90,8 @@ Phase 0 Task 0.1 (delete-endpoint auth).
 - [x] Migrated to own private repo `srksourabh/only2bali-v3` (2026-07-16)
 - [x] Full 229-commit history preserved
 - [x] Inherited Azure workflows disabled - see ADR-003
-- [ ] Vercel project on Sourabh's own account, linked to the private repo
-      (Root Directory must be `only2bali-next`; blank builds the legacy CRA)
+- [x] Vercel project on Sourabh's own account, linked to the private repo
+      (Root Directory must stay `only2bali-next`)
 - [ ] `GEMINI_API_KEY` set in Vercel, or the planner silently serves mock itineraries
 - [ ] Decide whether to keep using caloganathan's Azure backend or stand up own
 
@@ -193,8 +193,9 @@ Not done - this is what blocks retiring the React app:
 
 - [ ] **Revoke the two leaked credentials** (Zoho, SpringEdge). Nothing else on this list
       matters as much.
-- [ ] **Move production to Sourabh's Vercel** — `docs/vercel-handover.md`. This unblocks
-      contact details and login in one step.
+- [x] **Move production to Sourabh's Vercel** — `only2bali.vercel.app` is on
+      `srksourabhs-projects`. PR #13 merged 2026-08-23; production inspect Ready.
+      Contact values and OTP provider keys are still owner-only.
 - [ ] Choose an email provider and set `RESEND_API_KEY`, so people can actually sign in.
 - [x] **Wire Razorpay** — order create (`POST /api/payments/checkout`), Checkout.js verify
       (`POST /api/payments/verify`), webhook with idempotent `payment_event`
@@ -209,7 +210,9 @@ Not done - this is what blocks retiring the React app:
 - [x] **Phase E (code path)** — escrow hold, admin payout queue, refund-first; live PA-CB still owner/legal.
 - [x] **Phase F (partial)** — destinations + PWA shell. Django/CRA sunset and Vercel handover remain owner.
 - [x] **Clerk OAuth** — social login via Clerk → `o2b_session` bridge (`provider=clerk`).
-- [ ] **F4/F5 / E0** — Django user migration, Vercel ownership, PA-CB partner.
+- [x] **PR #13 marketplace shipment** — merged to `main` (`bc9c307`), production
+      Ready. Payments/uploads remain fail-closed until owner secrets.
+- [ ] **F4/F5 / E0** — Django user migration, PA-CB partner. Vercel ownership done.
 - [ ] **Set Clerk keys on Vercel** and enable Google/Apple in Clerk Dashboard.
 - [ ] Decide what happens to the four legacy React routes that call the deleted FastAPI
       service.

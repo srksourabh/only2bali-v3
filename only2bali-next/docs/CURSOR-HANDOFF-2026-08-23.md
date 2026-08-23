@@ -8,7 +8,7 @@ Continue from this folder:
 cd "C:\Users\soura\Dropbox\AI\Projects\Only2Bali\only2bali-next"
 ```
 
-Canonical GitHub repo:
+Canonical GitHub repo (the mother folder is the git repo):
 
 ```text
 https://github.com/srksourabh/only2bali-v3
@@ -17,10 +17,10 @@ https://github.com/srksourabh/only2bali-v3
 Active branch:
 
 ```text
-codex/saas-shipment-audit
+main
 ```
 
-Open PR:
+Merged PR:
 
 ```text
 https://github.com/srksourabh/only2bali-v3/pull/13
@@ -32,7 +32,7 @@ Production Vercel app:
 https://only2bali.vercel.app
 ```
 
-PR #13 is not merged yet. It is blocked only because the previous GitHub E2E run failed before the latest local fix was committed and pushed.
+PR #13 is merged. Merge commit `bc9c307`. Local `main` is fast-forwarded. Production inspect is Ready (`dpl_61d4jLwYRoSZgfLbhuneEZQzDNky`, aliases include `only2bali.vercel.app`). GitHub CI on that commit is green (`only2bali-next`, `schema and seed`, `end-to-end`, `no committed secrets`, Vercel).
 
 ## What Is Already Done
 
@@ -85,52 +85,15 @@ The Linux reproduction used a clean `node:22-bookworm` container and the local P
 
 ## Exact Next Steps In Cursor
 
-1. Re-check the current state:
+Code ship is done. Do not re-merge PR #13.
 
-```powershell
-cd "C:\Users\soura\Dropbox\AI\Projects\Only2Bali\only2bali-next"
-git status --short --branch
-git diff -- scripts/e2e.ts scripts/e2e.sh
-```
-
-2. Run final local checks:
-
-```powershell
-npm test
-npm run typecheck
-npm run db:check
-npm run build
-npm run test:e2e
-git diff --check
-```
-
-3. Commit and push the E2E fix:
-
-```powershell
-git add scripts/e2e.ts scripts/e2e.sh docs/CURSOR-HANDOFF-2026-08-23.md
-git commit -m "Stabilize Linux E2E warmup"
-git push origin codex/saas-shipment-audit
-```
-
-4. Wait for PR #13 checks:
-
-```powershell
-gh pr checks 13 --watch
-```
-
-5. If all checks are green, merge PR #13:
-
-```powershell
-gh pr merge 13 --squash --delete-branch
-git checkout main
-git pull --ff-only origin main
-```
-
-6. Verify Vercel production deployment:
+Remaining work is owner-only production secrets (table below). After those are set:
 
 ```powershell
 vercel inspect https://only2bali.vercel.app --scope srksourabhs-projects
 ```
+
+Then check `/api/health`: `payments.acceptingPayments` must be `true`, and both upload backends must be `vercel_blob`, before advertising checkout or file uploads.
 
 Do not use curl as the deployment proof. Use `vercel inspect` for Vercel status.
 
@@ -153,13 +116,13 @@ BLOB_READ_WRITE_TOKEN
 BLOB_PRIVATE_READ_WRITE_TOKEN
 ```
 
-## Do Not Claim Yet
+## Shipped (code path)
 
-Do not say "fully shipped" until PR #13 is merged, Vercel production is ready, and the production deployment has been inspected.
+PR #13 is merged, Vercel production is Ready, and `vercel inspect https://only2bali.vercel.app --scope srksourabhs-projects` returned Ready.
 
 Current truthful status:
 
 ```text
-The app code and E2E fix are locally verified. The PR still needs one final commit/push, green CI, merge to main, and Vercel production verification.
+Marketplace shipment code is on main and in production. Payments and direct uploads stay fail-closed until the owner sets the real Razorpay webhook secret and the two Vercel Blob tokens. Do not advertise live checkout or file uploads until /api/health says those backends are configured.
 ```
 
