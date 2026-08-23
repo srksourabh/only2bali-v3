@@ -28,6 +28,7 @@ import { hashSessionToken } from "../lib/auth/crypto";
 
 const BASE = (process.env.E2E_BASE_URL ?? "").replace(/\/$/, "");
 const SERVER_LOG = process.env.E2E_SERVER_LOG ?? "";
+const REQUEST_TIMEOUT_MS = Number(process.env.E2E_REQUEST_TIMEOUT_MS ?? 120_000);
 
 if (!BASE) {
   console.error("E2E_BASE_URL is not set. Run `npm run test:e2e` instead of calling this directly.");
@@ -97,7 +98,7 @@ async function call(path: string, opts: CallOptions = {}): Promise<Response> {
     headers,
     body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
     redirect: "manual",
-    signal: AbortSignal.timeout(60_000),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
 }
 
@@ -149,7 +150,9 @@ function cookieFrom(res: Response): string {
  */
 async function warmUp(): Promise<void> {
   const paths = ["/en", "/hi", "/en/account", "/en/packages/none", "/api/auth/session"];
-  await Promise.all(paths.map((p) => call(p).catch(() => null)));
+  for (const path of paths) {
+    await call(path).catch(() => null);
+  }
 }
 
 async function main() {

@@ -172,4 +172,13 @@ npx tsx scripts/e2e.ts
 STATUS=$?
 set -e
 
+if [ "$STATUS" -ne 0 ]; then
+  echo
+  echo "E2E failed. Last server stdout lines:" >&2
+  tail -80 "$OUT" >&2 || true
+  echo
+  echo "E2E failed. Last server stderr lines:" >&2
+  tail -120 "$ERR" >&2 || true
+fi
+
 exit "$STATUS"
