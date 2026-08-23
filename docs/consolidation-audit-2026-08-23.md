@@ -107,10 +107,11 @@ The legacy CRA README is only the default Create React App help page.
 | `srksourabh/only2bali-v3` | Original project, 283-commit history, full marketplace, CI, open consolidation/auth PR | **Canonical** |
 | `srksourabh/Only2bali_v3.0` | Older public fork, 232-commit history, no Actions runs, 56 commits behind on the useful branch | Archive after final merge |
 
-The canonical repo's `main` is not protected. PR #8 contains the current Clerk and
-repo-pruning branch and all four CI jobs pass. The consolidation work belongs on
-top of that PR branch. The old Azure workflows still targeted retired apps and
-were removed from this consolidation branch.
+The canonical repo's `main` is not protected. PR #8 contains the earlier Clerk
+and repo-pruning branch. Draft PR #9 is the complete consolidation candidate on
+top of that work; its app, schema/seed, end-to-end and secret-scan checks all
+pass. The old Azure workflows still targeted retired apps and were removed from
+this consolidation branch.
 
 Historical secret scanning found 27 redacted findings in the shared Git history,
 all in retired Django/React files. Current CI's committed-secret check passes, but
@@ -131,7 +132,7 @@ tested upgrade rather than hidden with a forced dependency change.
 | Production build | Pass; 127 static pages generated | Pass; 16 static pages generated |
 | Database-backed end-to-end | 75/75 pass | Not available |
 | Dependency audit after Next.js patch | Next.js 15.5.21; 10 transitive findings remain: 5 moderate, 5 high | 5 findings: 1 low, 4 high |
-| GitHub CI | Four jobs pass at `03c2b2c` | No Actions runs |
+| GitHub CI | All four jobs pass on draft PR #9 | No Actions runs |
 | Live home/planner | HTTP 200 | Not the chosen deployment |
 | Live health | HTTP 503, database unreachable | Not applicable |
 | Live services | HTTP 500 because DB is down | Feature absent |
