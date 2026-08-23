@@ -149,7 +149,16 @@ function cookieFrom(res: Response): string {
  * looking like a broken application.
  */
 async function warmUp(): Promise<void> {
-  const paths = ["/en", "/hi", "/en/account", "/en/packages/none", "/api/auth/session"];
+  const paths = [
+    "/en",
+    "/hi",
+    "/en/account",
+    "/en/packages",
+    "/en/packages/none",
+    "/en/providers",
+    "/en/food",
+    "/api/auth/session",
+  ];
   for (const path of paths) {
     await call(path).catch(() => null);
   }
@@ -210,6 +219,32 @@ async function main() {
       Boolean(pkg) && html.includes(pkg!.name),
       pkg?.name ?? "no published package seeded"
     );
+  }
+  {
+    const [pkg] = (await db.execute(sql`
+      select name from package where status = 'published' order by name limit 1
+    `)) as unknown as [{ name: string } | undefined];
+    const res = await call("/en/packages");
+    const html = await res.text();
+    check("the packages index renders", res.status === 200, `HTTP ${res.status}`);
+    check(
+      "the packages index lists a published package",
+      Boolean(pkg) && html.includes(pkg!.name),
+      pkg?.name ?? "no published package seeded"
+    );
+    check("the packages nav points at the index, not a homepage hash", html.includes('href="/en/packages"'));
+  }
+  {
+    const res = await call("/en/providers");
+    const html = await res.text();
+    check("the providers directory renders", res.status === 200, `HTTP ${res.status}`);
+  }
+  {
+    const res = await call("/en/food");
+    const html = await res.text();
+    check("the food page renders", res.status === 200, `HTTP ${res.status}`);
+    check("the food planner CTA is locale-prefixed", html.includes('href="/en/planner"'));
+    check("the food page does not use a bare /planner href", !html.includes('href="/planner"'));
   }
   {
     const res = await call("/hi");
@@ -431,6 +466,47 @@ async function main() {
   }
 
   {
+    const res = await call("/api/trip-requests", {
+      body: { protocol: "vegetarian", groupSize: 8, publishToProviders: true },
+    });
+    check("anonymous travellers cannot post a trip request", res.status === 401, `HTTP ${res.status}`);
+  }
+  {
+    const res = await call("/api/trip-requests", {
+      cookie: sessionCookie,
+      body: {
+        protocol: "vegetarian",
+        groupSize: 8,
+        departureCity: "Mumbai",
+        flexibleMonth: "October",
+        notes: "Family villa with Jain option",
+        publishToProviders: true,
+        budgetBasis: "unsure",
+      },
+    });
+    const body = await json(res);
+    check(
+      "a signed-in traveller can post a trip request",
+      res.status === 201 && body?.success === true,
+      `HTTP ${res.status}`
+    );
+    check(
+      "email-only travellers keep the request private until mobile is verified",
+      body?.data?.publishedToProviders === false,
+      `published=${body?.data?.publishedToProviders}`
+    );
+  }
+  {
+    const res = await call("/api/trip-requests", { cookie: sessionCookie });
+    const body = await json(res);
+    check(
+      "the traveller can list their trip requests",
+      res.status === 200 && Array.isArray(body?.data?.requests) && body.data.requests.length >= 1,
+      `count=${body?.data?.requests?.length}`
+    );
+  }
+
+  {
     const res = await call("/en/account", { cookie: sessionCookie });
     const html = await res.text();
     check("the account page now opens", res.status === 200, `HTTP ${res.status}`);
@@ -481,6 +557,15 @@ async function main() {
     vendorId = row?.id ?? "";
     check("vendor onboarding creates an isolated provider profile", Boolean(vendorId));
     check("a new vendor is not trusted automatically", row?.verification_status === "draft", row?.verification_status);
+  }
+  {
+    const res = await call("/en/providers");
+    const html = await res.text();
+    check(
+      "an unverified vendor stays off the public directory",
+      res.status === 200 && !html.includes(VENDOR_BUSINESS),
+      `HTTP ${res.status}`
+    );
   }
 
   {
@@ -590,6 +675,15 @@ async function main() {
       body: { verificationStatus: "verified" },
     });
     check("admin can verify the real vendor record", res.status === 200, `HTTP ${res.status}`);
+  }
+  {
+    const res = await call("/en/providers");
+    const html = await res.text();
+    check(
+      "a verified vendor appears on the public directory",
+      res.status === 200 && html.includes(VENDOR_BUSINESS),
+      `HTTP ${res.status}`
+    );
   }
   {
     const res = await call(`/api/admin/listings/${marketplaceListingId}`, {

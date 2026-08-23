@@ -1,11 +1,59 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { serviceListing, vendor, vendorHighlight, vendorMedia } from "@/lib/db/schema";
 import { listPublishedVendorReviews } from "@/lib/repositories/reviews";
 
+export type PublicProviderFilters = {
+  region?: "bali" | "jakarta" | "all";
+  limit?: number;
+};
+
 /** Pure gate used by tests and by the repository. */
 export function isPubliclyVisibleProvider(verificationStatus: string): boolean {
   return verificationStatus === "verified";
+}
+
+function providerRegionClause(region: PublicProviderFilters["region"]) {
+  if (!region || region === "all") return undefined;
+  if (region === "jakarta") {
+    return or(ilike(vendor.city, "%jakarta%"), ilike(vendor.baseArea, "%jakarta%"));
+  }
+  return and(
+    or(
+      ilike(vendor.city, "%bali%"),
+      ilike(vendor.city, "%denpasar%"),
+      ilike(vendor.baseArea, "%bali%"),
+      ilike(vendor.baseArea, "%ubud%"),
+      sql`coalesce(${vendor.city}, '') not ilike '%jakarta%'
+          and coalesce(${vendor.baseArea}, '') not ilike '%jakarta%'`
+    )
+  );
+}
+
+/** Public directory — verified vendors only. */
+export async function listPublicProviders(filters: PublicProviderFilters = {}) {
+  const clauses = [eq(vendor.verificationStatus, "verified")];
+  const region = providerRegionClause(filters.region);
+  if (region) clauses.push(region);
+
+  return db
+    .select({
+      slug: vendor.slug,
+      businessName: vendor.businessName,
+      vendorType: vendor.vendorType,
+      description: vendor.description,
+      baseArea: vendor.baseArea,
+      city: vendor.city,
+      logo: vendor.logo,
+      coverImage: vendor.coverImage,
+      ratingAvg: vendor.ratingAvg,
+      ratingCount: vendor.ratingCount,
+      languages: vendor.languages,
+    })
+    .from(vendor)
+    .where(and(...clauses))
+    .orderBy(desc(vendor.ratingCount), asc(vendor.businessName))
+    .limit(filters.limit ?? 60);
 }
 
 /** Public provider profile — verified vendors only. */

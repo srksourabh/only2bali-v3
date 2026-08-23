@@ -10,6 +10,8 @@ const PUBLIC_ROUTES = [
   "/food",
   "/inquiry",
   "/planner",
+  "/packages",
+  "/providers",
   "/services",
   "/vendors",
   "/privacy",

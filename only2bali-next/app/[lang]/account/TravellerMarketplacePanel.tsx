@@ -50,6 +50,14 @@ export default function TravellerMarketplacePanel({ lang }: { lang: string }) {
   const [draft, setDraft] = useState("");
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [form, setForm] = useState({
+    protocol: "vegetarian",
+    groupSize: "8",
+    departureCity: "",
+    flexibleMonth: "",
+    notes: "",
+  });
 
   const load = async () => {
     const [reqRes, thrRes] = await Promise.all([
@@ -94,6 +102,39 @@ export default function TravellerMarketplacePanel({ lang }: { lang: string }) {
     await load();
   };
 
+  const createRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setInfo("");
+    setCreating(true);
+    try {
+      const res = await fetch("/api/trip-requests", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          protocol: form.protocol,
+          groupSize: Number(form.groupSize),
+          departureCity: form.departureCity || undefined,
+          flexibleMonth: form.flexibleMonth || undefined,
+          notes: form.notes || undefined,
+          publishToProviders: true,
+          budgetBasis: "unsure",
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error ?? "Could not create that request.");
+      setInfo(
+        json.data.publishedToProviders
+          ? "Request published to verified providers."
+          : "Request saved. Verify a mobile number to publish it to the provider board."
+      );
+      setForm({ ...form, notes: "" });
+      await load();
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const send = async () => {
     if (!threadId || !draft.trim()) return;
     const res = await fetch("/api/messages", {
@@ -127,8 +168,61 @@ export default function TravellerMarketplacePanel({ lang }: { lang: string }) {
             </li>
           ))}
         </ul>
-        <Link className="btn btn-ghost btn-sm" href={`/${lang}/planner`}>
-          Create another request
+        <form className="leadform" onSubmit={(e) => createRequest(e).catch((err) => setError(err.message))}>
+          <h3>Post a trip request</h3>
+          <label>
+            Food protocol
+            <select
+              value={form.protocol}
+              onChange={(e) => setForm({ ...form, protocol: e.target.value })}
+            >
+              <option value="jain">Jain</option>
+              <option value="vegetarian">Vegetarian</option>
+              <option value="vegan">Vegan</option>
+            </select>
+          </label>
+          <label>
+            Group size
+            <input
+              type="number"
+              min={1}
+              max={500}
+              value={form.groupSize}
+              onChange={(e) => setForm({ ...form, groupSize: e.target.value })}
+              required
+            />
+          </label>
+          <label>
+            Departure city
+            <input
+              value={form.departureCity}
+              onChange={(e) => setForm({ ...form, departureCity: e.target.value })}
+              placeholder="Mumbai"
+            />
+          </label>
+          <label>
+            Travel month
+            <input
+              value={form.flexibleMonth}
+              onChange={(e) => setForm({ ...form, flexibleMonth: e.target.value })}
+              placeholder="October"
+            />
+          </label>
+          <label>
+            What do you need?
+            <textarea
+              rows={3}
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              placeholder="Villa with Jain kitchen, Hindi guide, 6 nights"
+            />
+          </label>
+          <button className="btn btn-solid btn-sm" type="submit" disabled={creating}>
+            {creating ? "Sending…" : "Send to verified providers"}
+          </button>
+        </form>
+        <Link className="btn btn-ghost btn-sm" href={`/${lang}/inquiry`}>
+          Or start from the enquiry form
         </Link>
       </section>
 

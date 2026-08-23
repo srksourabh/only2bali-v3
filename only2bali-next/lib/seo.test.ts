@@ -6,13 +6,15 @@ import { locales } from "@/lib/i18n/config";
 describe("public search metadata", () => {
   it("publishes every public route and package for every locale", () => {
     const entries = sitemap();
-    const expectedRoutesPerLocale = 11 + 3;
+    const expectedRoutesPerLocale = 13 + 3;
 
     expect(entries).toHaveLength(locales.length * expectedRoutesPerLocale);
     expect(entries.map((entry) => entry.url)).toContain("https://only2bali.com/en");
     expect(entries.map((entry) => entry.url)).toContain(
       "https://only2bali.com/hi/packages/sattvik-serenity",
     );
+    expect(entries.map((entry) => entry.url)).toContain("https://only2bali.com/en/packages");
+    expect(entries.map((entry) => entry.url)).toContain("https://only2bali.com/en/providers");
   });
 
   it("keeps private and API routes out of search results", () => {

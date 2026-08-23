@@ -12,4 +12,9 @@ describe("isPubliclyVisibleProvider", () => {
     expect(isPubliclyVisibleProvider("rejected")).toBe(false);
     expect(isPubliclyVisibleProvider("suspended")).toBe(false);
   });
+
+  it("is the only gate the public directory may use", () => {
+    const directoryStatuses = ["draft", "pending", "verified", "rejected", "suspended"] as const;
+    expect(directoryStatuses.filter(isPubliclyVisibleProvider)).toEqual(["verified"]);
+  });
 });

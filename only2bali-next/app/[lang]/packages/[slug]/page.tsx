@@ -104,7 +104,7 @@ export default async function PackagePage({
     <main className="pkgpage">
       <div className="o2b-wrap">
         <nav className="crumbs" aria-label="Breadcrumb">
-          <Link href={`/${lang}`}>{dict.nav.packages}</Link>
+          <Link href={`/${lang}/packages`}>{dict.nav.packages}</Link>
           <span aria-hidden="true"> / </span>
           <span>{copy?.name ?? pkg.name}</span>
         </nav>

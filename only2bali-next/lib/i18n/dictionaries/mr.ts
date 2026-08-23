@@ -14,6 +14,7 @@ export const mr: Dictionary = {
     guarantee: "Trip quality",
     verify: "आम्ही कशी तपासणी करतो",
     packages: "पॅकेजेस",
+    providers: "Providers",
     plan: "माझा प्रवास आखा",
     language: "भाषा",
     theme: "उजेड आणि अंधार बदला",
@@ -113,6 +114,14 @@ export const mr: Dictionary = {
     reviewsHeading: "Traveller reviews",
   },
 
+  providers: {
+    heading: "Verified Bali and Jakarta providers.",
+    sub: "Only admin-verified partners appear here. Open a profile to see approved photos and live services.",
+    empty: "No verified providers are public yet.",
+    viewCta: "View provider",
+    verified: "Verified",
+  },
+
   guarantee: {
     heading: "Food protocol is one filter. Stays, rides and budget are checked too.",
     sub: "Vegetarian, Jain and vegan remain first-class options — disclosed meal by meal — alongside stay comfort, vehicle type, guide language and clear INR pricing.",
@@ -168,6 +177,7 @@ export const mr: Dictionary = {
     bookNow: "Book this departure",
     nights: "रात्री",
     days: "दिवस",
+    empty: "No published packages yet.",
     items: [
       {
         slug: "sattvik-serenity",

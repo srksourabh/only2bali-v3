@@ -75,16 +75,6 @@ export default async function AccountPage({ params }: { params: Promise<{ lang: 
 
           {(user.role === "traveller" || user.role === "admin") && (
             <section className="acard">
-              <h2>{dict.account.tripsHeading}</h2>
-              <p className="empty">{dict.account.tripsEmpty}</p>
-              <Link className="btn btn-solid btn-sm" href={`/${lang}/planner`}>
-                {dict.account.tripsEmptyCta}
-              </Link>
-            </section>
-          )}
-
-          {(user.role === "traveller" || user.role === "admin") && (
-            <section className="acard">
               <h2>{dict.account.bookingsHeading}</h2>
               {bookings.length === 0 ? (
                 <p className="empty">{dict.account.bookingsEmpty}</p>
@@ -147,7 +137,7 @@ export default async function AccountPage({ params }: { params: Promise<{ lang: 
             <section className="acard">
               <h2>{dict.account.savedHeading}</h2>
               <p className="empty">{dict.account.savedEmpty}</p>
-              <Link className="btn btn-ghost btn-sm" href={`/${lang}#packages`}>
+              <Link className="btn btn-ghost btn-sm" href={`/${lang}/packages`}>
                 {dict.account.browseCta}
               </Link>
             </section>

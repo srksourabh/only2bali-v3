@@ -43,8 +43,8 @@ export default async function ProviderProfilePage({
     <main>
       <section className="packages-band" style={{ paddingTop: "3rem" }}>
         <div className="o2b-wrap" style={{ maxWidth: "52rem" }}>
-          <Link href={`/${lang}/services`} className="bookinglink">
-            ← {dict.services.back}
+          <Link href={`/${lang}/providers`} className="bookinglink">
+            ← {dict.nav.providers}
           </Link>
 
           <header className="accounthead" style={{ marginTop: "1.2rem" }}>
