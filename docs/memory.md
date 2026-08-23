@@ -494,3 +494,23 @@ existing payment schema and checkout intent path.
 **Still blocked on production**: Vercel handover + real
 `RAZORPAY_KEY_ID` / `KEY_SECRET` / `WEBHOOK_SECRET`. Without them health still
 reports payments unconfigured and verify/webhook answer 503.
+
+### 2026-08-23 — PR #13 marketplace shipment landed
+
+**Asked for**: continue the Codex handoff and ship.
+
+**Verified**: local `npm test` 153 passed, `npm run typecheck` clean. GitHub CI on
+`codex/saas-shipment-audit` and on merge commit `bc9c307` all green, including
+Linux E2E.
+
+**Shipped**:
+- Squash-merged [PR #13](https://github.com/srksourabh/only2bali-v3/pull/13)
+  (`Secure and verify marketplace shipment`).
+- Local `main` fast-forwarded to `bc9c307`.
+- Production inspect Ready: `dpl_61d4jLwYRoSZgfLbhuneEZQzDNky`, aliases include
+  `https://only2bali.vercel.app`. GitHub Vercel status on `bc9c307` is success.
+
+**Still owner-only**: real `RAZORPAY_WEBHOOK_SECRET` (not a URL),
+`BLOB_READ_WRITE_TOKEN`, `BLOB_PRIVATE_READ_WRITE_TOKEN`, and rotation of
+secrets pasted in chat. Checkout and direct uploads stay fail-closed until
+those are set. See `only2bali-next/docs/SAAS-SHIPMENT-AUDIT-2026-08-23.md`.
