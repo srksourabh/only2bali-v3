@@ -39,8 +39,18 @@ export function resolveDatabaseUrl(env: NodeJS.ProcessEnv = process.env): string
  * first query instead keeps `next build` runnable in CI and on Vercel with no
  * database credentials present, while still failing loudly at runtime.
  *
- * One client per process: hot reload in development would otherwise open a new
- * pool on every edit until Postgres runs out of connections.
+ * One client per process, in every environment.
+ *
+ * This cache used to be guarded by `NODE_ENV !== "production"`, which read as a
+ * hot-reload convenience and was in fact the opposite: in production nothing
+ * was ever cached, so the Proxy below built a fresh pool - TCP handshake, TLS
+ * handshake, authentication - for every single query. Against a database in
+ * another region that cost roughly two seconds per query and made every
+ * database-backed page take ten.
+ *
+ * Warm serverless invocations reuse the process exactly the way a dev server
+ * does, so the reasoning that motivated the cache applies to production more
+ * strongly, not less.
  */
 const globalForDb = globalThis as unknown as {
   __o2bSql?: ReturnType<typeof postgres>;
@@ -71,10 +81,8 @@ function connect(): PostgresJsDatabase<typeof schema> {
 
   const instance = drizzle(client, { schema });
 
-  if (process.env.NODE_ENV !== "production") {
-    globalForDb.__o2bSql = client;
-    globalForDb.__o2bDb = instance;
-  }
+  globalForDb.__o2bSql = client;
+  globalForDb.__o2bDb = instance;
 
   return instance;
 }

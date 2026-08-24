@@ -29,6 +29,7 @@ type Health = {
     stripe?: { mode?: string; acceptingPayments?: boolean };
   };
   clerk?: boolean;
+  placement?: { database?: string | null; function?: string | null; colocated?: boolean | null };
   latencyMs?: number;
 };
 
@@ -154,13 +155,23 @@ async function main(): Promise<void> {
     "cannot be checked from here — confirm at the providers, item 5",
   );
 
-  // ---------- 7: latency ----------
+  // ---------- 7: latency and placement ----------
+  const place = health.placement;
+  if (place?.colocated === true) {
+    ready("database and functions are in the same region", `${place.database}`);
+  } else if (place?.colocated === false) {
+    blocked(
+      "database and functions are in the same region",
+      `database ${place.database}, function ${place.function}`,
+      "Every query crosses regions. Set the function region to match the database — docs/launch-checklist.md item 7.",
+    );
+  } else if (place) {
+    warn("database placement", `database=${place.database ?? "unknown"} function=${place.function ?? "unknown"}`);
+  }
+
   const ms = Number(health.latencyMs ?? 0);
   if (ms > 2000) {
-    warn(
-      "database latency",
-      `${(ms / 1000).toFixed(1)}s on this probe — check DATABASE_URL uses Neon's pooled host (-pooler)`,
-    );
+    warn("database latency", `${(ms / 1000).toFixed(1)}s on this probe — see item 7`);
   } else if (ms > 0) {
     ready("database latency", `${ms}ms`);
   }

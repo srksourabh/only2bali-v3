@@ -4,6 +4,7 @@ import { deliveryChannels } from "@/lib/auth/delivery";
 import { CFG } from "@/lib/config";
 import { emptySchemaStatus, readSchemaStatus } from "@/lib/db/schema-status";
 import { uploadBackend } from "@/lib/uploads/store";
+import { readPlacement } from "@/lib/db/placement";
 import { razorpayConfig, stripeConfig } from "@/lib/payments/config";
 
 export const dynamic = "force-dynamic";
@@ -95,6 +96,10 @@ export async function GET() {
       uploads,
       clerk: clerkConfigured(),
       uptimeSeconds: Math.round(process.uptime()),
+      // Where the database is versus where this function runs. A mismatch here
+      // is worth several hundred milliseconds on every query and is invisible
+      // from both the code and the Vercel dashboard.
+      placement: readPlacement(),
       latencyMs: Date.now() - started,
     },
     { status: ok ? 200 : 503, headers: { "Cache-Control": "no-store" } }
