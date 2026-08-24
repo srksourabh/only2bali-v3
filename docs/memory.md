@@ -5,18 +5,21 @@
 >
 > Agent config lives in `CLAUDE.md` (Claude Code / Cursor) and `AGENTS.md` (Antigravity).
 
-## QA tester fixes (2026-08-24, local — not deployed)
+## QA tester fixes (2026-08-24)
 
-Testing-team notes on login, itinerary 404s, destination filters, dates, nav:
+Live on https://only2bali.vercel.app after CLI production deploy
+`dpl_6LPp5Dy9iB2aUbFipp6zFKdWCZpD` (`4f090f6` on `feat/schema-status-health`).
 
-- Password sign-in accepts email; wrong credentials return "Username or password is incorrect." not the username-character regex. Signup sanitizes display names and emails; blank email/businessName on traveler signup are ignored.
-- Google/Clerk "already signed in" offers Continue + Use a different account, then bridges to `o2b_session`.
-- Package "View itinerary & offer" uses catalogue fallback slugs (`sattvik-serenity` etc.) so the detail page does not 404 when Neon has no package rows. Dates on those pages are dd-mm-yyyy.
-- Services/providers browse in memory (chips, no full navigation). Empty or down catalogue shows a static fallback marketplace so Bali/Jakarta filters still have rows. 15s circuit-breaker skips repeat 10s DB connect waits.
-- Trip quality nav goes to `/[lang]/food`. Active nav `li` uses a 2px emerald underline; other items have none.
-- Layout no longer awaits `getSessionUser()`; `NavAuth` reads `/api/auth/session` on the client.
+Re-verified on the live site 2026-08-24 (browser + HTTP). All 12 tester items
+pass except full Google OAuth (needs a real Google account). Warm TTFB after
+health: home ~0.7s, services ~2.6s, providers ~0.3s.
 
-These changes are uncommitted until a deploy is requested. Production still serves the previous itinerary 404 until then.
+- Password sign-in accepts email; wrong credentials return "Username or password is incorrect." Signup sanitizes display names and emails.
+- Google/Clerk already-signed-in offers Continue + Use a different account, then bridges to `o2b_session`.
+- Package itinerary fallback slugs (`sattvik-serenity` etc.) no longer 404 when Neon has no package rows. Dates are dd-mm-yyyy.
+- Services/providers destination chips filter in the browser; empty catalogue uses static fallback listings.
+- Trip quality nav goes to `/[lang]/food`. Active nav `li` has a 2px emerald underline.
+- Layout no longer awaits `getSessionUser()`; catalogue circuit-breaker after a DB outage.
 
 ## Current product (2026-08-24)
 

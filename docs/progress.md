@@ -9,9 +9,13 @@
 >
 > This tracks the **real project**, not a greenfield build. The product is already live.
 
-## Tester QA batch (2026-08-24, local)
+## Tester QA batch (2026-08-24)
 
-Verified and fixed in `only2bali-next` (not yet committed/deployed):
+Shipped: commit `4f090f6` on `feat/schema-status-health`, production deploy
+`dpl_6LPp5Dy9iB2aUbFipp6zFKdWCZpD` (https://only2bali.vercel.app).
+
+Re-verified live 2026-08-24 on https://only2bali.vercel.app (browser + HTTP).
+No remaining code gaps from that tester batch.
 
 - [x] Login regex error on signup and wrong password
 - [x] Google/Clerk already-signed-in loop (Continue / switch account)
@@ -21,7 +25,8 @@ Verified and fixed in `only2bali-next` (not yet committed/deployed):
 - [x] Trip quality goes to `/food`; nav underline only on the active `li`
 - [x] Shared layout no longer blocks on session DB; catalogue circuit-breaker after outage
 
-Still owner: seed Neon with real marketplace rows; Google OAuth needs a live Clerk session to fully retest; paste Razorpay webhook; optional Stripe keys.
+Still owner: seed Neon with real marketplace rows; click through Google OAuth
+with a real Google account; paste Razorpay webhook; optional Stripe keys.
 
 ## Neon is the database of record (2026-08-24)
 
