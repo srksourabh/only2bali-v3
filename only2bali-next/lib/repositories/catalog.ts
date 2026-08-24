@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { isCatalogueCircuitOpen, tripCatalogueCircuit } from "@/lib/db/catalogue-circuit";
 import {
   circuit, pkg, packageCircuit, packagePlace, place, packageHighlight, departure,
   packageDay, packageDayMeal, packageInclusion,
@@ -218,12 +219,18 @@ export interface PackageDetail extends PackageCard {
  * has no reason to believe the badge.
  */
 export async function getPackageBySlug(slug: string): Promise<PackageDetail | null> {
-  try {
-    return await getPackageBySlugFromDb(slug);
-  } catch (err) {
-    console.warn("[package] catalogue unavailable, using itinerary fallback", err);
-    return getFallbackPackageBySlug(slug);
+  if (!isCatalogueCircuitOpen()) {
+    try {
+      const fromDb = await getPackageBySlugFromDb(slug);
+      if (fromDb) return fromDb;
+    } catch (err) {
+      console.warn("[package] catalogue unavailable, using itinerary fallback", err);
+      tripCatalogueCircuit();
+    }
   }
+  // Homepage cards fall back to dictionary slugs when Neon has no package rows.
+  // The detail page must do the same, otherwise "View itinerary" 404s.
+  return getFallbackPackageBySlug(slug);
 }
 
 async function getPackageBySlugFromDb(slug: string): Promise<PackageDetail | null> {

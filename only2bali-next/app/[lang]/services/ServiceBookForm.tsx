@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import BookingPayButton from "@/app/[lang]/account/BookingPayButton";
+import { formatDateDdMmYyyy } from "@/lib/dates";
 
 type PayCopy = {
   payNow: string;
@@ -131,12 +132,12 @@ export default function ServiceBookForm({
               <option value="">—</option>
               {dateOptions.map((d) => (
                 <option key={d} value={d}>
-                  {d}
+                  {formatDateDdMmYyyy(d)}
                 </option>
               ))}
             </select>
           ) : (
-            <input type="date" value={serviceDate} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setServiceDate(e.target.value)} />
+            <input type="date" lang="en-IN" value={serviceDate} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setServiceDate(e.target.value)} />
           )}
         </label>
         <label>

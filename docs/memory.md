@@ -5,6 +5,19 @@
 >
 > Agent config lives in `CLAUDE.md` (Claude Code / Cursor) and `AGENTS.md` (Antigravity).
 
+## QA tester fixes (2026-08-24, local — not deployed)
+
+Testing-team notes on login, itinerary 404s, destination filters, dates, nav:
+
+- Password sign-in accepts email; wrong credentials return "Username or password is incorrect." not the username-character regex. Signup sanitizes display names and emails; blank email/businessName on traveler signup are ignored.
+- Google/Clerk "already signed in" offers Continue + Use a different account, then bridges to `o2b_session`.
+- Package "View itinerary & offer" uses catalogue fallback slugs (`sattvik-serenity` etc.) so the detail page does not 404 when Neon has no package rows. Dates on those pages are dd-mm-yyyy.
+- Services/providers browse in memory (chips, no full navigation). Empty or down catalogue shows a static fallback marketplace so Bali/Jakarta filters still have rows. 15s circuit-breaker skips repeat 10s DB connect waits.
+- Trip quality nav goes to `/[lang]/food`. Active nav `li` uses a 2px emerald underline; other items have none.
+- Layout no longer awaits `getSessionUser()`; `NavAuth` reads `/api/auth/session` on the client.
+
+These changes are uncommitted until a deploy is requested. Production still serves the previous itinerary 404 until then.
+
 ## Current product (2026-08-24)
 
 The live product is **only2bali-next** at https://only2bali.vercel.app
@@ -561,7 +574,7 @@ payouts were not built. Do not complete a live Razorpay or Stripe charge to test
 Replaced the SiteNav text-link row with `components/ui/notch-nav.tsx`. Tailwind 3
 was added with **preflight off** and tokens mapped to emerald/cream/ivory; shadcn
 was not initialized. Language switcher, Sign in, and Plan your trip stay in the
-header. Mobile uses a second-row horizontal scroll. Not committed.
+header. Mobile uses a second-row horizontal scroll.
 
 ### 2026-08-24 — Neon is the only production database
 
@@ -572,3 +585,9 @@ Owner directed: stop Hostinger/VPS/mTLS/Azure Postgres for this app. Production
 applied 0000–0006 on the empty Neon (`7/7`, `authReady`). Hostinger marketplace
 rows did not move; Neon started empty. Admin `o2badmin` was recreated on Neon.
 Password is in Vercel `ADMIN_PASSWORD`, not printed here.
+
+### 2026-08-24 — Git push + Vercel production
+
+Committed `5514d04` on `feat/schema-status-health` and pushed to origin.
+Production CLI deploy `dpl_CL19V7Hgp2setxjPKi4GLz56vXgM` is Ready at
+https://only2bali.vercel.app. `main` was not merged.

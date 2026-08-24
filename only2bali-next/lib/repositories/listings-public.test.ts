@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { isPubliclyVisibleListing, listingMatchesRegion } from "./listings-public";
+import { listingMatchesRegion } from "@/lib/marketplace-region";
+import { isPubliclyVisibleListing } from "./listings-public";
 
 describe("isPubliclyVisibleListing", () => {
   it("shows only active listings from verified vendors", () => {

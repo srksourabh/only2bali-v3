@@ -28,20 +28,28 @@ export async function listPublishedVendorReviews(vendorId: string, limit = 20) {
       .orderBy(desc(review.createdAt))
       .limit(limit);
   } catch (err) {
-    if (!isSchemaLagError(err)) throw err;
-    const rows = await db
-      .select({
-        id: review.id,
-        rating: review.rating,
-        comment: review.comment,
-        foodComplianceKept: review.foodComplianceKept,
-        createdAt: review.createdAt,
-      })
-      .from(review)
-      .where(and(eq(review.vendorId, vendorId), eq(review.published, true)))
-      .orderBy(desc(review.createdAt))
-      .limit(limit);
-    return rows.map((row) => ({ ...row, direction: "traveller_to_vendor" as const }));
+    if (isSchemaLagError(err)) {
+      try {
+        const rows = await db
+          .select({
+            id: review.id,
+            rating: review.rating,
+            comment: review.comment,
+            foodComplianceKept: review.foodComplianceKept,
+            createdAt: review.createdAt,
+          })
+          .from(review)
+          .where(and(eq(review.vendorId, vendorId), eq(review.published, true)))
+          .orderBy(desc(review.createdAt))
+          .limit(limit);
+        return rows.map((row) => ({ ...row, direction: "traveller_to_vendor" as const }));
+      } catch (retryErr) {
+        console.warn("[reviews] list unavailable after schema retry", retryErr);
+        return [];
+      }
+    }
+    console.warn("[reviews] list unavailable", err);
+    return [];
   }
 }
 

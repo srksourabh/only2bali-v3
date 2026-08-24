@@ -85,7 +85,7 @@ export default async function LangLayout({
     .join(" ");
 
   return (
-    <html lang={lang} suppressHydrationWarning>
+    <html lang={lang === "en" ? "en-IN" : lang} suppressHydrationWarning>
       <body className={bodyClass}>
         <ClerkAppProvider>
           <PwaRegister />

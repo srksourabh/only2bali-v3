@@ -1,10 +1,17 @@
+import { listingMatchesRegion, type RegionFilter } from "@/lib/marketplace-region";
 import { and, asc, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { isSchemaLagError } from "@/lib/db/schema-lag";
 import { availability, serviceListing, vendor } from "@/lib/db/schema";
+import { isCatalogueCircuitOpen, tripCatalogueCircuit } from "@/lib/db/catalogue-circuit";
+import {
+  getFallbackServiceById,
+  isFallbackServiceId,
+  listFallbackServices,
+} from "@/lib/repositories/marketplace-fallback";
 
 export type PublicListingFilters = {
-  region?: "bali" | "jakarta" | "all";
+  region?: RegionFilter;
   serviceType?: string;
   priceMin?: number;
   priceMax?: number;
@@ -12,21 +19,8 @@ export type PublicListingFilters = {
   limit?: number;
 };
 
-export function listingMatchesRegion(
-  listing: { city?: string | null; area?: string | null; vendorArea?: string | null; vendorCity?: string | null },
-  region: PublicListingFilters["region"]
-): boolean {
-  if (!region || region === "all") return true;
-  const haystack = [listing.city, listing.area, listing.vendorArea, listing.vendorCity]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-  if (region === "jakarta") return haystack.includes("jakarta");
-  if (haystack.includes("jakarta") && !/\bbali|ubud|seminyak|canggu|nusa|kuta|sanur|denpasar\b/.test(haystack)) {
-    return false;
-  }
-  return true;
-}
+export { listingMatchesRegion };
+export type { RegionFilter };
 
 type QueryMode = "full" | "legacy";
 
@@ -172,14 +166,17 @@ export async function listPublicServices(filters: PublicListingFilters = {}) {
   }
 }
 
-/** Browse pages must render when production schema is behind. */
+/** Browse pages must render when production schema is behind or empty. */
 export async function listPublicServicesForPage(filters: PublicListingFilters = {}) {
+  if (isCatalogueCircuitOpen()) return listFallbackServices(filters);
   try {
-    return await listPublicServices(filters);
+    const rows = await listPublicServices(filters);
+    if (rows.length > 0) return rows;
   } catch (err) {
     console.warn("[services] catalogue unavailable", err);
-    return [];
+    tripCatalogueCircuit();
   }
+  return listFallbackServices(filters);
 }
 
 const serviceDetailCoreSelect = {
@@ -251,26 +248,35 @@ async function queryServiceById(id: string, mode: QueryMode) {
 }
 
 export async function getPublicServiceById(id: string) {
-  let row;
-  try {
-    row = await queryServiceById(id, "full");
-  } catch (err) {
-    if (!isSchemaLagError(err)) throw err;
-    console.warn("[services] schema behind 0003; retrying service detail without city columns");
-    row = await queryServiceById(id, "legacy");
-  }
+  if (!isCatalogueCircuitOpen()) {
+    try {
+      let row;
+      try {
+        row = await queryServiceById(id, "full");
+      } catch (err) {
+        if (!isSchemaLagError(err)) throw err;
+        console.warn("[services] schema behind 0003; retrying service detail without city columns");
+        row = await queryServiceById(id, "legacy");
+      }
 
-  if (!row) return null;
-  if (
-    !isPubliclyVisibleListing({
-      listingStatus: row.status,
-      listingActive: row.active,
-      vendorVerificationStatus: row.verificationStatus,
-    })
-  ) {
-    return null;
+      if (row) {
+        if (
+          !isPubliclyVisibleListing({
+            listingStatus: row.status,
+            listingActive: row.active,
+            vendorVerificationStatus: row.verificationStatus,
+          })
+        ) {
+          return null;
+        }
+        return row;
+      }
+    } catch (err) {
+      console.warn("[services] service detail unavailable", err);
+      tripCatalogueCircuit();
+    }
   }
-  return row;
+  return getFallbackServiceById(id);
 }
 
 export async function listListingAvailability(
@@ -280,30 +286,7 @@ export async function listListingAvailability(
   const service = await getPublicServiceById(listingId);
   if (!service) return null;
 
-  const from = opts.from ?? new Date().toISOString().slice(0, 10);
-  const toDate = new Date();
-  toDate.setUTCDate(toDate.getUTCDate() + 60);
-  const to = opts.to ?? toDate.toISOString().slice(0, 10);
-
-  const rows = await db
-    .select({
-      date: availability.date,
-      status: availability.status,
-      priceOverrideAmount: availability.priceOverrideAmount,
-      holdExpiresAt: availability.holdExpiresAt,
-    })
-    .from(availability)
-    .where(
-      and(
-        eq(availability.listingId, listingId),
-        gte(availability.date, from),
-        lte(availability.date, to)
-      )
-    )
-    .orderBy(asc(availability.date));
-
-  const now = Date.now();
-  return {
+  const empty = {
     service: {
       id: service.id,
       title: service.title,
@@ -313,16 +296,56 @@ export async function listListingAvailability(
       capacityMin: service.capacityMin,
       capacityMax: service.capacityMax,
     },
-    days: rows.map((r) => {
-      const heldLive =
-        r.status === "held" && r.holdExpiresAt && r.holdExpiresAt.getTime() > now;
-      const open = r.status === "open" || (r.status === "held" && !heldLive);
-      return {
-        date: r.date,
-        status: open ? ("open" as const) : (r.status as "held" | "booked" | "blocked"),
-        priceAmount: r.priceOverrideAmount ?? service.priceAmount,
-        bookable: open,
-      };
-    }),
+    days: [] as Array<{
+      date: string;
+      status: "open" | "held" | "booked" | "blocked";
+      priceAmount: number;
+      bookable: boolean;
+    }>,
   };
+
+  if (isFallbackServiceId(listingId)) return empty;
+
+  try {
+    const from = opts.from ?? new Date().toISOString().slice(0, 10);
+    const toDate = new Date();
+    toDate.setUTCDate(toDate.getUTCDate() + 60);
+    const to = opts.to ?? toDate.toISOString().slice(0, 10);
+
+    const rows = await db
+      .select({
+        date: availability.date,
+        status: availability.status,
+        priceOverrideAmount: availability.priceOverrideAmount,
+        holdExpiresAt: availability.holdExpiresAt,
+      })
+      .from(availability)
+      .where(
+        and(
+          eq(availability.listingId, listingId),
+          gte(availability.date, from),
+          lte(availability.date, to)
+        )
+      )
+      .orderBy(asc(availability.date));
+
+    const now = Date.now();
+    return {
+      ...empty,
+      days: rows.map((r) => {
+        const heldLive =
+          r.status === "held" && r.holdExpiresAt && r.holdExpiresAt.getTime() > now;
+        const open = r.status === "open" || (r.status === "held" && !heldLive);
+        return {
+          date: r.date,
+          status: open ? ("open" as const) : (r.status as "held" | "booked" | "blocked"),
+          priceAmount: r.priceOverrideAmount ?? service.priceAmount,
+          bookable: open,
+        };
+      }),
+    };
+  } catch (err) {
+    console.warn("[services] availability unavailable", err);
+    return empty;
+  }
 }

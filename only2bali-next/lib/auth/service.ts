@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, ne, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { account, otpCode, session, auditLog, traveller, vendor, oauthAccount } from "@/lib/db/schema";
 import {
@@ -244,7 +244,7 @@ export async function signInWithPassword(
   const [row] = await db
     .select()
     .from(account)
-    .where(eq(account.username, input.username))
+    .where(or(eq(account.username, input.username), eq(account.email, input.username)))
     .limit(1);
 
   if (!row || row.status !== "active" || !verifyPassword(input.password, row.passwordHash)) {

@@ -86,7 +86,11 @@ export default function LoginForm({
         router.refresh();
         return;
       }
-      setError(body?.fields?.[0]?.message ?? body?.error ?? t.errGeneric);
+      if (mode === "signin") {
+        setError(body?.error ?? "Username or password is incorrect.");
+      } else {
+        setError(body?.fields?.[0]?.message ?? body?.error ?? t.errGeneric);
+      }
     } catch {
       setError(t.errNetwork);
     } finally {
@@ -230,7 +234,7 @@ export default function LoginForm({
             </p>
           )}
 
-          <label htmlFor="username">Username</label>
+          <label htmlFor="username">Username or email</label>
           <input
             id="username"
             value={username}

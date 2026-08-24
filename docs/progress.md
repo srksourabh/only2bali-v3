@@ -9,6 +9,20 @@
 >
 > This tracks the **real project**, not a greenfield build. The product is already live.
 
+## Tester QA batch (2026-08-24, local)
+
+Verified and fixed in `only2bali-next` (not yet committed/deployed):
+
+- [x] Login regex error on signup and wrong password
+- [x] Google/Clerk already-signed-in loop (Continue / switch account)
+- [x] Dates shown as dd-mm-yyyy
+- [x] View itinerary 404 on home/packages fallback slugs
+- [x] Services/providers destination chips filter in-memory; empty Neon uses fallback listings
+- [x] Trip quality goes to `/food`; nav underline only on the active `li`
+- [x] Shared layout no longer blocks on session DB; catalogue circuit-breaker after outage
+
+Still owner: seed Neon with real marketplace rows; Google OAuth needs a live Clerk session to fully retest; paste Razorpay webhook; optional Stripe keys.
+
 ## Neon is the database of record (2026-08-24)
 
 Production Next.js uses **Neon only** (Vercel integration `o2b_*` vars,
@@ -74,7 +88,8 @@ Still blocked on production (owner):
   `STRIPE_WEBHOOK_SECRET` and point Stripe at
   `https://only2bali.vercel.app/api/payments/webhook/stripe`
 - Set `RESEND_API_KEY` or `SPRINGEDGE_API_KEY` if you want OTP (password/Clerk work now)
-- Commit the uncommitted working tree; the CLI deploy is ahead of git
+- [x] Commit and push the working tree (`5514d04` on `feat/schema-status-health`);
+      production is `dpl_CL19V7Hgp2setxjPKi4GLz56vXgM`. `main` still lacks this commit.
 - Re-seed or recreate marketplace listings on Neon (schema is empty of product
   rows after the Hostinger → Neon cutover)
 

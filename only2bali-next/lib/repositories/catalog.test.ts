@@ -38,6 +38,12 @@ describe("getPackageBySlug when the database cannot be reached", () => {
     await expect(getPackageBySlug("no-such-package")).resolves.toBeNull();
   });
 
+  it("uses the curated itinerary when the database has no row for a known slug", async () => {
+    expect((await import("./catalog")).getFallbackPackageBySlug("sattvik-serenity")?.slug).toBe(
+      "sattvik-serenity",
+    );
+  });
+
   it("also falls back when no DATABASE_URL is set", async () => {
     vi.stubEnv("DATABASE_URL", "");
     const { getPackageBySlug } = await import("./catalog");

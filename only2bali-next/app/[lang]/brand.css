@@ -127,6 +127,16 @@ h1, h2, h3, h4, .wm {
   list-style: none;
   margin: 0;
 }
+.notch-nav li {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-bottom: 2px solid transparent;
+  text-decoration: none;
+}
+.notch-nav li[data-active="true"] {
+  border-bottom-color: var(--emerald);
+}
 .notch-nav [role="menuitem"] {
   position: relative;
   display: inline-flex;
@@ -134,7 +144,7 @@ h1, h2, h3, h4, .wm {
   border: 0;
   background: none;
   border-radius: 0.375rem;
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 0.75rem 0.35rem;
   font: inherit;
   font-size: 0.875rem;
   font-weight: 600;
@@ -147,13 +157,11 @@ h1, h2, h3, h4, .wm {
 .notch-nav [role="menuitem"]:hover,
 .notch-nav [role="menuitem"][aria-current="page"] {
   color: var(--emerald);
+  text-decoration: none;
 }
 .notch-nav [role="menuitem"]:focus-visible {
   outline: 2px solid var(--saffron);
   outline-offset: 2px;
-}
-.notch-nav [aria-hidden="true"] {
-  color: var(--emerald);
 }
 
 /* language switcher */
@@ -369,8 +377,8 @@ section { padding: clamp(3.5rem, 7vw, 6rem) 0; }
 .pkg .price small { display: block; font-family: var(--font-body); font-size: .7rem; color: var(--text-2); font-weight: 400; }
 .chips { display: flex; flex-wrap: wrap; gap: .35rem; }
 .chip { background: var(--cream); color: var(--head); border-radius: var(--r-pill); padding: .22rem .68rem; font-size: .72rem; font-weight: 600; }
-a.chip { text-decoration: none; border: 1px solid transparent; }
-a.chip-on, .chip-on { background: var(--emerald); color: var(--ivory); }
+a.chip, button.chip { text-decoration: none; border: 1px solid transparent; background: var(--cream); color: var(--head); cursor: pointer; font: inherit; }
+a.chip-on, button.chip-on, .chip-on { background: var(--emerald); color: var(--ivory); }
 
 /* ---------- languages ---------- */
 .langs { display: flex; flex-wrap: wrap; gap: .6rem; }

@@ -1,14 +1,12 @@
 import Link from "next/link";
 import type { Dictionary } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n/config";
-import { getSessionUser } from "@/lib/auth";
 import Mark from "./Mark";
 import LanguageSwitcher from "./LanguageSwitcher";
 import SiteNotchNav from "./SiteNotchNav";
+import NavAuth from "./NavAuth";
 
-export default async function SiteNav({ lang, dict }: { lang: Locale; dict: Dictionary }) {
-  const user = await getSessionUser();
-
+export default function SiteNav({ lang, dict }: { lang: Locale; dict: Dictionary }) {
   return (
     <header className="o2b-nav">
       <div className="o2b-wrap o2b-navrow">
@@ -33,17 +31,7 @@ export default async function SiteNav({ lang, dict }: { lang: Locale; dict: Dict
 
         <div className="navactions">
           <LanguageSwitcher lang={lang} label={dict.nav.language} />
-
-          {user ? (
-            <Link className="btn btn-ghost btn-sm" href={`/${lang}/account`}>
-              {dict.auth.account}
-            </Link>
-          ) : (
-            <Link className="navsignin" href={`/${lang}/login`}>
-              {dict.auth.signIn}
-            </Link>
-          )}
-
+          <NavAuth lang={lang} signInLabel={dict.auth.signIn} accountLabel={dict.auth.account} />
           <Link className="btn btn-primary" href={`/${lang}/planner`}>
             {dict.nav.plan}
           </Link>

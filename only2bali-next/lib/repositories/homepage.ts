@@ -1,3 +1,5 @@
+import { formatDateDdMmYyyy } from "@/lib/dates";
+import { isCatalogueCircuitOpen, tripCatalogueCircuit } from "@/lib/db/catalogue-circuit";
 import { listPackageCards, type PackageCard } from "./catalog";
 import type { Dictionary } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n/config";
@@ -39,15 +41,8 @@ function formatMoney(paise: number, currency: string): string {
   }).format(paise / 100);
 }
 
-export function formatDeparture(iso: string, locale: Locale): string {
-  // Indic locales fall back to en-IN formatting rather than risking an
-  // unsupported locale throwing at render time.
-  const tag = locale === "en" ? "en-GB" : `${locale}-IN`;
-  try {
-    return new Intl.DateTimeFormat(tag, { day: "numeric", month: "short" }).format(new Date(iso));
-  } catch {
-    return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short" }).format(new Date(iso));
-  }
+export function formatDeparture(iso: string, _locale: Locale): string {
+  return formatDateDdMmYyyy(iso);
 }
 
 /**
@@ -66,11 +61,19 @@ export async function getHomePackages(
 ): Promise<{ packages: HomePackage[]; source: "database" | "fallback" }> {
   const fromDict = new Map(dict.packages.items.map((i) => [i.slug, i]));
 
+  if (isCatalogueCircuitOpen()) {
+    return {
+      packages: dict.packages.items.map((i) => ({ ...i, why: [...i.why], chips: [...i.chips], live: null })),
+      source: "fallback",
+    };
+  }
+
   let rows: PackageCard[] = [];
   try {
     rows = await listPackageCards({ limit: options.limit ?? 3 });
   } catch (err) {
     console.warn("[homepage] catalogue unavailable, using dictionary content", err);
+    tripCatalogueCircuit();
     return {
       packages: dict.packages.items.map((i) => ({ ...i, why: [...i.why], chips: [...i.chips], live: null })),
       source: "fallback",

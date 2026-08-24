@@ -575,11 +575,11 @@ function PlannerWizardComponent() {
                     <div className="form-group-row">
                       <div className="form-field">
                         <label htmlFor="from-date">Departure Date (From)</label>
-                        <input id="from-date" type="date" min={todayStr} value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+                        <input id="from-date" type="date" lang="en-IN" min={todayStr} value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
                       </div>
                       <div className="form-field">
                         <label htmlFor="to-date">Return Date (To)</label>
-                        <input id="to-date" type="date" min={fromDate || todayStr} value={toDate} onChange={(e) => setToDate(e.target.value)} />
+                        <input id="to-date" type="date" lang="en-IN" min={fromDate || todayStr} value={toDate} onChange={(e) => setToDate(e.target.value)} />
                       </div>
                     </div>
 

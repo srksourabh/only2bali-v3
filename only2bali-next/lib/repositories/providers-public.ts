@@ -3,6 +3,11 @@ import { db } from "@/lib/db";
 import { isSchemaLagError } from "@/lib/db/schema-lag";
 import { serviceListing, vendor, vendorHighlight, vendorMedia } from "@/lib/db/schema";
 import { listPublishedVendorReviews } from "@/lib/repositories/reviews";
+import { isCatalogueCircuitOpen, tripCatalogueCircuit } from "@/lib/db/catalogue-circuit";
+import {
+  getFallbackProviderBySlug,
+  listFallbackProviders,
+} from "@/lib/repositories/marketplace-fallback";
 
 export type PublicProviderFilters = {
   region?: "bali" | "jakarta" | "all";
@@ -93,14 +98,17 @@ export async function listPublicProviders(filters: PublicProviderFilters = {}) {
   }
 }
 
-/** Browse pages must render when production schema is behind. */
+/** Browse pages must render when production schema is behind or empty. */
 export async function listPublicProvidersForPage(filters: PublicProviderFilters = {}) {
+  if (isCatalogueCircuitOpen()) return listFallbackProviders(filters);
   try {
-    return await listPublicProviders(filters);
+    const rows = await listPublicProviders(filters);
+    if (rows.length > 0) return rows;
   } catch (err) {
     console.warn("[providers] directory unavailable", err);
-    return [];
+    tripCatalogueCircuit();
   }
+  return listFallbackProviders(filters);
 }
 
 const providerProfileCoreSelect = {
@@ -251,10 +259,14 @@ export async function getPublicProviderBySlug(slug: string) {
 }
 
 export async function getPublicProviderBySlugForPage(slug: string) {
-  try {
-    return await getPublicProviderBySlug(slug);
-  } catch (err) {
-    console.warn("[provider] profile unavailable", err);
-    return null;
+  if (!isCatalogueCircuitOpen()) {
+    try {
+      const row = await getPublicProviderBySlug(slug);
+      if (row) return row;
+    } catch (err) {
+      console.warn("[provider] profile unavailable", err);
+      tripCatalogueCircuit();
+    }
   }
+  return getFallbackProviderBySlug(slug);
 }

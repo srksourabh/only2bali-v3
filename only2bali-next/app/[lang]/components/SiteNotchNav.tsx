@@ -45,7 +45,7 @@ export default function SiteNotchNav({ lang, labels }: { lang: Locale; labels: N
       { value: "providers", label: labels.providers, href: `/${lang}/providers` },
       { value: "services", label: labels.services, href: `/${lang}/services` },
       { value: "packages", label: labels.packages, href: `/${lang}/packages` },
-      { value: "guarantee", label: labels.guarantee, href: `/${lang}#guarantee` },
+      { value: "guarantee", label: labels.guarantee, href: `/${lang}/food` },
     ],
     [lang, labels],
   );
