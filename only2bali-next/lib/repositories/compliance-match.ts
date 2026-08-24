@@ -1,3 +1,4 @@
+import type { Protocol } from "@/lib/protocols";
 /**
  * Compliance hard-filter for marketplace matching.
  *
@@ -10,7 +11,7 @@ import { isSchemaLagError } from "@/lib/db/schema-lag";
 import { listingCompliance, serviceListing, vendor } from "@/lib/db/schema";
 import { isPubliclyVisibleListing, listingMatchesRegion } from "@/lib/repositories/listings-public";
 
-export type ProtocolFilter = "jain" | "vegetarian" | "vegan";
+export type ProtocolFilter = Protocol;
 
 /** Pure: expired compliance does not count. */
 export function isComplianceActive(expiresAt: Date | null | undefined, now = new Date()): boolean {

@@ -40,11 +40,11 @@ archive. Never restore them into the production build.
 cd only2bali-next && npm run dev:local        # prints the OTP to the terminal
 cd only2bali-next && npm run dev:down         # remove the local database
 
-npm test          # Vitest, 237 tests as of 2026-08-25
-npm run test:e2e  # boots Postgres + the app, drives it over HTTP
+npm test          # Vitest, 249 tests as of 2026-08-25
+npm run test:e2e  # boots Postgres + the app, drives it over HTTP (322 checks)
 npm run typecheck
 npm run build
-npm run db:verify # 38 checks against whatever DATABASE_URL points at
+npm run db:verify # 43 checks against whatever DATABASE_URL points at
 npm run db:seed
 ```
 
@@ -77,6 +77,12 @@ container.
   limiter is the fallback for when the database is unreachable, not the primary.
 - **Never use `tier` as a price boundary.** Pricing is open-ended min/max with no
   floor and no ceiling; `tier` is a display label only.
+- **Food protocols live in `lib/protocols.ts`, nowhere else.** The list was
+  written out by hand in sixteen files, which is why it stayed at three for so
+  long. `PROTOCOLS` is in storage order because Postgres can only append to an
+  enum; `PROTOCOL_DISPLAY_ORDER` is what a traveller sees. Adding one means
+  appending to both, adding a label to all seven dictionaries, and an
+  `ALTER TYPE … ADD VALUE` migration — never a type rewrite.
 
 ## Rules
 

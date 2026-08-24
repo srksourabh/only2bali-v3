@@ -1,3 +1,4 @@
+import { PROTOCOLS } from "@/lib/protocols";
 import { z } from "zod";
 
 /** Hard cap on the request body. Rejected before any parsing or model call. */
@@ -23,7 +24,7 @@ export const plannerInputSchema = z.object({
   international_airport: shortText.default(""),
   flight_class: shortText.default("Economy"),
   budget: z.enum(["economical", "comfort", "premium"]).default("comfort"),
-  food: z.enum(["jain", "vegetarian", "vegan"]).default("vegetarian"),
+  food: z.enum(PROTOCOLS).default("vegetarian"),
   diet_choices: z.array(shortText).max(20).default([]),
   kitchen: z.coerce.boolean().default(false),
   cook: z.coerce.boolean().default(false),

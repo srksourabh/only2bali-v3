@@ -222,10 +222,11 @@ describe("local private document storage", () => {
       type: "application/pdf",
     });
     const stored = await storeUpload(file, { folder: "documents", vendorId: LOCAL_VENDOR });
+    if (!("ref" in stored)) throw new Error("a documents upload must return a private ref");
 
-    expect(stored.ref).toBe(`providers/${LOCAL_VENDOR}/documents/${stored.ref!.split("/").pop()}`);
+    expect(stored.ref).toBe(`providers/${LOCAL_VENDOR}/documents/${stored.ref.split("/").pop()}`);
 
-    const read = await readDocumentBytes(stored.ref!);
+    const read = await readDocumentBytes(stored.ref);
     expect(read).not.toBeNull();
     expect(read!.bytes.toString("hex")).toBe("25504446");
     expect(read!.contentType).toBe("application/pdf");

@@ -1,3 +1,4 @@
+import type { Protocol } from "@/lib/protocols";
 import { listingMatchesRegion, type RegionFilter } from "@/lib/marketplace-region";
 import { and, asc, desc, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -15,7 +16,7 @@ export type PublicListingFilters = {
   serviceType?: string;
   priceMin?: number;
   priceMax?: number;
-  protocol?: "jain" | "vegetarian" | "vegan";
+  protocol?: Protocol;
   limit?: number;
 };
 

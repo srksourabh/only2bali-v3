@@ -1,3 +1,4 @@
+import type { Protocol } from "@/lib/protocols";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { isCatalogueCircuitOpen, tripCatalogueCircuit } from "@/lib/db/catalogue-circuit";
@@ -51,7 +52,7 @@ export interface PackageCard {
 
 export interface PackageFilters {
   circuitKey?: string;
-  protocol?: "jain" | "vegetarian" | "vegan";
+  protocol?: Protocol;
   /** Open-ended. Either bound may be omitted; `tier` is never a price boundary. */
   minPrice?: number;
   maxPrice?: number;

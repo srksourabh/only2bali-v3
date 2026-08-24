@@ -1,3 +1,4 @@
+import type { Protocol } from "@/lib/protocols";
 /**
  * Demo data for the marketplace half of the product.
  *
@@ -58,7 +59,7 @@ interface DemoVendor {
     images: string[];
     circuits: Array<"ramayana" | "adventure" | "culinary" | "artistic">;
     compliance: Array<{
-      protocol: "jain" | "vegetarian" | "vegan";
+      protocol: Protocol;
       guaranteeLevel: "certified" | "capable" | "on_request" | "not_supported";
       rating: "green" | "amber" | "red";
       kitchenType?: "dedicated_veg" | "separate_line" | "shared";

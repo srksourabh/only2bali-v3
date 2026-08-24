@@ -1,3 +1,4 @@
+import type { Protocol } from "@/lib/protocols";
 /**
  * Seeds circuits, places and the package catalogue.
  *
@@ -42,7 +43,7 @@ interface SeedPackage {
   days: number;
   nights: number;
   tier: "economical" | "comfort" | "premium";
-  protocols: Array<"jain" | "vegetarian" | "vegan">;
+  protocols: Protocol[];
   priceRupees: number;
   heroImage: string;
   blurb: string;

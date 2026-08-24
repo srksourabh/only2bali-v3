@@ -1,9 +1,10 @@
 import { pgEnum } from "drizzle-orm/pg-core";
+import { PROTOCOLS } from "@/lib/protocols";
 
 export const accountRole = pgEnum("account_role", ["traveller", "vendor", "admin"]);
 export const accountStatus = pgEnum("account_status", ["active", "suspended", "deleted"]);
 
-export const protocol = pgEnum("protocol", ["jain", "vegetarian", "vegan"]);
+export const protocol = pgEnum("protocol", PROTOCOLS);
 
 /** Display label only. Never a price boundary — pricing is open-ended (spec §2.3). */
 export const tier = pgEnum("tier", ["economical", "comfort", "premium"]);

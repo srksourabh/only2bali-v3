@@ -26,6 +26,7 @@ import { db } from "../lib/db";
 import { SESSION_COOKIE } from "../lib/auth";
 import { hashSessionToken } from "../lib/auth/crypto";
 import { razorpayPaymentSignature } from "../lib/payments/razorpay";
+import { PROTOCOLS } from "../lib/protocols";
 
 /** Matches the test-only key exported by scripts/e2e.sh. Not a live secret. */
 const E2E_RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET ?? "e2e-only2bali-razorpay-key-secret";
@@ -931,6 +932,49 @@ async function main() {
       },
     });
     check("a tampered verify signature is refused", bad.status === 400, `HTTP ${bad.status}`);
+  }
+
+  // ---------- food protocols ----------
+  //
+  // The list grew from three to seven. What matters is that a protocol the
+  // form offers is a protocol the API stores - a mismatch here is somebody
+  // booking a trip under a diet the platform never recorded.
+  console.log("\nFood protocols");
+  {
+    const res = await call("/api/trip-requests", { cookie: sessionCookie, body: { protocol: "not_a_protocol", groupSize: 2 } });
+    check("an invented protocol is refused", res.status === 400, `HTTP ${res.status}`);
+
+    for (const protocol of PROTOCOLS) {
+      const created = await call("/api/trip-requests", {
+        cookie: sessionCookie,
+        body: { protocol, groupSize: 2, notes: `E2E protocol ${protocol} ${run}`, publishToProviders: false },
+      });
+      const body = await json(created);
+      const id = body?.data?.request?.id ?? "";
+      if (!check(`a traveller can request a ${protocol} trip`, created.status === 201 && Boolean(id), `HTTP ${created.status}`)) continue;
+
+      const [row] = (await db.execute(sql`select protocol from trip_request where id = ${id}`)) as unknown as [
+        { protocol: string } | undefined,
+      ];
+      check(`and it is stored as ${protocol}, not coerced`, row?.protocol === protocol, row?.protocol);
+    }
+  }
+  {
+    // The public filter has to accept the same words, or a protocol is
+    // offered on the form and silently ignored on the directory.
+    for (const protocol of PROTOCOLS) {
+      const res = await call(`/api/services?protocol=${protocol}`);
+      check(`the services filter accepts ${protocol}`, res.status === 200, `HTTP ${res.status}`);
+    }
+  }
+  {
+    const res = await call("/en");
+    const html = await res.text();
+    check(
+      "no raw enum value is rendered at a traveller",
+      !html.includes("non_veg"),
+      "the homepage would have shown non_veg"
+    );
   }
 
   // ---------- the demand loop: publish, bid, compare, accept ----------

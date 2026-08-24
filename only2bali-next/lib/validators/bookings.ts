@@ -1,3 +1,4 @@
+import { PROTOCOLS } from "@/lib/protocols";
 import { z } from "zod";
 
 const travellerSchema = z.object({
@@ -9,7 +10,7 @@ const travellerSchema = z.object({
 const sharedBookingFields = {
   pax: z.number().int().min(1, "At least one traveller.").max(30, "Contact us for groups over 30."),
   rooms: z.number().int().min(1).max(15).optional(),
-  protocol: z.enum(["jain", "vegetarian", "vegan"]),
+  protocol: z.enum(PROTOCOLS),
   travellers: z
     .array(travellerSchema)
     .min(1, "Add at least the lead traveller.")

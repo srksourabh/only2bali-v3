@@ -129,7 +129,7 @@ export const en = {
   guarantee: {
     heading: "Food protocol is one filter. Stays, rides and budget are checked too.",
     sub: "Vegetarian, Jain and vegan remain first-class options — disclosed meal by meal — alongside stay comfort, vehicle type, guide language and clear INR pricing.",
-    protocols: { jain: "Jain", veg: "Vegetarian", vegan: "Vegan" },
+    protocols: { jain: "Jain", veg: "Vegetarian", vegan: "Vegan", satvik: "Satvik (no onion or garlic)", eggetarian: "Vegetarian with egg", halal: "Halal", nonVeg: "No restriction" },
     legend: {
       green: "Dedicated kitchen, verified",
       amber: "Shared kitchen, separate line",

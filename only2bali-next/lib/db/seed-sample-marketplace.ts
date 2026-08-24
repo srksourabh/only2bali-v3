@@ -49,7 +49,7 @@ const inr = (rupees: number) => rupees * 100;
 const at = (offsetDays: number) => new Date(Date.now() + offsetDays * 86_400_000);
 const day = (offsetDays: number) => at(offsetDays).toISOString().slice(0, 10);
 
-type Protocol = "jain" | "vegetarian" | "vegan";
+import type { Protocol } from "@/lib/protocols";
 type VendorType = "restaurant" | "transport" | "tour_agency";
 type CircuitKey = "ramayana" | "adventure" | "culinary" | "artistic";
 

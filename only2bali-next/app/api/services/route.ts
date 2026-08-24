@@ -1,3 +1,4 @@
+import { isProtocol } from "@/lib/protocols";
 import { NextResponse } from "next/server";
 import { apiError } from "@/lib/api";
 import { listPublicServices } from "@/lib/repositories/listings-public";
@@ -17,7 +18,7 @@ export async function GET(req: Request) {
     const regionFilter =
       region === "bali" || region === "jakarta" || region === "all" ? region : "all";
 
-    if (protocol === "jain" || protocol === "vegetarian" || protocol === "vegan") {
+    if (isProtocol(protocol)) {
       let services = await listCompliantPublicServices({
         protocol,
         region: regionFilter,

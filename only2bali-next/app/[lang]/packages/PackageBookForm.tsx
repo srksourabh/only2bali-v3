@@ -1,4 +1,6 @@
 "use client";
+import { protocolOptions } from "@/lib/protocol-options";
+import type { Protocol } from "@/lib/protocols";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -48,7 +50,7 @@ export default function PackageBookForm({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pax, setPax] = useState(1);
-  const [protocol, setProtocol] = useState<"jain" | "vegetarian" | "vegan">("vegetarian");
+  const [protocol, setProtocol] = useState<Protocol>("vegetarian");
   const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -138,9 +140,11 @@ export default function PackageBookForm({
       <label>
         {bookCopy.protocol}
         <select value={protocol} onChange={(e) => setProtocol(e.target.value as typeof protocol)}>
-          <option value="vegetarian">{bookCopy.protocols.veg}</option>
-          <option value="jain">{bookCopy.protocols.jain}</option>
-          <option value="vegan">{bookCopy.protocols.vegan}</option>
+          {protocolOptions(bookCopy.protocols).map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
         </select>
       </label>
       <label>
