@@ -40,7 +40,7 @@ archive. Never restore them into the production build.
 cd only2bali-next && npm run dev:local        # prints the OTP to the terminal
 cd only2bali-next && npm run dev:down         # remove the local database
 
-npm test          # Vitest, 249 tests as of 2026-08-25
+npm test          # Vitest, 268 tests as of 2026-08-25
 npm run test:e2e  # boots Postgres + the app, drives it over HTTP (322 checks)
 npm run typecheck
 npm run build

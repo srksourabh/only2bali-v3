@@ -88,13 +88,29 @@ that, silently.
 
 ## 4 — Contact details
 
-| Variable | Note |
-|---|---|
-| `NEXT_PUBLIC_WHATSAPP_NUMBER` | digits with country code |
-| `NEXT_PUBLIC_CONTACT_EMAIL` | |
+**Half of this was already done, and the code was throwing it away.**
 
-`lib/config.ts` rejects the placeholder `6281200000000`, so a half-filled value
-reads as unset rather than as a working number that reaches nobody.
+Production has `NEXT_PUBLIC_CONTACT_EMAIL=hello@only2bali.com` set. `/api/health`
+still reported `contact.email: false`, because `hello@only2bali.com` was the
+literal value `lib/config.ts` used as its "somebody pasted the example" sentinel
+— the single most likely real address for this business. Anyone setting it saw a
+configured variable, a site with no contact link, and nothing explaining the
+gap.
+
+The sentinel is now `you@example.com`, which is reserved by RFC 2606 and cannot
+be a real destination. `lib/config.test.ts` pins both halves: the business's own
+address is accepted, a pasted example is still refused.
+
+**After deploying, `contact.email` should flip to `true` with no change in
+Vercel.** What remains:
+
+| Variable | State |
+|---|---|
+| `NEXT_PUBLIC_CONTACT_EMAIL` | already set — works once the fix ships |
+| `NEXT_PUBLIC_WHATSAPP_NUMBER` | **not set.** Digits with country code, no `+` |
+
+The WhatsApp sentinel `6281200000000` is untouched; all-zeros is not a number
+anyone could want.
 
 ## 5 — Revoke the two leaked credentials
 
@@ -127,28 +143,51 @@ against the production database, not a local one.
 
 ## 7 — Database round-trip latency
 
-`/api/health` answered in 10.7s, 9.8s and 10.0s on three **back-to-back**
-probes. `/api/services` takes 3.6s; static pages 0.5s. Every database-backed
-page pays this, on every request.
+**Root cause found and fixed in code (commit `a6618a4`). This item is now just
+"deploy it, then confirm".**
 
-Two explanations are already ruled out:
+`lib/db/index.ts` cached the connection pool on `globalThis` behind
+`NODE_ENV !== "production"`. It reads as a hot-reload convenience; it was the
+opposite. In production nothing was ever cached, and because `db` is a Proxy
+that calls `connect()` on every property access, **every single query built a
+fresh pool** — TCP handshake, TLS handshake, authentication — and discarded it.
 
-- **Not a cold start.** A Neon scale-to-zero wake would be slow once and fast
-  immediately after. Three consecutive probes were all ~10s.
-- **Probably not pooling.** `docs/memory.md` records `DATABASE_URL` as Neon's
-  pooled `sslmode=require` string. Confirm the host still contains `-pooler`,
-  but do not stop there if it does.
+Nothing ever failed, which is why it lasted. It was only slow. At roughly two
+seconds per query and about five queries in the health handler, that is the ten
+seconds every probe of production reported. Static pages answered in 0.5s and
+hid it completely.
 
-`latencyMs` covers the whole handler, which makes roughly five round trips
-(applied-migration count, three schema probes, one ping). Ten seconds across
-those is about two seconds per round trip, which points at distance rather than
-connection setup.
+The cache now applies in every environment, which is what the comment above it
+already claimed. `lib/db/index.test.ts` asserts reuse rather than the
+environment, and was run against the unfixed code first to confirm it fails
+there.
 
-**Check first:** the Neon project's region against the Vercel function region.
-A database in one continent and a function in another produces exactly this
-profile, and it is invisible locally — `npm run db:verify` reports 1ms average
-against the Docker Postgres. Co-locating them is a Neon project setting, not a
-code change.
+### After deploying, confirm
+
+`/api/health` now reports `placement`:
+
+```json
+"placement": { "database": "...", "function": "iad1", "colocated": true|false }
+```
+
+- **`colocated: true`** — nothing more to do. Expect `latencyMs` to fall from
+  ~10s to well under a second.
+- **`colocated: false`** — the pool fix alone still helps a great deal, but
+  every query is crossing regions. Functions currently execute in **iad1**
+  (confirmed from the `x-vercel-id` header; the `bom1` in that header is only
+  the edge PoP that accepted the request, not where the code ran). Move them to
+  the database's region by adding a `vercel.json` beside `package.json`:
+
+  ```json
+  { "regions": ["<the vercel region matching placement.database>"] }
+  ```
+
+  `lib/db/placement.ts` carries the Vercel-region-to-cloud-region table — for
+  example `ap-south-1` is `bom1`, `us-east-1` is `iad1`. Redeploy after adding
+  it.
+
+Neon regions cannot be changed in place, so moving the functions is the cheap
+direction. Do not guess: read `placement` first.
 
 ## After each change
 
