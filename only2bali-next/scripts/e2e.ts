@@ -75,6 +75,10 @@ const ADMIN_EMAIL = `e2e-admin-${run}@only2bali.test`;
 const ADMIN_USERNAME = `admin-${run}`;
 const APPLICANT_EMAIL = `e2e-applicant-${run}@only2bali.test`;
 const APPLICANT_BUSINESS = `E2E Applicant Kitchen ${run}`;
+/** Run-unique so a half-cleaned earlier run cannot collide on the unique index. */
+const MOBILE = `+9198${String(Date.now()).slice(-8)}`;
+/** What the provider asks to be paid. The traveller's price is derived from it. */
+const BID_NET_AMOUNT = 6_000_000;
 
 let sessionCookie = "";
 let vendorCookie = "";
@@ -82,6 +86,13 @@ let adminCookie = "";
 let marketplaceListingId = "";
 let marketplaceBookingId = "";
 let applicantApplicationId = "";
+let boardRequestId = "";
+let acceptedOfferId = "";
+let rivalOfferId = "";
+let bidThreadId = "";
+let offerBookingId = "";
+let offerPaymentId = "";
+let disbursementId = "";
 /** Set once a booking has taken seats, so cleanup can give them back. */
 let bookedDepartureId = "";
 
@@ -919,6 +930,599 @@ async function main() {
     check("a tampered verify signature is refused", bad.status === 400, `HTTP ${bad.status}`);
   }
 
+  // ---------- the demand loop: publish, bid, compare, accept ----------
+  //
+  // The traveller's first request stayed private because the account had only
+  // an email. Publishing to providers needs a verified mobile, so that round
+  // trip is driven here rather than arranged in SQL — an unverified number
+  // silently publishing a request would be the bug worth catching.
+  console.log("\nRequest board, bids and offers");
+  {
+    const res = await call("/api/auth/verify-mobile/request", {
+      cookie: sessionCookie,
+      body: { mobile: MOBILE },
+    });
+    check("a signed-in traveller can ask to verify a mobile", res.status === 200, `HTTP ${res.status}`);
+
+    const anon = await call("/api/auth/verify-mobile/request", { body: { mobile: MOBILE } });
+    check("an anonymous caller cannot", anon.status === 401, `HTTP ${anon.status}`);
+  }
+  {
+    const code = await otpFromLog(MOBILE);
+    if (!check("the mobile code reaches its delivery channel", Boolean(code), code ? "read from the server log" : "not found")) {
+      console.log("\n  Cannot continue the request board without the mobile code.\n");
+    } else {
+      const wrong = await call("/api/auth/verify-mobile/confirm", {
+        cookie: sessionCookie,
+        body: { mobile: MOBILE, code: code === "000000" ? "111111" : "000000" },
+      });
+      check("a wrong mobile code is refused", wrong.status === 400, `HTTP ${wrong.status}`);
+
+      const res = await call("/api/auth/verify-mobile/confirm", {
+        cookie: sessionCookie,
+        body: { mobile: MOBILE, code },
+      });
+      const body = await json(res);
+      check(
+        "the correct mobile code verifies the number",
+        res.status === 200 && body?.data?.verified === true,
+        `HTTP ${res.status}`
+      );
+
+      const [row] = (await db.execute(sql`
+        select mobile, mobile_verified_at from account where email = ${EMAIL}
+      `)) as unknown as [{ mobile: string | null; mobile_verified_at: string | null } | undefined];
+      check("the verification is recorded on the account", Boolean(row?.mobile_verified_at), row?.mobile ?? "no mobile");
+    }
+  }
+  {
+    const res = await call("/api/trip-requests", {
+      cookie: sessionCookie,
+      body: {
+        protocol: "jain",
+        groupSize: 8,
+        nights: 5,
+        departureCity: "Ahmedabad",
+        kitchenRequired: true,
+        budgetMinAmount: 6_000_000,
+        budgetMaxAmount: 9_000_000,
+        budgetCurrency: "INR",
+        budgetBasis: "total",
+        notes: `E2E board request ${run}`,
+        publishToProviders: true,
+      },
+    });
+    const body = await json(res);
+    boardRequestId = body?.data?.request?.id ?? "";
+    check(
+      "a mobile-verified traveller can publish a request",
+      res.status === 201 && Boolean(boardRequestId),
+      `HTTP ${res.status}`
+    );
+    check("and it really is published to providers", body?.data?.publishedToProviders === true);
+
+    const [row] = (await db.execute(sql`
+      select visibility, published_at, bids_close_at from trip_request where id = ${boardRequestId}
+    `)) as unknown as [{ visibility: string; published_at: string | null; bids_close_at: string | null } | undefined];
+    check("the board request is open to verified providers", row?.visibility === "open_to_verified", row?.visibility);
+    check("bidding has a closing date", Boolean(row?.bids_close_at));
+  }
+  {
+    const anon = await call(`/api/trip-requests/${boardRequestId}/bids`, {
+      body: { title: "Anonymous bid", vendorNetAmount: 100_000 },
+    });
+    check("an anonymous caller cannot bid", anon.status === 401, `HTTP ${anon.status}`);
+
+    const asTraveller = await call(`/api/trip-requests/${boardRequestId}/bids`, {
+      cookie: sessionCookie,
+      body: { title: "Traveller bid", vendorNetAmount: 100_000 },
+    });
+    check("a traveller cannot bid on their own request", asTraveller.status === 403, `HTTP ${asTraveller.status}`);
+
+    const invalid = await call(`/api/trip-requests/${boardRequestId}/bids`, {
+      cookie: vendorCookie,
+      body: { title: "", vendorNetAmount: -1 },
+    });
+    check("a malformed bid is refused", invalid.status === 400, `HTTP ${invalid.status}`);
+
+    const missing = await call("/api/trip-requests/00000000-0000-0000-0000-000000000000/bids", {
+      cookie: vendorCookie,
+      body: { title: `E2E bid ${run}`, vendorNetAmount: 100_000 },
+    });
+    check("a bid on an unknown request is a not-found", missing.status === 404, `HTTP ${missing.status}`);
+  }
+  {
+    const res = await call(`/api/trip-requests/${boardRequestId}/bids`, {
+      cookie: vendorCookie,
+      body: {
+        title: `E2E Jain Bali 5N ${run}`,
+        summary: "Kitchen on site, Jain cook, own-language guide.",
+        vendorNetAmount: BID_NET_AMOUNT,
+        currency: "INR",
+        pricePerPerson: Math.floor(BID_NET_AMOUNT / 8),
+        lineItems: [
+          { label: "Stay", amount: 4_000_000 },
+          { label: "Meals", amount: 2_000_000 },
+        ],
+      },
+    });
+    const body = await json(res);
+    acceptedOfferId = body?.data?.bid?.id ?? "";
+    bidThreadId = body?.data?.threadId ?? "";
+    check("a verified provider can bid", res.status === 201 && Boolean(acceptedOfferId), `HTTP ${res.status}`);
+    check("bidding opens a message thread", Boolean(bidThreadId));
+
+    // The provider quotes what it wants to be paid and the traveller's price is
+    // grossed up from it. Taking the commission out of the provider's number
+    // instead would quietly underpay every provider, and the arithmetic is
+    // close enough either way to survive a casual read.
+    //
+    // The rate comes from the vendor row rather than the platform default,
+    // because a negotiated per-provider rate is exactly the case where the two
+    // diverge — and the one a hard-coded default would hide.
+    const [vendorRow] = (await db.execute(sql`
+      select commission_rate from vendor where id = ${vendorId}
+    `)) as unknown as [{ commission_rate: string | null } | undefined];
+    const rate = Number(vendorRow?.commission_rate ?? 0.1);
+    const expectedTotal = Math.ceil(BID_NET_AMOUNT / (1 - rate));
+    const [row] = (await db.execute(sql`
+      select total_amount, vendor_net_amount, commission_rate, status, origin
+      from offer where id = ${acceptedOfferId}
+    `)) as unknown as [
+      | {
+          total_amount: number;
+          vendor_net_amount: number;
+          commission_rate: string;
+          status: string;
+          origin: string;
+        }
+      | undefined,
+    ];
+    check(
+      "the traveller price is grossed up from the provider's net, not cut from it",
+      Number(row?.total_amount) === expectedTotal && Number(row?.vendor_net_amount) === BID_NET_AMOUNT,
+      `${row?.total_amount} vs ${expectedTotal}`
+    );
+    check(
+      "the offer is priced at this provider's own commission rate, not the platform default",
+      Number(row?.commission_rate) === rate,
+      `offer=${row?.commission_rate} vendor=${vendorRow?.commission_rate}`
+    );
+    check(
+      "the bid arrives as a sent vendor offer",
+      row?.status === "sent" && row?.origin === "vendor_bid",
+      `${row?.status}/${row?.origin}`
+    );
+  }
+  {
+    // A second bid, so accepting the first has something to close.
+    const res = await call(`/api/trip-requests/${boardRequestId}/bids`, {
+      cookie: vendorCookie,
+      body: { title: `E2E Runner-up ${run}`, vendorNetAmount: BID_NET_AMOUNT + 500_000, currency: "INR" },
+    });
+    const body = await json(res);
+    rivalOfferId = body?.data?.bid?.id ?? "";
+    check("a second bid is accepted onto the same request", res.status === 201 && Boolean(rivalOfferId), `HTTP ${res.status}`);
+  }
+  {
+    const anon = await call(`/api/trip-requests/${boardRequestId}/offers`);
+    check("offers are not readable anonymously", anon.status === 401, `HTTP ${anon.status}`);
+
+    const res = await call(`/api/trip-requests/${boardRequestId}/offers`, { cookie: sessionCookie });
+    const body = await json(res);
+    const offers: Array<{ id: string }> = body?.data?.offers ?? [];
+    check(
+      "the traveller can compare the offers",
+      res.status === 200 && offers.length === 2,
+      `HTTP ${res.status} count=${offers.length}`
+    );
+    check(
+      "both bids are on the table",
+      offers.some((o) => o.id === acceptedOfferId) && offers.some((o) => o.id === rivalOfferId)
+    );
+
+    const vendorView = await call(`/api/trip-requests/${boardRequestId}/offers`, { cookie: vendorCookie });
+    const vendorBody = await json(vendorView);
+    const mine: Array<{ vendorId: string | null }> = vendorBody?.data?.offers ?? [];
+    check(
+      "a provider sees only its own offers on a request",
+      vendorView.status === 200 && mine.length > 0 && mine.every((o) => o.vendorId === vendorId),
+      `HTTP ${vendorView.status} count=${mine.length}`
+    );
+  }
+  {
+    const res = await call("/api/messages", {
+      cookie: vendorCookie,
+      body: {
+        threadId: bidThreadId,
+        body: `Happy to help. Reach me on ${MOBILE} or vendor-${run}@example.com`,
+      },
+    });
+    check("a provider can message the traveller about the bid", res.status === 201 || res.status === 200, `HTTP ${res.status}`);
+
+    const read = await call(`/api/messages?threadId=${bidThreadId}`, { cookie: sessionCookie });
+    const body = await json(read);
+    check("the traveller can read the thread", read.status === 200, `HTTP ${read.status}`);
+    check(
+      "contact details stay masked before a booking exists",
+      body?.data?.unmasked === false,
+      `unmasked=${body?.data?.unmasked}`
+    );
+    const first = body?.data?.messages?.[0];
+    check("the raw phone number is not served while masked", !String(first?.body ?? "").includes(MOBILE));
+    check("the attempt to swap contacts off-platform is flagged", first?.contactAttemptDetected === true);
+  }
+  {
+    const asVendor = await call(`/api/offers/${acceptedOfferId}`, { cookie: vendorCookie, body: {} });
+    check("a provider cannot accept its own offer", asVendor.status === 403, `HTTP ${asVendor.status}`);
+
+    const missing = await call("/api/offers/00000000-0000-0000-0000-000000000000", {
+      cookie: sessionCookie,
+      body: {},
+    });
+    check("accepting an unknown offer is a not-found", missing.status === 404, `HTTP ${missing.status}`);
+
+    const res = await call(`/api/offers/${acceptedOfferId}`, { cookie: sessionCookie, body: {} });
+    const body = await json(res);
+    offerBookingId = body?.data?.booking?.id ?? "";
+    check("the traveller can accept an offer", res.status === 200 && Boolean(offerBookingId), `HTTP ${res.status}`);
+    check("accepting returns a booking reference", Boolean(body?.data?.booking?.reference), body?.data?.booking?.reference);
+
+    const [row] = (await db.execute(sql`
+      select b.status, b.gross_amount, b.commission_amount, b.net_amount, b.pax,
+             tr.status as request_status, tr.close_reason
+      from booking b join trip_request tr on tr.id = b.trip_request_id
+      where b.id = ${offerBookingId}
+    `)) as unknown as [
+      | {
+          status: string;
+          gross_amount: number;
+          commission_amount: number;
+          net_amount: number;
+          pax: number;
+          request_status: string;
+          close_reason: string | null;
+        }
+      | undefined,
+    ];
+    check("the booking waits for payment", row?.status === "pending_payment", row?.status);
+    check("it carries the group size from the request", Number(row?.pax) === 8, `pax=${row?.pax}`);
+    check("the provider keeps exactly the net it quoted", Number(row?.net_amount) === BID_NET_AMOUNT, `${row?.net_amount}`);
+    check(
+      "commission and net add back up to the gross",
+      Number(row?.commission_amount) + Number(row?.net_amount) === Number(row?.gross_amount),
+      `${row?.commission_amount} + ${row?.net_amount} = ${row?.gross_amount}`
+    );
+    check(
+      "the request closes as booked",
+      row?.request_status === "booked" && row?.close_reason === "offer_accepted",
+      `${row?.request_status}/${row?.close_reason}`
+    );
+
+    const [rival] = (await db.execute(sql`
+      select status, decline_reason from offer where id = ${rivalOfferId}
+    `)) as unknown as [{ status: string; decline_reason: string | null } | undefined];
+    check("the losing offer is closed automatically", rival?.status === "declined", rival?.status);
+    check("and it says why", rival?.decline_reason === "Another offer accepted", rival?.decline_reason ?? "no reason");
+
+    const again = await call(`/api/offers/${acceptedOfferId}`, { cookie: sessionCookie, body: {} });
+    check("an accepted offer cannot be accepted twice", again.status === 409, `HTTP ${again.status}`);
+
+    const declineClosed = await call(`/api/offers/${rivalOfferId}?action=decline`, {
+      cookie: sessionCookie,
+      body: { reason: "already chosen" },
+    });
+    check("a closed offer cannot then be declined", declineClosed.status === 409, `HTTP ${declineClosed.status}`);
+  }
+
+  // ---------- the money tail: escrow, payout queue, refund ----------
+  //
+  // Everything after capture. The provider is paid out of an escrow hold that
+  // only an admin can release, and a refund has to beat the payout: money that
+  // has already left cannot be pulled back by this platform, so the refund
+  // must record a clawback rather than quietly rewrite the payout.
+  console.log("\nEscrow, payout and refund");
+  {
+    const asTraveller = await call("/api/provider/payout-account", {
+      cookie: sessionCookie,
+      method: "PUT",
+      body: { accountHolderName: "Not A Provider" },
+    });
+    check("a traveller cannot set a payout account", asTraveller.status === 403, `HTTP ${asTraveller.status}`);
+
+    const invalid = await call("/api/provider/payout-account", {
+      cookie: vendorCookie,
+      method: "PUT",
+      body: { bankName: "No holder name" },
+    });
+    check("a payout account without a holder name is refused", invalid.status === 400, `HTTP ${invalid.status}`);
+
+    const res = await call("/api/provider/payout-account", {
+      cookie: vendorCookie,
+      method: "PUT",
+      body: {
+        accountHolderName: `E2E Payout ${run}`,
+        bankName: "Bank Central Asia",
+        bankCountry: "Indonesia",
+        currency: "IDR",
+        maskedAccount: "****4321",
+      },
+    });
+    check("a provider can set its payout account", res.status === 200, `HTTP ${res.status}`);
+
+    const read = await call("/api/provider/payout-account", { cookie: vendorCookie });
+    const body = await json(read);
+    check(
+      "and read it back",
+      read.status === 200 && body?.data?.payoutAccount?.accountHolderName === `E2E Payout ${run}`,
+      `HTTP ${read.status}`
+    );
+  }
+  {
+    // Capture the accepted offer. The payout account was set first on purpose:
+    // the escrow row is written during capture and links to whatever payout
+    // account exists at that moment.
+    const orderId = `order_e2e_offer_${run}`;
+    const paymentId = `pay_e2e_offer_${run}`;
+    await db.execute(sql`
+      insert into payment (
+        booking_id, provider, provider_order_id, amount, currency, purpose, status, idempotency_key, initiated_by
+      )
+      select
+        b.id, 'razorpay', ${orderId}, b.gross_amount, b.currency, 'full', 'created',
+        ${`e2e-offer-verify-${run}`}, a.id
+      from booking b
+      join traveller t on t.id = b.traveller_id
+      join account a on a.id = t.account_id
+      where b.id = ${offerBookingId}
+    `);
+    const signature = razorpayPaymentSignature(orderId, paymentId, E2E_RAZORPAY_KEY_SECRET);
+    const res = await call("/api/payments/verify", {
+      cookie: sessionCookie,
+      body: {
+        bookingId: offerBookingId,
+        razorpay_order_id: orderId,
+        razorpay_payment_id: paymentId,
+        razorpay_signature: signature,
+      },
+    });
+    const body = await json(res);
+    check(
+      "a signed verify captures the offer booking",
+      res.status === 200 && body?.data?.status === "captured",
+      `HTTP ${res.status} status=${body?.data?.status}`
+    );
+
+    const [row] = (await db.execute(sql`
+      select d.id, d.status, d.hold_reason, d.net_amount, d.commission_amount, d.gross_amount,
+             d.payout_account_id, d.vendor_currency, d.payment_id
+      from payment_disbursement d
+      where d.booking_id = ${offerBookingId}
+    `)) as unknown as [
+      | {
+          id: string;
+          status: string;
+          hold_reason: string | null;
+          net_amount: number;
+          commission_amount: number;
+          gross_amount: number;
+          payout_account_id: string | null;
+          vendor_currency: string;
+          payment_id: string;
+        }
+      | undefined,
+    ];
+    disbursementId = row?.id ?? "";
+    offerPaymentId = row?.payment_id ?? "";
+    check("capture opens an escrow hold for the provider", Boolean(disbursementId) && row?.status === "held", row?.status);
+    check("the hold says what it is waiting for", Boolean(row?.hold_reason), row?.hold_reason ?? "none");
+    check("the escrow row links to the payout account set beforehand", Boolean(row?.payout_account_id));
+    check("the provider is owed in its own currency", row?.vendor_currency === "IDR", row?.vendor_currency);
+    check(
+      "escrow splits the same way the booking does",
+      Number(row?.commission_amount) + Number(row?.net_amount) === Number(row?.gross_amount),
+      `${row?.commission_amount} + ${row?.net_amount} = ${row?.gross_amount}`
+    );
+
+    const thread = await call(`/api/messages?threadId=${bidThreadId}`, { cookie: sessionCookie });
+    const threadBody = await json(thread);
+    check(
+      "a confirmed booking unmasks the thread",
+      threadBody?.data?.unmasked === true,
+      `unmasked=${threadBody?.data?.unmasked}`
+    );
+  }
+  {
+    const anon = await call("/api/admin/disbursements");
+    check("the payout queue is not readable anonymously", anon.status === 401, `HTTP ${anon.status}`);
+
+    const asVendor = await call("/api/admin/disbursements", { cookie: vendorCookie });
+    check("a provider cannot read the payout queue", asVendor.status === 403, `HTTP ${asVendor.status}`);
+
+    const asTraveller = await call("/api/admin/disbursements", { cookie: sessionCookie });
+    check("nor can a traveller", asTraveller.status === 403, `HTTP ${asTraveller.status}`);
+
+    const res = await call("/api/admin/disbursements", { cookie: adminCookie });
+    const body = await json(res);
+    const rows: Array<{ id: string; status: string; businessName: string | null }> = body?.data?.disbursements ?? [];
+    check("an admin can read the payout queue", res.status === 200, `HTTP ${res.status}`);
+    const mine = rows.find((d) => d.id === disbursementId);
+    check("the new hold is on the queue", Boolean(mine), mine ? `${mine.businessName} ${mine.status}` : "not listed");
+  }
+  {
+    const asVendor = await call(`/api/admin/disbursements/${disbursementId}`, {
+      cookie: vendorCookie,
+      method: "PATCH",
+      body: { action: "approve" },
+    });
+    check("a provider cannot approve its own payout", asVendor.status === 403, `HTTP ${asVendor.status}`);
+
+    const badAction = await call(`/api/admin/disbursements/${disbursementId}`, {
+      cookie: adminCookie,
+      method: "PATCH",
+      body: { action: "send_it" },
+    });
+    check("an unknown payout action is refused", badAction.status === 400, `HTTP ${badAction.status}`);
+
+    const missing = await call("/api/admin/disbursements/00000000-0000-0000-0000-000000000000", {
+      cookie: adminCookie,
+      method: "PATCH",
+      body: { action: "approve" },
+    });
+    check("patching an unknown payout is a not-found", missing.status === 404, `HTTP ${missing.status}`);
+
+    const tooEarly = await call(`/api/admin/disbursements/${disbursementId}`, {
+      cookie: adminCookie,
+      method: "PATCH",
+      body: { action: "mark_paid" },
+    });
+    check("money cannot be marked paid straight out of escrow", tooEarly.status === 409, `HTTP ${tooEarly.status}`);
+  }
+  {
+    const res = await call(`/api/admin/disbursements/${disbursementId}`, {
+      cookie: adminCookie,
+      method: "PATCH",
+      body: { action: "release_hold" },
+    });
+    const body = await json(res);
+    check(
+      "an admin can release the escrow hold",
+      res.status === 200 && body?.data?.disbursement?.status === "pending",
+      `HTTP ${res.status} status=${body?.data?.disbursement?.status}`
+    );
+    check("releasing clears the hold reason", body?.data?.disbursement?.holdReason === null);
+
+    const again = await call(`/api/admin/disbursements/${disbursementId}`, {
+      cookie: adminCookie,
+      method: "PATCH",
+      body: { action: "release_hold" },
+    });
+    check("a hold cannot be released twice", again.status === 409, `HTTP ${again.status}`);
+  }
+  {
+    const res = await call(`/api/admin/disbursements/${disbursementId}`, {
+      cookie: adminCookie,
+      method: "PATCH",
+      body: { action: "approve" },
+    });
+    const body = await json(res);
+    check(
+      "an admin can approve the payout",
+      res.status === 200 && body?.data?.disbursement?.status === "approved",
+      `HTTP ${res.status} status=${body?.data?.disbursement?.status}`
+    );
+
+    const [row] = (await db.execute(sql`
+      select d.approved_at, a.email
+      from payment_disbursement d left join account a on a.id = d.approved_by
+      where d.id = ${disbursementId}
+    `)) as unknown as [{ approved_at: string | null; email: string | null } | undefined];
+    check("the approval names the admin who made it", row?.email === ADMIN_EMAIL, row?.email ?? "unattributed");
+    check("and when", Boolean(row?.approved_at));
+
+    const [event] = (await db.execute(sql`
+      select count(*)::int as n from payment_event
+      where payment_id = ${offerPaymentId} and type = 'disbursement.approved'
+    `)) as unknown as [{ n: number }];
+    check("approving is written to the payment ledger", Number(event.n) === 1, `${event.n} rows`);
+  }
+  {
+    const res = await call(`/api/admin/disbursements/${disbursementId}`, {
+      cookie: adminCookie,
+      method: "PATCH",
+      body: { action: "mark_paid" },
+    });
+    const body = await json(res);
+    check(
+      "an admin can mark the payout paid",
+      res.status === 200 && body?.data?.disbursement?.status === "paid",
+      `HTTP ${res.status} status=${body?.data?.disbursement?.status}`
+    );
+    check(
+      "a paid payout carries a payout reference",
+      Boolean(body?.data?.disbursement?.providerPayoutId),
+      body?.data?.disbursement?.providerPayoutId
+    );
+
+    const [event] = (await db.execute(sql`
+      select count(*)::int as n from payment_event
+      where payment_id = ${offerPaymentId} and type = 'disbursement.paid'
+    `)) as unknown as [{ n: number }];
+    check("paying is written to the payment ledger", Number(event.n) === 1, `${event.n} rows`);
+  }
+  {
+    // Refund after the provider has already been paid.
+    const asVendor = await call(`/api/admin/payments/${offerPaymentId}/refund`, { cookie: vendorCookie, body: {} });
+    check("a provider cannot refund a traveller", asVendor.status === 403, `HTTP ${asVendor.status}`);
+
+    const overRefund = await call(`/api/admin/payments/${offerPaymentId}/refund`, {
+      cookie: adminCookie,
+      body: { amount: 999_999_999 },
+    });
+    check("a refund larger than the payment is refused", overRefund.status === 409, `HTTP ${overRefund.status}`);
+
+    const res = await call(`/api/admin/payments/${offerPaymentId}/refund`, { cookie: adminCookie, body: {} });
+    const body = await json(res);
+    check("an admin can refund the traveller in full", res.status === 200 && body?.data?.fully === true, `HTTP ${res.status}`);
+
+    const [row] = (await db.execute(sql`
+      select p.status as payment_status, p.refunded_amount, p.amount,
+             b.status as booking_status, d.status as disbursement_status
+      from payment p
+      join booking b on b.id = p.booking_id
+      left join payment_disbursement d on d.payment_id = p.id
+      where p.id = ${offerPaymentId}
+    `)) as unknown as [
+      | {
+          payment_status: string;
+          refunded_amount: number;
+          amount: number;
+          booking_status: string;
+          disbursement_status: string | null;
+        }
+      | undefined,
+    ];
+    check(
+      "the payment is fully refunded",
+      row?.payment_status === "refunded" && Number(row?.refunded_amount) === Number(row?.amount),
+      `${row?.refunded_amount}/${row?.amount}`
+    );
+    check("the booking is refunded with it", row?.booking_status === "refunded", row?.booking_status);
+    check("a payout already made is not silently rewritten", row?.disbursement_status === "paid", row?.disbursement_status ?? "none");
+
+    const [event] = (await db.execute(sql`
+      select count(*)::int as n from payment_event
+      where payment_id = ${offerPaymentId} and type = 'disbursement.clawback_required'
+    `)) as unknown as [{ n: number }];
+    check("the clawback owed by the provider is recorded", Number(event.n) === 1, `${event.n} rows`);
+
+    const twice = await call(`/api/admin/payments/${offerPaymentId}/refund`, { cookie: adminCookie, body: {} });
+    check("a fully refunded payment cannot be refunded again", twice.status === 409, `HTTP ${twice.status}`);
+  }
+  {
+    // The other order: refund while the money is still in escrow. Here the
+    // platform can stop the payout, and must.
+    const [before] = (await db.execute(sql`
+      select id, status, payment_id from payment_disbursement where booking_id = ${marketplaceBookingId}
+    `)) as unknown as [{ id: string; status: string; payment_id: string } | undefined];
+    check(
+      "the listing booking is still holding the provider's money",
+      before?.status === "held",
+      before?.status ?? "no escrow row"
+    );
+
+    if (before?.payment_id) {
+      const res = await call(`/api/admin/payments/${before.payment_id}/refund`, { cookie: adminCookie, body: {} });
+      check("an admin can refund before the payout leaves", res.status === 200, `HTTP ${res.status}`);
+
+      const [after] = (await db.execute(sql`
+        select status, failure_code from payment_disbursement where id = ${before.id}
+      `)) as unknown as [{ status: string; failure_code: string | null } | undefined];
+      check("the pending payout is cancelled rather than paid", after?.status === "failed", after?.status);
+      check("and it records why", after?.failure_code === "refund_before_payout", after?.failure_code ?? "no code");
+    }
+  }
+
   // ---------- booking, seat inventory and the price boundary ----------
   //
   // Run while the session is still live, because a booking without a signed-in
@@ -1160,7 +1764,7 @@ async function cleanup() {
   }
 
   await db.execute(sql`delete from account where email in (${EMAIL}, ${VENDOR_EMAIL}, ${ADMIN_EMAIL}, ${APPLICANT_EMAIL})`);
-  await db.execute(sql`delete from otp_code where identifier in (${`email:${EMAIL}`}, ${`email:${FLOOD_EMAIL}`})`);
+  await db.execute(sql`delete from otp_code where identifier in (${`email:${EMAIL}`}, ${`email:${FLOOD_EMAIL}`}, ${`mobile:${MOBILE}`})`);
   await db.execute(sql`delete from lead where name = ${`E2E ${run}`}`);
   await db.execute(sql`delete from vendor_application where business_name in (${`E2E Kitchen ${run}`}, ${APPLICANT_BUSINESS})`);
   await db.execute(sql`delete from rate_limit where key like ${`%${IP_MAIN}`} or key like ${`%${IP_FLOOD}`}`);
@@ -1172,7 +1776,9 @@ async function cleanup() {
     + (select count(*) from lead where name = ${`E2E ${run}`})
     + (select count(*) from vendor_application where business_name in (${`E2E Kitchen ${run}`}, ${APPLICANT_BUSINESS}))
     + (select count(*) from service_listing where title = ${MARKETPLACE_LISTING})
-    + (select count(*) from booking_traveller where full_name like ${`E2E %${run}%`}) as n
+    + (select count(*) from booking_traveller where full_name like ${`E2E %${run}%`})
+    + (select count(*) from offer where title like ${`E2E %${run}%`})
+    + (select count(*) from otp_code where identifier = ${`mobile:${MOBILE}`}) as n
   `)) as unknown as [{ n: number }];
   check("the test leaves nothing behind", Number(left.n) === 0, `${left.n} rows remain`);
 }
