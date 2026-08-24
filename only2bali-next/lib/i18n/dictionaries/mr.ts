@@ -8,6 +8,7 @@ export const mr: Dictionary = {
   },
 
   nav: {
+    home: "मुख्यपृष्ठ",
     circuits: "सर्किट",
     destinations: "Destinations",
     services: "Services",

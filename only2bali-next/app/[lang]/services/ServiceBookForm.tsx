@@ -75,9 +75,7 @@ export default function ServiceBookForm({
     setBusy(true);
     setError("");
     try {
-      const travellers = Array.from({ length: pax }, (_, i) => ({
-        fullName: i === 0 ? fullName.trim() : `${fullName.trim()} guest ${i + 1}`,
-      }));
+      const travellers = [{ fullName: fullName.trim() }];
       const res = await fetch("/api/bookings", {
         method: "POST",
         headers: { "content-type": "application/json" },

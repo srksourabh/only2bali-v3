@@ -4,9 +4,10 @@ import { deliveryChannels } from "@/lib/auth/delivery";
 import { CFG } from "@/lib/config";
 import { emptySchemaStatus, readSchemaStatus } from "@/lib/db/schema-status";
 import { uploadBackend } from "@/lib/uploads/store";
-import { razorpayConfig } from "@/lib/payments/config";
+import { razorpayConfig, stripeConfig } from "@/lib/payments/config";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /**
  * Liveness plus a real database round-trip. Used by the container healthcheck
@@ -28,6 +29,10 @@ export async function GET() {
     database = "connected";
     try {
       schema = await readSchemaStatus(db);
+      if (!schema.current) {
+        const { catchUpProductionSchema } = await import("@/lib/db/apply-pending-migrations");
+        schema = await catchUpProductionSchema();
+      }
     } catch (err) {
       console.error("health: schema probe failed", err);
     }
@@ -39,7 +44,15 @@ export async function GET() {
   const ok = database === "connected";
 
   const razorpay = razorpayConfig();
-  const paymentProvider = razorpay.checkoutConfigured ? "razorpay" : null;
+  const stripe = stripeConfig();
+  const paymentProvider =
+    razorpay.checkoutConfigured && stripe.checkoutConfigured
+      ? "both"
+      : razorpay.checkoutConfigured
+        ? "razorpay"
+        : stripe.checkoutConfigured
+          ? "stripe"
+          : null;
 
   const uploads = {
     media: uploadBackend("media"),
@@ -62,7 +75,22 @@ export async function GET() {
         mode: razorpay.mode,
         checkoutConfigured: razorpay.checkoutConfigured,
         webhookConfigured: razorpay.webhookConfigured,
-        acceptingPayments: razorpay.acceptingPayments,
+        webhookBlocker: razorpay.webhookBlocker,
+        acceptingPayments: razorpay.acceptingPayments || stripe.acceptingPayments,
+        razorpay: {
+          mode: razorpay.mode,
+          checkoutConfigured: razorpay.checkoutConfigured,
+          webhookConfigured: razorpay.webhookConfigured,
+          webhookBlocker: razorpay.webhookBlocker,
+          acceptingPayments: razorpay.acceptingPayments,
+        },
+        stripe: {
+          mode: stripe.mode,
+          checkoutConfigured: stripe.checkoutConfigured,
+          webhookConfigured: stripe.webhookConfigured,
+          webhookBlocker: stripe.webhookBlocker,
+          acceptingPayments: stripe.acceptingPayments,
+        },
       },
       uploads,
       clerk: clerkConfigured(),

@@ -8,6 +8,7 @@ export const hi: Dictionary = {
   },
 
   nav: {
+    home: "होम",
     circuits: "सर्किट",
     destinations: "Destinations",
     services: "Services",

@@ -8,7 +8,7 @@ import { and, eq, gte, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { isSchemaLagError } from "@/lib/db/schema-lag";
 import { listingCompliance, serviceListing, vendor } from "@/lib/db/schema";
-import { isPubliclyVisibleListing } from "@/lib/repositories/listings-public";
+import { isPubliclyVisibleListing, listingMatchesRegion } from "@/lib/repositories/listings-public";
 
 export type ProtocolFilter = "jain" | "vegetarian" | "vegan";
 
@@ -90,6 +90,6 @@ export async function listCompliantPublicServices(opts: {
       listingStatus: r.status,
       listingActive: r.active,
       vendorVerificationStatus: r.vendorVerificationStatus,
-    })
+    }) && listingMatchesRegion({ city: r.city, area: r.area }, opts.region)
   );
 }

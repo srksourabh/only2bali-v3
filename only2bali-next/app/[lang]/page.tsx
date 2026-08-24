@@ -18,7 +18,7 @@ const CIRCUIT_ART = {
   wellness: { src: "/Asset/D-card-img3.png", span: 1, num: "+" },
 } as const;
 
-const PKG_ART = ["/Asset/D-card-img2.png", "/Asset/beaches.png", "/Asset/adventure.png"];
+const PKG_ART = ["/Asset/villa-stay.png", "/Asset/beaches.png", "/Asset/adventure.png"];
 
 export default async function Home({ params }: { params: Promise<{ lang: string }> }) {
   const lang = (await params).lang as Locale;

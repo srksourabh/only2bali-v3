@@ -26,7 +26,7 @@ own-language guides and managed logistics.
 | Directory | What it is | Status |
 |---|---|---|
 | `only2bali-next/` | **The product.** Next.js 15, 7 languages, marketplace, Postgres and Clerk/OTP auth. | Active — build here |
-| `infra/` | Postgres on the VPS: compose, mTLS certs, backups, bootstrap. | Active |
+| `infra/` | Legacy VPS compose/certs. Not production. Production DB is Neon. | Inactive |
 | `docs/` | Architecture, security, planning, ADRs. | Active |
 
 The Django backend, Create React App frontend and static prototype were removed
@@ -54,9 +54,9 @@ container.
 
 ## Architecture as it stands
 
-- **App** on Vercel. **Postgres** self-hosted on a Hostinger VPS, reached over
-  **mutual TLS** — a leaked `DATABASE_URL` alone cannot connect, because
-  `pg_hba.conf` sets `clientcert=verify-full`.
+- **App** on Vercel. **Postgres** is Neon (Vercel integration,
+  `o2b_DATABASE_URL` / `DATABASE_URL`, `sslmode=require`). Hostinger VPS
+  mTLS and Azure PostgreSQL are not used by this app.
 - **Auth** is passwordless: six-digit OTP, HMAC-hashed, attempt-capped, single
   use; opaque session tokens stored as hashes in httpOnly cookies.
 - **i18n**: every route lives under `/[lang]`. That layout *is* the root layout,

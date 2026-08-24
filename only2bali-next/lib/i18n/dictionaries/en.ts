@@ -11,6 +11,7 @@ export const en = {
   },
 
   nav: {
+    home: "Home",
     circuits: "Circuits",
     destinations: "Destinations",
     services: "Services",

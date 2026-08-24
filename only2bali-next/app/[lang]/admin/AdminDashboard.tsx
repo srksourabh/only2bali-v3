@@ -2,6 +2,30 @@
 
 import { useEffect, useState } from "react";
 
+type DeskPayment = {
+  bookingId: string;
+  reference: string;
+  travellerName: string;
+  pax: number;
+  amount: number;
+  currency: string;
+  bookingStatus: string;
+  paymentStatus: string | null;
+  provider: string | null;
+  capturedAt: string | null;
+  vendorNet?: number | null;
+  disbursementStatus?: string | null;
+};
+
+type DeskVendor = {
+  id: string;
+  businessName: string;
+  verificationStatus: string;
+  assignedTo: string | null;
+  assignedUsername: string | null;
+  payments: DeskPayment[];
+};
+
 interface Overview {
   vendors: Array<{ id: string; businessName: string; verificationStatus: string }>;
   applications: Array<{ id: string; businessName: string; businessType: string; status: string }>;
@@ -10,6 +34,10 @@ interface Overview {
   events: Array<{ id: string; title: string; status: string }>;
   promotions: Array<{ id: string; title: string; priceAmount: number | null; status: string }>;
   documents: Array<{ id: string; kind: string; fileUrl: string; status: string; vendorId: string }>;
+  desk?: {
+    staff: Array<{ id: string; username: string }>;
+    vendors: DeskVendor[];
+  };
 }
 
 type Disbursement = {
@@ -22,6 +50,10 @@ type Disbursement = {
   holdReason: string | null;
   paymentId: string | null;
 };
+
+function formatMoney(minor: number, currency = "INR") {
+  return new Intl.NumberFormat("en-IN", { style: "currency", currency }).format(minor / 100);
+}
 
 async function patch(path: string, body: unknown) {
   const res = await fetch(path, {
@@ -39,17 +71,23 @@ export default function AdminDashboard() {
   const [error, setError] = useState("");
   const [saved, setSaved] = useState("");
   const [priceDraft, setPriceDraft] = useState<Record<string, string>>({});
+  const [platformFeePercent, setPlatformFeePercent] = useState("10");
 
   const load = async () => {
-    const [overviewRes, disbRes] = await Promise.all([
+    const [overviewRes, disbRes, settingsRes] = await Promise.all([
       fetch("/api/admin/overview", { cache: "no-store" }),
       fetch("/api/admin/disbursements", { cache: "no-store" }),
+      fetch("/api/admin/settings", { cache: "no-store" }),
     ]);
     const json = await overviewRes.json();
     if (!json.success) throw new Error(json.error);
     setData(json.data);
     const dJson = await disbRes.json();
     if (dJson.success) setDisbursements(dJson.data.disbursements ?? []);
+    const sJson = await settingsRes.json();
+    if (sJson.success && sJson.data?.platformFee?.percent != null) {
+      setPlatformFeePercent(String(sJson.data.platformFee.percent));
+    }
   };
 
   useEffect(() => {
@@ -75,7 +113,7 @@ export default function AdminDashboard() {
           <div>
             <span className="eyebrow">Admin control</span>
             <h1>Verify providers, rates, pictures and offers</h1>
-            <p className="empty">Approve applications, verify providers, then publish listings travellers can book. All changes are audit logged.</p>
+            <p className="empty">Assign a developer to each vendor, see who paid what, then approve applications and publish listings. All changes are audit logged.</p>
           </div>
         </header>
 
@@ -84,8 +122,97 @@ export default function AdminDashboard() {
 
         <div className="accountgrid admin-grid">
           <section className="acard">
+            <h2>Platform fee %</h2>
+            <p className="empty">
+              Default take on new catalogue bookings. Traveller pays 100%; Only2Bali keeps this percent and the vendor is owed the rest. Existing vendor rates (often 12-18%) still override this default on listing and offer bookings.
+            </p>
+            <label htmlFor="platform-fee-percent">Platform fee %</label>
+            <input
+              id="platform-fee-percent"
+              type="number"
+              min={0}
+              max={50}
+              step={0.1}
+              value={platformFeePercent}
+              onChange={(e) => setPlatformFeePercent(e.target.value)}
+              aria-describedby="platform-fee-help"
+            />
+            <p id="platform-fee-help" className="empty">
+              Current value applies to new bookings only. Money is stored as integer paise; this percent becomes a decimal rate like 0.1000.
+            </p>
+            <div className="mini-actions">
+              <button
+                onClick={() =>
+                  run("Platform fee saved.", () =>
+                    patch("/api/admin/settings", { platformFeePercent: Number(platformFeePercent) })
+                  )
+                }
+              >
+                Save platform fee
+              </button>
+            </div>
+          </section>
+
+          <section className="acard desk-card">
+            <h2>Vendor desk</h2>
+            <p className="empty">
+              Which developer is tied to which vendor, plus every traveller payment on that account. Unassigned vendors need a developer before follow-up.
+            </p>
+            <ul className="admin-list">
+              {(data?.desk?.vendors ?? []).map((item) => (
+                <li key={item.id}>
+                  <b>{item.businessName}</b>
+                  <span>
+                    {item.verificationStatus}
+                    {item.assignedUsername ? ` · developer ${item.assignedUsername}` : " · unassigned"}
+                    {` · ${item.payments.length} payment${item.payments.length === 1 ? "" : "s"}`}
+                  </span>
+                  <label htmlFor={`desk-dev-${item.id}`}>Assigned developer</label>
+                  <select
+                    id={`desk-dev-${item.id}`}
+                    value={item.assignedTo ?? ""}
+                    onChange={(e) =>
+                      run("Developer assigned.", () =>
+                        patch(`/api/admin/vendors/${item.id}`, {
+                          assignedTo: e.target.value ? e.target.value : null,
+                        })
+                      )
+                    }
+                  >
+                    <option value="">Unassigned</option>
+                    {(data?.desk?.staff ?? []).map((dev) => (
+                      <option key={dev.id} value={dev.id}>
+                        {dev.username}
+                      </option>
+                    ))}
+                  </select>
+                  {item.payments.length === 0 ? (
+                    <p className="empty">No bookings or payments yet.</p>
+                  ) : (
+                    <ul className="admin-list desk-payments">
+                      {item.payments.map((pay, idx) => (
+                        <li key={`${pay.bookingId}-${idx}`}>
+                          <b>{pay.travellerName}</b>
+                          <span>
+                            {pay.reference} · {pay.pax} pax · {formatMoney(pay.amount, pay.currency)}
+                            {pay.provider ? ` · ${pay.provider}` : ""}
+                            {` · booking ${pay.bookingStatus}`}
+                            {pay.paymentStatus ? ` · paid ${pay.paymentStatus}` : " · not paid"}
+                            {pay.vendorNet != null ? ` · vendor net ${formatMoney(pay.vendorNet, pay.currency)}` : ""}
+                            {pay.disbursementStatus ? ` · payout ${pay.disbursementStatus}` : ""}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="acard">
             <h2>Provider applications</h2>
-            <p className="empty">{data?.applications.length ?? 0} applications in the system.</p>
+            <p className="empty">{data?.applications.length ?? 0} applications in the system. Approve creates or links a vendor account on the applicant email and marks it verified.</p>
             <ul className="admin-list">
               {data?.applications.slice(0, 8).map((item) => (
                 <li key={item.id}>

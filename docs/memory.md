@@ -5,18 +5,31 @@
 >
 > Agent config lives in `CLAUDE.md` (Claude Code / Cursor) and `AGENTS.md` (Antigravity).
 
-## Current product (2026-08-23)
+## Current product (2026-08-24)
 
 The live product is **only2bali-next** at https://only2bali.vercel.app
 (GitHub `srksourabh/only2bali-v3`). Django/CRA copies are not in this repo.
 
-Production Postgres is connected and serves the catalogue through a schema-lag
-retry (journal 0000–0002 live; 0003–0005 pending). Clerk keys are present.
-Password and Clerk login still need migration 0004 (`username`, `password_hash`,
-`oauth_account`). Razorpay checkout keys are set; the webhook secret is not, so
-`acceptingPayments` is false. OTP delivery is none; Resend is not required.
+**Database of record is Neon** (Vercel integration project `neon-apricot-marble`,
+id `square-union-56483086`, branch `main` / `br-young-fog-az24h689`,
+ap-southeast-1). App reads `DATABASE_URL` (Neon pooled, `sslmode=require`),
+then `o2b_DATABASE_URL`. Hostinger VPS mTLS (`PGSSL_*`) is unused and was
+removed from Vercel production. Azure PostgreSQL is not used by this app.
 
-`GET /api/health` now reports `schema.{applied,expected,current,authReady,catalogueColumns}`.
+Production schema is current: journal **0000–0006 applied** (7/7), `authReady` true.
+`GET /api/health` applies pending committed SQL when lagged (ADR-005). Clerk
+keys are present. Razorpay checkout is live (`acceptingPayments` true). The
+webhook secret was the placeholder and has been replaced on Vercel; it still
+must be pasted into the Razorpay dashboard. Checkout UI now always offers
+Stripe and Razorpay; Stripe stays unavailable until its three env vars are set.
+Default platform fee is 10%, admin-editable after migration 0006. OTP delivery is none.
+
+Vendor applications are no longer a dead end: admin approve provisions a vendor
+account from the applicant email (or promotes a traveller / verifies an existing
+vendor). Providers can edit listings. Travellers can filter services and verify a
+mobile number to publish trip requests.
+
+`GET /api/health` reports `schema.{applied,expected,current,authReady,catalogueColumns}`.
 Auth writes against a lagged schema return HTTP 503 with `code: "schema_lag"`.
 
 ## Project metadata
@@ -28,7 +41,7 @@ Auth writes against a lagged schema return HTTP 503 with `code: "schema_lag"`.
   forward as Sourabh's own product rather than as an upstream contribution.
 - **Stack**: Django 5.1 + DRF (live API) · Create React App (live, legacy) ·
   Next.js 15 (live, the future) · FastAPI + Gemini (not deployed)
-- **Databases**: Azure PostgreSQL (Django) · Azure Redis (OTP + rate limits)
+- **Databases**: **Neon** (Next.js production, Vercel integration) · Azure PostgreSQL/Redis are legacy Django only and unused by only2bali-next
 - **Deployment**: Azure App Service (Django) · Vercel ×2 (React and Next.js)
 - **Docs created**: 2026-07-16
 
@@ -508,3 +521,54 @@ existing payment schema and checkout intent path.
 **Still blocked on production**: Vercel handover + real
 `RAZORPAY_KEY_ID` / `KEY_SECRET` / `WEBHOOK_SECRET`. Without them health still
 reports payments unconfigured and verify/webhook answer 503.
+
+### 2026-08-24 — Marketplace portal gaps
+
+**Asked for:** complete the vendor + traveller web portal, verify flows, ship.
+
+**Shipped in code:**
+- `adminDecideApplication` now creates/promotes/verifies a vendor from the
+  application email (`lib/repositories/application-onboarding.ts`).
+- Provider listing edit UI; `/services` type + protocol filters; mobile verify
+  API + account UI; provider messaging panel; vendor/admin OTP hidden.
+- DB TLS accepts managed Postgres (Neon) without mTLS client certs.
+- E2E covers application approve, listing PATCH, services filters, unsigned
+  webhook refusal, and signed `/api/payments/verify` capture.
+
+**Verified:** Vitest migrate helper 5/5; `tsc --noEmit` clean; local e2e 134/134
+from earlier. Production health after deploy: **applied 6/6**, `authReady` true.
+Browser-checked live `/en/login`, `/en/services` (listings + filters), `/en/vendors`
+apply form.
+
+`acceptingPayments` is still false. OTP delivery is still none.
+
+**Owner still:** Razorpay webhook secret (same value in Vercel + Razorpay
+dashboard), OTP provider, commit the uncommitted tree so a Git deploy does not
+revert the CLI production deploy.
+
+### 2026-08-24 — Stripe checkout + admin platform fee
+
+Traveller pay UI always lists Stripe and Razorpay. Razorpay keys on Vercel are
+enough for that option; Stripe needs `STRIPE_SECRET_KEY`,
+`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`. Traveller pays
+the platform; vendor net is `gross - commission` on the booking row. Admin can
+change the default 10% platform fee (`platform_setting.platform_fee_rate`).
+Vendor `commissionRate` still wins on listing/offer bookings. Stripe Connect
+payouts were not built. Do not complete a live Razorpay or Stripe charge to test.
+
+### 2026-08-24 — NotchNav in the real header
+
+Replaced the SiteNav text-link row with `components/ui/notch-nav.tsx`. Tailwind 3
+was added with **preflight off** and tokens mapped to emerald/cream/ivory; shadcn
+was not initialized. Language switcher, Sign in, and Plan your trip stay in the
+header. Mobile uses a second-row horizontal scroll. Not committed.
+
+### 2026-08-24 — Neon is the only production database
+
+Owner directed: stop Hostinger/VPS/mTLS/Azure Postgres for this app. Production
+`DATABASE_URL` now points at the Vercel Neon project `neon-apricot-marble`
+(pooled `sslmode=require`). Runtime `sslConfig` no longer loads `PGSSL_*` PEMs.
+`PGSSL_CA` / `CERT` / `KEY` were removed from Vercel production. Schema catch-up
+applied 0000–0006 on the empty Neon (`7/7`, `authReady`). Hostinger marketplace
+rows did not move; Neon started empty. Admin `o2badmin` was recreated on Neon.
+Password is in Vercel `ADMIN_PASSWORD`, not printed here.

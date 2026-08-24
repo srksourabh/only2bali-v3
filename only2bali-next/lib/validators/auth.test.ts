@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { requestOtpSchema, verifyOtpSchema, toIdentifier } from "./auth";
+import {
+  requestOtpSchema,
+  verifyOtpSchema,
+  toIdentifier,
+  verifyMobileRequestSchema,
+  verifyMobileConfirmSchema,
+} from "./auth";
 
 describe("requestOtpSchema", () => {
   it("accepts an email on its own", () => {
@@ -49,6 +55,29 @@ describe("verifyOtpSchema", () => {
       expect(verifyOtpSchema.safeParse({ email: "a@b.com", code }).success).toBe(false);
     }
   );
+});
+
+describe("verifyMobileRequestSchema", () => {
+  it("accepts a formatted mobile and strips it", () => {
+    const parsed = verifyMobileRequestSchema.safeParse({ mobile: "+91 98765-43210" });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.mobile).toBe("+919876543210");
+  });
+
+  it("rejects an email-only payload", () => {
+    expect(verifyMobileRequestSchema.safeParse({ email: "a@b.com" }).success).toBe(false);
+  });
+});
+
+describe("verifyMobileConfirmSchema", () => {
+  it("requires a six-digit code with the mobile", () => {
+    expect(
+      verifyMobileConfirmSchema.safeParse({ mobile: "+919876543210", code: "012345" }).success
+    ).toBe(true);
+    expect(verifyMobileConfirmSchema.safeParse({ mobile: "+919876543210", code: "12" }).success).toBe(
+      false
+    );
+  });
 });
 
 describe("toIdentifier", () => {

@@ -118,7 +118,7 @@ const VENDORS: DemoVendor[] = [
         tier: "comfort",
         priceRupees: 3200,
         priceUnit: "per_person",
-        images: ["/Asset/culinary.png"],
+        images: ["/Asset/food-class.png"],
         circuits: ["culinary"],
         compliance: [
           { protocol: "vegetarian", guaranteeLevel: "certified", rating: "green", kitchenType: "dedicated_veg",
@@ -158,7 +158,7 @@ const VENDORS: DemoVendor[] = [
         tier: "premium",
         priceRupees: 18500,
         priceUnit: "per_night",
-        images: ["/Asset/D-card-img2.png", "/Asset/cultures.png"],
+        images: ["/Asset/villa-stay.png", "/Asset/cultures.png"],
         circuits: ["ramayana", "artistic"],
         compliance: [
           { protocol: "jain", guaranteeLevel: "capable", rating: "green", kitchenType: "dedicated_veg",
@@ -242,7 +242,7 @@ const VENDORS: DemoVendor[] = [
         tier: "premium",
         priceRupees: 62000,
         priceUnit: "per_trip",
-        images: ["/Asset/culinary.png"],
+        images: ["/Asset/food-kitchen.png"],
         circuits: ["ramayana", "culinary"],
         compliance: [
           { protocol: "jain", guaranteeLevel: "certified", rating: "green", kitchenType: "dedicated_veg",

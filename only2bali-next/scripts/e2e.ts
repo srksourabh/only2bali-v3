@@ -25,6 +25,10 @@ import { sql } from "drizzle-orm";
 import { db } from "../lib/db";
 import { SESSION_COOKIE } from "../lib/auth";
 import { hashSessionToken } from "../lib/auth/crypto";
+import { razorpayPaymentSignature } from "../lib/payments/razorpay";
+
+/** Matches the test-only key exported by scripts/e2e.sh. Not a live secret. */
+const E2E_RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET ?? "e2e-only2bali-razorpay-key-secret";
 
 const BASE = (process.env.E2E_BASE_URL ?? "").replace(/\/$/, "");
 const SERVER_LOG = process.env.E2E_SERVER_LOG ?? "";
@@ -69,12 +73,15 @@ const VENDOR_BUSINESS = `E2E Jain Kitchen ${run}`;
 const MARKETPLACE_LISTING = `E2E Jain Dining ${run}`;
 const ADMIN_EMAIL = `e2e-admin-${run}@only2bali.test`;
 const ADMIN_USERNAME = `admin-${run}`;
+const APPLICANT_EMAIL = `e2e-applicant-${run}@only2bali.test`;
+const APPLICANT_BUSINESS = `E2E Applicant Kitchen ${run}`;
 
 let sessionCookie = "";
 let vendorCookie = "";
 let adminCookie = "";
 let marketplaceListingId = "";
 let marketplaceBookingId = "";
+let applicantApplicationId = "";
 /** Set once a booking has taken seats, so cleanup can give them back. */
 let bookedDepartureId = "";
 
@@ -371,6 +378,22 @@ async function main() {
     });
     check("an application with no dietary capability is refused", res.status === 400, `HTTP ${res.status}`);
   }
+  {
+    const res = await call("/api/vendor-applications", {
+      body: {
+        businessName: APPLICANT_BUSINESS,
+        businessType: "Jain-capable kitchen",
+        baseArea: "Ubud",
+        capabilities: ["Jain", "Vegetarian"],
+        languages: "English, Hindi",
+        whatsapp: "+6281234567891",
+        email: APPLICANT_EMAIL,
+      },
+    });
+    const body = await json(res);
+    applicantApplicationId = body?.data?.id ?? body?.data?.application?.id ?? "";
+    check("an application with an email is accepted", res.status === 201 && Boolean(applicantApplicationId), `HTTP ${res.status}`);
+  }
 
   // ---------- the account page is guarded ----------
   console.log("\nAccess control");
@@ -642,6 +665,20 @@ async function main() {
     );
   }
   {
+    const res = await call(`/api/provider/listings/${marketplaceListingId}`, {
+      method: "PATCH",
+      cookie: vendorCookie,
+      body: {
+        title: MARKETPLACE_LISTING,
+        description: "Updated Jain dining listing after the vendor edited the price.",
+        priceAmount: marketplacePrice,
+      },
+    });
+    const body = await json(res);
+    check("the vendor can edit their listing", res.status === 200 && body?.data?.listing?.id === marketplaceListingId, `HTTP ${res.status}`);
+    check("an edited listing returns to review", body?.data?.listing?.status === "pending_review", body?.data?.listing?.status);
+  }
+  {
     const res = await call("/api/provider/media", {
       cookie: vendorCookie,
       body: {
@@ -677,6 +714,23 @@ async function main() {
     const res = await call("/en/admin", { cookie: adminCookie });
     const html = await res.text();
     check("the admin control opens for an admin", res.status === 200 && /Admin control/i.test(html), `HTTP ${res.status}`);
+  }
+  {
+    const res = await call(`/api/admin/applications/${applicantApplicationId}`, {
+      method: "PATCH",
+      cookie: adminCookie,
+      body: { status: "verified" },
+    });
+    check("admin can approve a vendor application", res.status === 200, `HTTP ${res.status}`);
+
+    const [row] = (await db.execute(sql`
+      select a.role, v.verification_status
+      from account a
+      join vendor v on v.account_id = a.id
+      where a.email = ${APPLICANT_EMAIL}
+    `)) as unknown as [{ role: string; verification_status: string } | undefined];
+    check("approving an application creates a vendor account", row?.role === "vendor", row?.role);
+    check("the new vendor is verified immediately", row?.verification_status === "verified", row?.verification_status);
   }
   {
     const res = await call(`/api/admin/vendors/${vendorId}`, {
@@ -722,6 +776,29 @@ async function main() {
     const html = await res.text();
     check("the marketplace detail page renders", res.status === 200 && html.includes(MARKETPLACE_LISTING), `HTTP ${res.status}`);
     check("a signed-out visitor is prompted to sign in before booking", /Sign in/i.test(html));
+  }
+  {
+    const res = await call("/en/services?type=restaurant&region=bali");
+    const html = await res.text();
+    check("the services index renders filtered listings", res.status === 200 && html.includes(MARKETPLACE_LISTING), `HTTP ${res.status}`);
+  }
+  {
+    const res = await call("/api/services?type=restaurant&region=bali");
+    const body = await json(res);
+    const titles = (body?.data?.services ?? []).map((s: { title?: string }) => s.title);
+    check("the services API applies the type filter", res.status === 200 && titles.includes(MARKETPLACE_LISTING), titles.join(","));
+  }
+  {
+    const res = await call("/api/payments/webhook", {
+      method: "POST",
+      body: { event: "payment.captured" },
+    });
+    const body = await json(res);
+    check(
+      "an unsigned webhook is refused while payments stay fail-closed",
+      [400, 503].includes(res.status),
+      `HTTP ${res.status} reason=${body?.reason ?? body?.error}`
+    );
   }
   {
     const res = await call("/api/bookings", {
@@ -793,6 +870,54 @@ async function main() {
     `)) as unknown as [{ n: number }];
     check("the paused checkout creates no gateway payment row", Number(rows.n) === 0, `${rows.n} rows`);
   }
+  {
+    const orderId = `order_e2e_${run}`;
+    const paymentId = `pay_e2e_${run}`;
+    await db.execute(sql`
+      insert into payment (
+        booking_id, provider, provider_order_id, amount, currency, purpose, status, idempotency_key, initiated_by
+      )
+      select
+        b.id, 'razorpay', ${orderId}, b.gross_amount, b.currency, 'full', 'created',
+        ${`e2e-verify-${run}`}, a.id
+      from booking b
+      join traveller t on t.id = b.traveller_id
+      join account a on a.id = t.account_id
+      where b.id = ${marketplaceBookingId}
+    `);
+    const signature = razorpayPaymentSignature(orderId, paymentId, E2E_RAZORPAY_KEY_SECRET);
+    const res = await call("/api/payments/verify", {
+      cookie: sessionCookie,
+      body: {
+        bookingId: marketplaceBookingId,
+        razorpay_order_id: orderId,
+        razorpay_payment_id: paymentId,
+        razorpay_signature: signature,
+      },
+    });
+    const body = await json(res);
+    check("a signed Razorpay verify confirms the listing booking", res.status === 200 && body?.data?.status === "captured", `HTTP ${res.status} status=${body?.data?.status}`);
+
+    const [row] = (await db.execute(sql`
+      select b.status as booking_status, p.status as payment_status
+      from booking b
+      join payment p on p.booking_id = b.id
+      where b.id = ${marketplaceBookingId}
+    `)) as unknown as [{ booking_status: string; payment_status: string } | undefined];
+    check("the booking is confirmed after verify", row?.booking_status === "confirmed", row?.booking_status);
+    check("the payment row is captured", row?.payment_status === "captured", row?.payment_status);
+
+    const bad = await call("/api/payments/verify", {
+      cookie: sessionCookie,
+      body: {
+        bookingId: marketplaceBookingId,
+        razorpay_order_id: orderId,
+        razorpay_payment_id: paymentId,
+        razorpay_signature: "0".repeat(64),
+      },
+    });
+    check("a tampered verify signature is refused", bad.status === 400, `HTTP ${bad.status}`);
+  }
 
   // ---------- booking, seat inventory and the price boundary ----------
   //
@@ -840,9 +965,14 @@ async function main() {
     {
       const res = await call("/api/bookings", {
         cookie: sessionCookie,
-        body: { departureId: dep!.id, pax: 3, protocol: "jain", travellers: [{ fullName: "Only One Name" }] },
+        body: {
+          departureId: dep!.id,
+          pax: 2,
+          protocol: "jain",
+          travellers: [{ fullName: "One" }, { fullName: "Two" }, { fullName: "Three" }],
+        },
       });
-      check("a group size that disagrees with the traveller list is refused",
+      check("more names than the group size is refused",
         res.status === 400, `HTTP ${res.status}`);
     }
 
@@ -978,6 +1108,28 @@ async function cleanup() {
    * the correct rule for real data and a trap for a test that ignores it.
    */
   await db.execute(sql`
+    delete from payment_disbursement where booking_id in (
+      select b.id from booking b
+      join traveller t on t.id = b.traveller_id
+      join account a on a.id = t.account_id
+      where a.email = ${EMAIL})
+  `);
+  await db.execute(sql`
+    delete from payment_event where payment_id in (
+      select p.id from payment p
+      join booking b on b.id = p.booking_id
+      join traveller t on t.id = b.traveller_id
+      join account a on a.id = t.account_id
+      where a.email = ${EMAIL})
+  `);
+  await db.execute(sql`
+    delete from payment where booking_id in (
+      select b.id from booking b
+      join traveller t on t.id = b.traveller_id
+      join account a on a.id = t.account_id
+      where a.email = ${EMAIL})
+  `);
+  await db.execute(sql`
     delete from booking where traveller_id in (
       select t.id from traveller t
       join account a on a.id = t.account_id
@@ -1007,18 +1159,18 @@ async function cleanup() {
     `);
   }
 
-  await db.execute(sql`delete from account where email in (${EMAIL}, ${VENDOR_EMAIL}, ${ADMIN_EMAIL})`);
+  await db.execute(sql`delete from account where email in (${EMAIL}, ${VENDOR_EMAIL}, ${ADMIN_EMAIL}, ${APPLICANT_EMAIL})`);
   await db.execute(sql`delete from otp_code where identifier in (${`email:${EMAIL}`}, ${`email:${FLOOD_EMAIL}`})`);
   await db.execute(sql`delete from lead where name = ${`E2E ${run}`}`);
-  await db.execute(sql`delete from vendor_application where business_name = ${`E2E Kitchen ${run}`}`);
+  await db.execute(sql`delete from vendor_application where business_name in (${`E2E Kitchen ${run}`}, ${APPLICANT_BUSINESS})`);
   await db.execute(sql`delete from rate_limit where key like ${`%${IP_MAIN}`} or key like ${`%${IP_FLOOD}`}`);
   await db.execute(sql`delete from rate_limit where key = ${`otp:id:email:${FLOOD_EMAIL}`} or key = ${`otp:id:email:${EMAIL}`}`);
 
   const [left] = (await db.execute(sql`
     select
-      (select count(*) from account where email in (${EMAIL}, ${FLOOD_EMAIL}, ${VENDOR_EMAIL}, ${ADMIN_EMAIL}))
+      (select count(*) from account where email in (${EMAIL}, ${FLOOD_EMAIL}, ${VENDOR_EMAIL}, ${ADMIN_EMAIL}, ${APPLICANT_EMAIL}))
     + (select count(*) from lead where name = ${`E2E ${run}`})
-    + (select count(*) from vendor_application where business_name = ${`E2E Kitchen ${run}`})
+    + (select count(*) from vendor_application where business_name in (${`E2E Kitchen ${run}`}, ${APPLICANT_BUSINESS}))
     + (select count(*) from service_listing where title = ${MARKETPLACE_LISTING})
     + (select count(*) from booking_traveller where full_name like ${`E2E %${run}%`}) as n
   `)) as unknown as [{ n: number }];

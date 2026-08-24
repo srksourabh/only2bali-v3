@@ -8,6 +8,7 @@ export const te: Dictionary = {
   },
 
   nav: {
+    home: "హోమ్",
     circuits: "సర్క్యూట్లు",
     destinations: "Destinations",
     services: "Services",

@@ -8,6 +8,7 @@ export const ta: Dictionary = {
   },
 
   nav: {
+    home: "முகப்பு",
     circuits: "சுற்றுவழிகள்",
     destinations: "Destinations",
     services: "Services",

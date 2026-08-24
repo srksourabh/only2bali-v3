@@ -7,6 +7,7 @@ import { safeNextPath } from "@/lib/auth/redirect";
 import Mark from "../components/Mark";
 import LoginForm from "./LoginForm";
 import { portalHomePath } from "@/lib/auth/portal";
+import { otpOffered } from "@/lib/auth/delivery";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,7 @@ export default async function LoginPage({
         <div className="authmark" aria-hidden="true">
           <Mark size={44} />
         </div>
-        <LoginForm dict={dict} lang={lang} next={target} />
+        <LoginForm dict={dict} lang={lang} next={target} otpOffered={otpOffered()} />
       </div>
     </main>
   );

@@ -1,34 +1,13 @@
 import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { checkServerIdentity, type PeerCertificate } from "node:tls";
 import postgres from "postgres";
 import * as schema from "./schema";
 
-/** Vercel env vars cannot hold raw newlines, so PEMs are stored base64-encoded. */
-function pem(name: string): string | undefined {
-  const raw = process.env[name];
-  if (!raw) return undefined;
-  const value = raw.includes("-----BEGIN") ? raw : Buffer.from(raw, "base64").toString("utf8");
-  if (!value.includes("-----BEGIN")) {
-    throw new Error(`${name} is set but is not a PEM (neither raw nor base64).`);
-  }
-  return value;
-}
-
 /**
- * The database lives on our own VPS and is reached across the public internet,
- * so the connection proves two things in both directions:
- *
- *   - the server is ours  → `ca` + rejectUnauthorized, so a MITM holding a
- *                           valid public certificate is still refused
- *   - the client is ours  → `cert` + `key`, which pg_hba.conf demands via
- *                           clientcert=verify-full
- *
- * A stolen DATABASE_URL on its own is therefore not enough to connect.
+ * Production database is Neon (Vercel integration). Server TLS only.
+ * Leftover Hostinger mTLS PEMs (PGSSL_*) are ignored so they cannot
+ * attach client certificates to a Neon connection.
  */
 export function sslConfig(url: string): postgres.Options<{}>["ssl"] {
-  const ca = pem("PGSSL_CA");
-  const cert = pem("PGSSL_CERT");
-  const key = pem("PGSSL_KEY");
   const host = (() => {
     try {
       return new URL(url).hostname;
@@ -37,36 +16,19 @@ export function sslConfig(url: string): postgres.Options<{}>["ssl"] {
     }
   })();
 
-  if (ca && cert && key) {
-    return {
-      ca,
-      cert,
-      key,
-      rejectUnauthorized: true,
-      // postgres.js upgrades an existing TCP socket to TLS. For a raw IP it
-      // deliberately omits SNI, and Node otherwise checks the certificate
-      // against `localhost`. Verify against the DATABASE_URL host explicitly.
-      checkServerIdentity: (_hostname: string, certificate: PeerCertificate) =>
-        checkServerIdentity(host, certificate),
-    };
-  }
-
-  if (ca || cert || key) {
-    throw new Error(
-      "Partial TLS configuration: PGSSL_CA, PGSSL_CERT and PGSSL_KEY must all be set, or none of them."
-    );
-  }
-
   const isLocal = host === "localhost" || host === "127.0.0.1" || host === "::1";
-
-  if (!isLocal && process.env.NODE_ENV === "production") {
-    throw new Error(
-      `Refusing to connect to ${host} without client certificates. ` +
-        "Set PGSSL_CA, PGSSL_CERT and PGSSL_KEY, or tunnel to 127.0.0.1."
-    );
+  if (isLocal) {
+    return process.env.DATABASE_SSL === "require" ? "require" : undefined;
   }
 
-  return process.env.DATABASE_SSL === "require" ? "require" : undefined;
+  return "require";
+}
+
+/** Neon Vercel integration writes `o2b_DATABASE_URL`. Prefer `DATABASE_URL`. */
+export function resolveDatabaseUrl(env: NodeJS.ProcessEnv = process.env): string | undefined {
+  const primary = env.DATABASE_URL?.trim();
+  if (primary) return primary;
+  return env.o2b_DATABASE_URL?.trim() || undefined;
 }
 
 /**
@@ -88,10 +50,10 @@ const globalForDb = globalThis as unknown as {
 function connect(): PostgresJsDatabase<typeof schema> {
   if (globalForDb.__o2bDb) return globalForDb.__o2bDb;
 
-  const url = process.env.DATABASE_URL;
+  const url = resolveDatabaseUrl();
   if (!url) {
     throw new Error(
-      "DATABASE_URL is not set. Copy .env.example to .env.local and point it at your Postgres instance."
+      "DATABASE_URL is not set. Copy .env.example to .env.local and point it at Neon (sslmode=require)."
     );
   }
 

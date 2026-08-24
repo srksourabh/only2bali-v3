@@ -71,8 +71,19 @@ export const passwordSignInSchema = z.object({
   role: authRoleSchema,
 });
 
+export const verifyMobileRequestSchema = z.object({ mobile });
+export const verifyMobileConfirmSchema = z.object({
+  mobile,
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "The code is six digits."),
+});
+
 export type PasswordSignUpInput = z.infer<typeof passwordSignUpSchema>;
 export type PasswordSignInInput = z.infer<typeof passwordSignInSchema>;
+export type VerifyMobileRequestInput = z.infer<typeof verifyMobileRequestSchema>;
+export type VerifyMobileConfirmInput = z.infer<typeof verifyMobileConfirmSchema>;
 
 /** The single string an OTP is keyed on, so email and mobile cannot collide. */
 export function toIdentifier(input: { email?: string; mobile?: string }): string {

@@ -8,6 +8,7 @@ export const gu: Dictionary = {
   },
 
   nav: {
+    home: "હોમ",
     circuits: "સર્કિટ",
     destinations: "Destinations",
     services: "Services",

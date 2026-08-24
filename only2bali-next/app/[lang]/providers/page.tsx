@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getDictionary } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n/config";
+import { providerCoverImage } from "@/lib/media/listing-art";
 import { listPublicProvidersForPage } from "@/lib/repositories/providers-public";
 
 export const revalidate = 120;
@@ -66,14 +67,16 @@ export default async function ProvidersPage({
             <div className="pkgs">
               {providers.map((p) => (
                 <article className="pkg" key={p.slug}>
-                  {p.coverImage && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={p.coverImage}
-                      alt=""
-                      style={{ width: "100%", height: "160px", objectFit: "cover" }}
-                    />
-                  )}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={providerCoverImage({
+                      vendorType: p.vendorType,
+                      coverImage: p.coverImage,
+                      businessName: p.businessName,
+                    })}
+                    alt=""
+                    style={{ width: "100%", height: "160px", objectFit: "cover" }}
+                  />
                   <div className="pkg-body">
                     <span className="pkg-tag" style={{ position: "static", marginBottom: ".4rem" }}>
                       {(p.vendorType ?? "provider").replaceAll("_", " ")}

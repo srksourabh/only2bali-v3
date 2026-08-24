@@ -39,6 +39,11 @@ export function canDeliver(channel: "email" | "sms"): boolean {
   return available.includes("console") || available.includes(channel);
 }
 
+/** Login UI should not offer OTP when no channel can reach a person. */
+export function otpOffered(): boolean {
+  return deliveryChannels().length > 0;
+}
+
 export async function deliverOtp(
   identifier: { email?: string; mobile?: string },
   code: string

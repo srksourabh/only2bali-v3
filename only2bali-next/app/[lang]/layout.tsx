@@ -10,7 +10,6 @@ import {
 } from "next/font/google";
 import { getDictionary } from "@/lib/i18n";
 import { locales, localeScript, type Locale } from "@/lib/i18n/config";
-import CustomCursor from "./components/CustomCursor";
 import SiteNav from "./components/SiteNav";
 import SiteFooter from "./components/SiteFooter";
 import PwaRegister from "./components/PwaRegister";
@@ -89,7 +88,6 @@ export default async function LangLayout({
     <html lang={lang} suppressHydrationWarning>
       <body className={bodyClass}>
         <ClerkAppProvider>
-          <CustomCursor />
           <PwaRegister />
           <SiteNav lang={lang} dict={dict} />
           {children}

@@ -1,7 +1,16 @@
+@tailwind utilities;
+
 :root{
   --emerald:#0e4f44; --emerald-d:#093830; --saffron:#e8941a; --saffron-d:#c97a0a;
   --ivory:#faf6ee; --cream:#f3ecdd; --ink:#1d2a27; --muted:#5d6f6a; --line:#e3dccb;
   --ok:#1e7d4f; --err:#c0392b; --r:14px; --shadow:0 10px 30px rgba(14,79,68,.10);
+  /* shadcn-shaped tokens, mapped onto the existing brand (not a purple kit) */
+  --background:var(--ivory);
+  --foreground:var(--ink);
+  --primary:var(--emerald);
+  --secondary:var(--cream);
+  --border:var(--line);
+  --ring:var(--saffron);
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -13,8 +22,8 @@ section{padding:64px 0}
 .wrap{width:min(1140px,92%);margin:0 auto}
 .tag{display:inline-block;background:var(--cream);color:var(--saffron-d);font-weight:600;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;padding:.3rem .8rem;border-radius:99px;margin-bottom:.8rem}
 
-/* NAV */
-nav{position:sticky;top:0;z-index:50;background:rgba(250,246,238,.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+/* NAV — scoped so the inner NotchNav <nav> is not also sticky */
+.o2b-nav,.navrow{position:sticky;top:0;z-index:50;background:rgba(250,246,238,.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .navrow{display:flex;align-items:center;justify-content:space-between;height:64px}
 .brand{font-size:1.35rem;font-weight:700;color:var(--emerald-d);text-decoration:none}
 .brand span{color:var(--saffron)}
@@ -29,6 +38,7 @@ nav{position:sticky;top:0;z-index:50;background:rgba(250,246,238,.95);backdrop-f
 
 /* HERO */
 header.hero{background:linear-gradient(160deg,var(--emerald-d) 0%,var(--emerald) 55%,#15695b 100%);color:#fff;padding:84px 0 64px;position:relative;overflow:hidden}
+header.hero:has(.hero-photo){padding:0}
 .hero::after{content:"";position:absolute;right:-120px;top:-120px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(232,148,26,.35),transparent 70%)}
 .hero h1{font-size:clamp(2rem,5vw,3.3rem);line-height:1.15;max-width:760px}
 .hero h1 em{color:#f6b85a;font-style:normal}

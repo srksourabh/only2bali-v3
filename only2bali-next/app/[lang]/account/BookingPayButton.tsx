@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type PayCopy = {
@@ -10,6 +10,13 @@ type PayCopy = {
   holdExpired: string;
   errSetup: string;
   errGeneric: string;
+};
+
+type GatewayChoice = {
+  id: "stripe" | "razorpay";
+  label: string;
+  available: boolean;
+  reason: string | null;
 };
 
 type RazorpaySuccess = {
@@ -56,6 +63,11 @@ const money = (minor: number, currency: string) =>
     maximumFractionDigits: 0,
   }).format(minor / 100);
 
+const fallbackGateways: { stripe: GatewayChoice; razorpay: GatewayChoice } = {
+  stripe: { id: "stripe", label: "Stripe", available: true, reason: null },
+  razorpay: { id: "razorpay", label: "Razorpay", available: true, reason: null },
+};
+
 export default function BookingPayButton({
   bookingId,
   amount,
@@ -72,16 +84,90 @@ export default function BookingPayButton({
   copy: PayCopy;
 }) {
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<"stripe" | "razorpay" | null>(null);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [gateways, setGateways] = useState(fallbackGateways);
 
   const expired =
     holdExpiresAt !== null && !Number.isNaN(Date.parse(holdExpiresAt)) && Date.parse(holdExpiresAt) < Date.now();
 
-  async function startPay() {
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/payments/options", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((body) => {
+        if (cancelled || !body?.data?.stripe || !body?.data?.razorpay) return;
+        setGateways({ stripe: body.data.stripe, razorpay: body.data.razorpay });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setGateways({
+            stripe: {
+              id: "stripe",
+              label: "Stripe",
+              available: false,
+              reason: "Could not check Stripe setup.",
+            },
+            razorpay: {
+              id: "razorpay",
+              label: "Razorpay",
+              available: false,
+              reason: "Could not check Razorpay setup.",
+            },
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get("session_id");
+    const booking = params.get("booking");
+    if (!sessionId || booking !== bookingId || done || expired) return;
+
+    let cancelled = false;
+    setBusy("stripe");
+    fetch("/api/payments/stripe/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bookingId, sessionId }),
+    })
+      .then(async (res) => {
+        const body = await res.json().catch(() => null);
+        if (cancelled) return;
+        if (!res.ok) {
+          setError(body?.error ?? copy.errGeneric);
+          setBusy(null);
+          return;
+        }
+        setDone(true);
+        setBusy(null);
+        router.refresh();
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setError(copy.errGeneric);
+          setBusy(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [bookingId, copy.errGeneric, done, expired, router]);
+
+  async function startPay(provider: "stripe" | "razorpay") {
     if (busy || done || expired) return;
-    setBusy(true);
+    const choice = gateways[provider];
+    if (!choice.available) {
+      setError(choice.reason ?? copy.errSetup);
+      return;
+    }
+    setBusy(provider);
     setError(null);
     try {
       const intentRes = await fetch("/api/payments/checkout", {
@@ -89,33 +175,44 @@ export default function BookingPayButton({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           bookingId,
-          provider: "razorpay",
+          provider,
           purpose: "full",
-          idempotencyKey: `pay_${bookingId}_full`,
+          idempotencyKey: `pay_${bookingId}_full_${provider}`,
+          returnTo: window.location.pathname,
         }),
       });
       const intentBody = await intentRes.json().catch(() => null);
       if (!intentRes.ok) {
         setError(
           intentBody?.reason === "payment_setup_required"
-            ? copy.errSetup
-            : intentBody?.error ?? copy.errGeneric
+            ? (intentBody?.error ?? copy.errSetup)
+            : (intentBody?.error ?? copy.errGeneric)
         );
-        setBusy(false);
+        setBusy(null);
         return;
       }
 
       const checkout = intentBody?.data?.checkout;
+      if (provider === "stripe") {
+        if (!checkout?.url) {
+          setError(copy.errSetup);
+          setBusy(null);
+          return;
+        }
+        window.location.href = checkout.url;
+        return;
+      }
+
       if (!checkout?.orderId || !checkout?.keyId) {
         setError(copy.errSetup);
-        setBusy(false);
+        setBusy(null);
         return;
       }
 
       await loadRazorpayScript();
       if (!window.Razorpay) {
         setError(copy.errGeneric);
-        setBusy(false);
+        setBusy(null);
         return;
       }
 
@@ -141,29 +238,29 @@ export default function BookingPayButton({
             const verifyBody = await verifyRes.json().catch(() => null);
             if (!verifyRes.ok) {
               setError(verifyBody?.error ?? copy.errGeneric);
-              setBusy(false);
+              setBusy(null);
               return;
             }
             setDone(true);
             router.refresh();
           } catch {
             setError(copy.errGeneric);
-            setBusy(false);
+            setBusy(null);
           }
         },
         modal: {
-          ondismiss: () => setBusy(false),
+          ondismiss: () => setBusy(null),
         },
       });
 
       rzp.on("payment.failed", (response) => {
         setError(response.error?.description ?? copy.errGeneric);
-        setBusy(false);
+        setBusy(null);
       });
       rzp.open();
     } catch {
       setError(copy.errGeneric);
-      setBusy(false);
+      setBusy(null);
     }
   }
 
@@ -175,12 +272,67 @@ export default function BookingPayButton({
     return <span className="paystatus">{copy.holdExpired}</span>;
   }
 
+  const price = money(amount, currency);
+
   return (
     <div className="payrow">
-      <button type="button" className="btn btn-solid btn-sm" disabled={busy} onClick={startPay}>
-        {busy ? copy.paying : `${copy.payNow} · ${money(amount, currency)}`}
+      <p className="paychoose">Pay {price}</p>
+      <div className="payoptions" role="group" aria-label="Payment methods">
+        <GatewayButton
+          label={`Stripe · ${price}`}
+          available={gateways.stripe.available}
+          reason={gateways.stripe.reason}
+          busy={busy === "stripe"}
+          locked={busy !== null}
+          onClick={() => startPay("stripe")}
+        />
+        <GatewayButton
+          label={`Razorpay · ${price}`}
+          available={gateways.razorpay.available}
+          reason={gateways.razorpay.reason}
+          busy={busy === "razorpay"}
+          locked={busy !== null}
+          onClick={() => startPay("razorpay")}
+        />
+      </div>
+      {error && (
+        <p className="payerr" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function GatewayButton({
+  label,
+  available,
+  reason,
+  busy,
+  locked,
+  onClick,
+}: {
+  label: string;
+  available: boolean;
+  reason: string | null;
+  busy: boolean;
+  locked: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <div className="payoption">
+      <button
+        type="button"
+        className="btn btn-solid btn-sm"
+        disabled={!available || locked}
+        onClick={onClick}
+        aria-disabled={!available}
+      >
+        {busy ? "Opening..." : label}
       </button>
-      {error && <p className="payerr" role="alert">{error}</p>}
+      {!available && (
+        <p className="payunavailable">{reason ?? "Unavailable"}</p>
+      )}
     </div>
   );
 }

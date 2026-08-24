@@ -157,7 +157,7 @@ const PROVIDERS: SampleProvider[] = [
         capacityMax: 55,
         priceRupees: 1450,
         priceUnit: "per_person",
-        images: ["/Asset/culinary.png", "/Asset/D-card-img2.png"],
+        images: ["/Asset/culinary.png", "/Asset/food-class.png"],
         circuits: ["culinary", "ramayana"],
         inclusions: ["Welcome drink", "Fixed thali", "Dessert", "Filtered water"],
         exclusions: ["Private transport", "Birthday cake", "Late-night service after 10 PM"],
@@ -193,6 +193,7 @@ const PROVIDERS: SampleProvider[] = [
     ],
     media: [
       { kind: "cover", fileUrl: "/Asset/culinary.png", altText: "Vegetarian Bali meal", caption: "Jain and vegetarian thali setup" },
+      { kind: "photo", fileUrl: "/Asset/food-kitchen.png", altText: "Villa kitchen cook station", caption: "Private kitchen for group cooks" },
       { kind: "menu", fileUrl: "/demo/sample-shuddh-menu.pdf", altText: "Jain menu", caption: "Sample Jain group menu" },
       { kind: "gallery", fileUrl: "/Asset/D-card-img2.png", altText: "Group restaurant seating", caption: "Reserved group section" },
     ],

@@ -20,9 +20,11 @@ import {
   verifyRazorpayPaymentSignature,
   verifyRazorpayWebhookSignature,
 } from "@/lib/payments/razorpay";
-import { razorpayConfig } from "@/lib/payments/config";
-import type { PaymentIntentInput, RazorpayVerifyInput } from "@/lib/validators/payments";
+import { razorpayConfig, stripeConfig } from "@/lib/payments/config";
+import { stripeEventId, stripeWebhookEvent } from "@/lib/payments/stripe";
+import type { PaymentIntentInput, RazorpayVerifyInput, StripeConfirmInput } from "@/lib/validators/payments";
 import { createHeldDisbursementForBooking } from "@/lib/repositories/disbursements";
+import Stripe from "stripe";
 
 export class PaymentSetupError extends Error {
   constructor(message: string) {
@@ -41,15 +43,17 @@ export class PaymentContactError extends Error {
 export type PaymentIntentResult = {
   paymentId: string;
   bookingId: string;
-  provider: "cashfree" | "razorpay" | "manual_bank_transfer";
+  provider: "cashfree" | "razorpay" | "stripe" | "manual_bank_transfer";
   providerOrderId: string | null;
   amount: number;
   currency: "INR";
   checkout: {
-    mode: "cashfree" | "razorpay" | "manual";
+    mode: "cashfree" | "razorpay" | "stripe" | "manual";
     paymentSessionId?: string;
     orderId?: string;
     keyId?: string;
+    url?: string;
+    publishableKey?: string;
     instructions?: string;
   };
 };
@@ -144,9 +148,58 @@ async function createRazorpayOrder(args: { reference: string; amount: number; cu
   return { providerOrderId: String(json.id), keyId: config.keyId };
 }
 
+function stripeSdk(secretKey: string): Stripe {
+  return new Stripe(secretKey);
+}
+
+async function createStripeCheckoutSession(args: {
+  paymentId: string;
+  bookingId: string;
+  reference: string;
+  amount: number;
+  currency: string;
+  origin: string;
+  returnTo: string;
+}) {
+  const config = stripeConfig();
+  if (!config.acceptingPayments || !config.secretKey) {
+    throw new PaymentSetupError(config.unavailableReason ?? "Stripe is not configured.");
+  }
+
+  const returnPath = args.returnTo.startsWith("/") ? args.returnTo : "/en/account";
+  const joiner = returnPath.includes("?") ? "&" : "?";
+  const session = await stripeSdk(config.secretKey).checkout.sessions.create({
+    mode: "payment",
+    success_url: `${args.origin}${returnPath}${joiner}session_id={CHECKOUT_SESSION_ID}&booking=${args.bookingId}`,
+    cancel_url: `${args.origin}${returnPath}`,
+    client_reference_id: args.bookingId,
+    metadata: {
+      bookingId: args.bookingId,
+      paymentId: args.paymentId,
+      reference: args.reference,
+    },
+    line_items: [
+      {
+        quantity: 1,
+        price_data: {
+          currency: args.currency.toLowerCase(),
+          unit_amount: args.amount,
+          product_data: { name: `Only2Bali booking ${args.reference}` },
+        },
+      },
+    ],
+  });
+
+  if (!session.id || !session.url) {
+    throw new Error("Stripe did not return a checkout session URL.");
+  }
+  return { providerOrderId: session.id, url: session.url, publishableKey: config.publishableKey };
+}
+
 export async function createPaymentIntent(
   accountId: string,
-  input: PaymentIntentInput
+  input: PaymentIntentInput,
+  opts?: { origin?: string }
 ): Promise<PaymentIntentResult> {
   const [row] = await db
     .select({
@@ -170,8 +223,12 @@ export async function createPaymentIntent(
   if (row.currency !== "INR") throw new PaymentSetupError("Only INR traveler checkout is enabled.");
   if (input.provider === "razorpay" && !razorpayConfig().acceptingPayments) {
     throw new PaymentSetupError(
-      "Razorpay checkout is paused until the separate dashboard webhook secret is configured."
+      razorpayConfig().unavailableReason ??
+        "Razorpay checkout is paused until the separate dashboard webhook secret is configured."
     );
+  }
+  if (input.provider === "stripe" && !stripeConfig().acceptingPayments) {
+    throw new PaymentSetupError(stripeConfig().unavailableReason ?? "Stripe is not configured.");
   }
 
   const idempotencyKey = input.idempotencyKey ?? `pay_${input.bookingId}_${input.purpose}_${randomUUID()}`;
@@ -194,6 +251,14 @@ export async function createPaymentIntent(
     .returning();
 
   if (created.providerOrderId) {
+    let stripeUrl: string | undefined;
+    if (input.provider === "stripe") {
+      const secret = stripeConfig().secretKey;
+      if (secret) {
+        const existing = await stripeSdk(secret).checkout.sessions.retrieve(created.providerOrderId);
+        stripeUrl = existing.url ?? undefined;
+      }
+    }
     return {
       paymentId: created.id,
       bookingId: input.bookingId,
@@ -204,7 +269,14 @@ export async function createPaymentIntent(
       checkout:
         input.provider === "razorpay"
           ? { mode: "razorpay", orderId: created.providerOrderId, keyId: process.env.RAZORPAY_KEY_ID }
-          : { mode: "cashfree", orderId: created.providerOrderId },
+          : input.provider === "stripe"
+            ? {
+                mode: "stripe",
+                orderId: created.providerOrderId,
+                url: stripeUrl,
+                publishableKey: stripeConfig().publishableKey ?? undefined,
+              }
+            : { mode: "cashfree", orderId: created.providerOrderId },
     };
   }
 
@@ -247,6 +319,38 @@ export async function createPaymentIntent(
         mode: "cashfree",
         orderId: gateway.providerOrderId,
         paymentSessionId: gateway.paymentSessionId,
+      },
+    };
+  }
+
+  if (input.provider === "stripe") {
+    const origin = opts?.origin ?? "https://only2bali.vercel.app";
+    const gateway = await createStripeCheckoutSession({
+      paymentId: created.id,
+      bookingId: input.bookingId,
+      reference: row.reference,
+      amount: created.amount,
+      currency: created.currency,
+      origin,
+      returnTo: input.returnTo ?? "/en/account",
+    });
+    await db
+      .update(payment)
+      .set({ providerOrderId: gateway.providerOrderId, updatedAt: new Date() })
+      .where(eq(payment.id, created.id));
+
+    return {
+      paymentId: created.id,
+      bookingId: input.bookingId,
+      provider: input.provider,
+      providerOrderId: gateway.providerOrderId,
+      amount: created.amount,
+      currency: "INR",
+      checkout: {
+        mode: "stripe",
+        orderId: gateway.providerOrderId,
+        url: gateway.url,
+        publishableKey: gateway.publishableKey ?? undefined,
       },
     };
   }
@@ -675,6 +779,245 @@ export async function ingestRazorpayWebhook(args: {
       processed = true;
     } else {
       // Acknowledged and stored; nothing to apply to booking state.
+      processed = true;
+    }
+  } catch (err) {
+    processingError = err instanceof Error ? err.message : "processing_failed";
+  }
+
+  await db
+    .update(paymentEvent)
+    .set({
+      processedAt: processed ? new Date() : null,
+      processingError,
+      paymentId: paymentId ?? undefined,
+    })
+    .where(eq(paymentEvent.id, eventRowId));
+
+  if (processingError && !processed) {
+    throw new Error(processingError);
+  }
+
+  return {
+    accepted: true,
+    duplicate: Boolean(existing),
+    processed,
+    signatureVerified: true,
+    eventId,
+    eventType,
+  };
+}
+
+export async function confirmStripeCheckout(
+  accountId: string,
+  input: StripeConfirmInput
+): Promise<CaptureResult> {
+  const { secretKey, checkoutConfigured } = stripeConfig();
+  if (!checkoutConfigured || !secretKey) {
+    throw new PaymentSetupError("Stripe is not configured. Set STRIPE_SECRET_KEY.");
+  }
+
+  const session = await stripeSdk(secretKey).checkout.sessions.retrieve(input.sessionId);
+  const paid = session.payment_status === "paid";
+  const paymentIntentId =
+    typeof session.payment_intent === "string"
+      ? session.payment_intent
+      : session.payment_intent?.id ?? session.id;
+  if (!paid) {
+    throw new PaymentContactError("Stripe has not marked this session as paid yet.");
+  }
+
+  const [row] = await db
+    .select({
+      paymentId: payment.id,
+      bookingId: booking.id,
+      travellerAccountId: traveller.accountId,
+    })
+    .from(payment)
+    .innerJoin(booking, eq(payment.bookingId, booking.id))
+    .innerJoin(traveller, eq(booking.travellerId, traveller.id))
+    .where(
+      and(
+        eq(booking.id, input.bookingId),
+        eq(payment.provider, "stripe"),
+        eq(payment.providerOrderId, input.sessionId)
+      )
+    )
+    .limit(1);
+
+  if (!row || row.travellerAccountId !== accountId) {
+    throw new PaymentContactError("Payment not found for this account.");
+  }
+
+  return db.transaction((tx) =>
+    confirmBookingFromPayment(tx, {
+      bookingId: row.bookingId,
+      paymentId: row.paymentId,
+      providerPaymentId: paymentIntentId,
+    })
+  );
+}
+
+function stripeSessionFromEvent(event: Stripe.Event): Stripe.Checkout.Session | null {
+  if (
+    event.type === "checkout.session.completed" ||
+    event.type === "checkout.session.async_payment_succeeded" ||
+    event.type === "checkout.session.async_payment_failed" ||
+    event.type === "checkout.session.expired"
+  ) {
+    return event.data.object as Stripe.Checkout.Session;
+  }
+  return null;
+}
+
+export async function ingestStripeWebhook(args: {
+  rawBody: string;
+  signatureHeader: string | null;
+}): Promise<WebhookIngestResult> {
+  const { webhookSecret, webhookConfigured } = stripeConfig();
+  if (!webhookConfigured || !webhookSecret) {
+    throw new PaymentSetupError("Stripe webhooks are paused until STRIPE_WEBHOOK_SECRET is configured.");
+  }
+  if (!args.signatureHeader) {
+    throw new PaymentSignatureError("Stripe webhook signature is missing.");
+  }
+
+  let event: Stripe.Event;
+  let signatureVerified = false;
+  try {
+    event = stripeWebhookEvent({
+      rawBody: args.rawBody,
+      signature: args.signatureHeader,
+      webhookSecret,
+    });
+    signatureVerified = true;
+  } catch {
+    throw new PaymentSignatureError("Stripe webhook signature is invalid.");
+  }
+
+  const eventId = stripeEventId(event);
+  const eventType = event.type;
+  const session = stripeSessionFromEvent(event);
+  const providerOrderId = session?.id ?? null;
+  const providerPaymentId =
+    typeof session?.payment_intent === "string"
+      ? session.payment_intent
+      : session?.payment_intent?.id ?? null;
+
+  const [existing] = await db
+    .select({
+      id: paymentEvent.id,
+      processedAt: paymentEvent.processedAt,
+      signatureVerified: paymentEvent.signatureVerified,
+    })
+    .from(paymentEvent)
+    .where(and(eq(paymentEvent.provider, "stripe"), eq(paymentEvent.providerEventId, eventId)))
+    .limit(1);
+
+  if (existing?.processedAt) {
+    return {
+      accepted: true,
+      duplicate: true,
+      processed: true,
+      signatureVerified: existing.signatureVerified,
+      eventId,
+      eventType,
+    };
+  }
+
+  let paymentId: string | null = null;
+  if (providerOrderId) {
+    const [pay] = await db
+      .select({ id: payment.id })
+      .from(payment)
+      .where(and(eq(payment.provider, "stripe"), eq(payment.providerOrderId, providerOrderId)))
+      .limit(1);
+    paymentId = pay?.id ?? null;
+  }
+
+  let eventRowId = existing?.id;
+  if (!eventRowId) {
+    try {
+      const [inserted] = await db
+        .insert(paymentEvent)
+        .values({
+          provider: "stripe",
+          providerEventId: eventId,
+          paymentId,
+          type: eventType,
+          signatureVerified,
+          payload: event as unknown as Record<string, unknown>,
+        })
+        .returning({ id: paymentEvent.id });
+      eventRowId = inserted.id;
+    } catch {
+      const [again] = await db
+        .select({
+          id: paymentEvent.id,
+          processedAt: paymentEvent.processedAt,
+          signatureVerified: paymentEvent.signatureVerified,
+        })
+        .from(paymentEvent)
+        .where(and(eq(paymentEvent.provider, "stripe"), eq(paymentEvent.providerEventId, eventId)))
+        .limit(1);
+      if (again?.processedAt) {
+        return {
+          accepted: true,
+          duplicate: true,
+          processed: true,
+          signatureVerified: again.signatureVerified,
+          eventId,
+          eventType,
+        };
+      }
+      eventRowId = again?.id;
+    }
+  }
+
+  if (!eventRowId) {
+    throw new Error("Could not record payment event.");
+  }
+
+  let processed = false;
+  let processingError: string | null = null;
+
+  try {
+    const paid =
+      (eventType === "checkout.session.completed" && session?.payment_status === "paid") ||
+      eventType === "checkout.session.async_payment_succeeded";
+    if (paid && paymentId && (providerPaymentId || providerOrderId)) {
+      const [pay] = await db
+        .select({ bookingId: payment.bookingId })
+        .from(payment)
+        .where(eq(payment.id, paymentId))
+        .limit(1);
+      if (pay) {
+        await db.transaction((tx) =>
+          confirmBookingFromPayment(tx, {
+            bookingId: pay.bookingId,
+            paymentId,
+            providerPaymentId: providerPaymentId ?? providerOrderId!,
+          })
+        );
+        processed = true;
+      } else {
+        processingError = "payment_row_missing";
+      }
+    } else if (
+      (eventType === "checkout.session.async_payment_failed" || eventType === "checkout.session.expired") &&
+      paymentId
+    ) {
+      await db
+        .update(payment)
+        .set({
+          status: "failed",
+          failureCode: eventType,
+          failureMessage: `Stripe reported ${eventType}`,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(payment.id, paymentId), eq(payment.status, "created")));
+      processed = true;
+    } else {
       processed = true;
     }
   } catch (err) {

@@ -96,14 +96,65 @@ h1, h2, h3, h4, .wm {
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--hair);
 }
-.o2b-navrow { display: flex; align-items: center; justify-content: space-between; height: 68px; gap: 1rem; }
+.o2b-navrow { display: flex; align-items: center; justify-content: space-between; min-height: 68px; height: auto; gap: 1rem; padding-block: .45rem; }
 .lockup { display: flex; align-items: center; gap: .6rem; text-decoration: none; }
 .lockup .wm { font-weight: 600; font-size: 1.28rem; white-space: nowrap; }
 .lockup .wm i { font-style: normal; color: var(--saffron); }
-.navlinks { display: flex; gap: 1.5rem; align-items: center; }
-.navlinks a { text-decoration: none; font-size: .9rem; font-weight: 500; color: var(--text); opacity: .85; }
-.navlinks a:hover { opacity: 1; color: var(--emerald); }
-.navactions { display: flex; gap: .6rem; align-items: center; }
+.navlinks { display: flex; align-items: center; justify-content: center; min-width: 0; flex: 1 1 auto; }
+.navlinks a { text-decoration: none; }
+.navactions { display: flex; gap: .6rem; align-items: center; flex: none; }
+.notch-nav {
+  max-width: 100%;
+  position: static;
+  background: none;
+  border: 0;
+  backdrop-filter: none;
+}
+.notch-nav-track {
+  overflow: visible;
+  position: relative;
+  border-radius: 0.5rem;
+  border: 1px solid var(--line);
+  background: var(--cream);
+  color: var(--ink);
+}
+.notch-nav [role="menubar"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  list-style: none;
+  margin: 0;
+}
+.notch-nav [role="menuitem"] {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  border: 0;
+  background: none;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: color-mix(in srgb, var(--ink) 70%, transparent);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.notch-nav [role="menuitem"]:hover,
+.notch-nav [role="menuitem"][aria-current="page"] {
+  color: var(--emerald);
+}
+.notch-nav [role="menuitem"]:focus-visible {
+  outline: 2px solid var(--saffron);
+  outline-offset: 2px;
+}
+.notch-nav [aria-hidden="true"] {
+  color: var(--emerald);
+}
 
 /* language switcher */
 .langsw { position: relative; }
@@ -355,8 +406,30 @@ a.chip-on, .chip-on { background: var(--emerald); color: var(--ivory); }
 .o2b-footer a { color: var(--saffron-l); }
 
 /* ---------- responsive ---------- */
-@media (max-width: 1000px) {
-  .navlinks { display: none; }
+@media (max-width: 1100px) {
+  .o2b-navrow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "logo actions"
+      "links links";
+    align-items: center;
+    row-gap: .45rem;
+    padding-bottom: .7rem;
+  }
+  .lockup { grid-area: logo; }
+  .navactions { grid-area: actions; justify-self: end; }
+  .navlinks {
+    grid-area: links;
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: .2rem;
+  }
+  .navlinks::-webkit-scrollbar { display: none; }
+  .notch-nav { margin-inline: auto; }
 }
 @media (max-width: 960px) {
   .hero { grid-template-columns: 1fr; }
@@ -520,6 +593,7 @@ a.chip-on, .chip-on { background: var(--emerald); color: var(--ivory); }
 
 .accountgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; }
 .accountgrid.admin-grid { grid-template-columns: repeat(2, 1fr); align-items: start; }
+.admin-grid .desk-card { grid-column: 1 / -1; width: 100%; }
 .acard {
   background: var(--surface); border: 1px solid var(--hair);
   border-radius: var(--r-lg); padding: 1.5rem;
@@ -541,6 +615,10 @@ a.chip-on, .chip-on { background: var(--emerald); color: var(--ivory); }
 .bookingmeta { margin: .25rem 0 0; font-size: .82rem; color: var(--text-2); line-height: 1.45; }
 .bookinglink { display: inline-block; margin-top: .35rem; font-size: .8rem; color: var(--emerald); }
 .payrow { display: flex; flex-direction: column; align-items: flex-end; gap: .35rem; }
+.paychoose { margin: 0; font-size: .78rem; color: var(--text-2); }
+.payoptions { display: flex; flex-direction: column; align-items: stretch; gap: .45rem; min-width: 12.5rem; }
+.payoption { display: flex; flex-direction: column; align-items: flex-end; gap: .2rem; }
+.payunavailable { margin: 0; font-size: .72rem; color: var(--text-2); max-width: 16rem; text-align: right; }
 .payerr { margin: 0; font-size: .78rem; color: #b42318; max-width: 14rem; text-align: right; }
 .paystatus { font-size: .8rem; color: var(--text-2); }
 .paystatus-ok { color: var(--emerald); font-weight: 600; }
@@ -569,9 +647,18 @@ a.chip-on, .chip-on { background: var(--emerald); color: var(--ivory); }
 .admin-list span {
   color: var(--text-2); font-size: .78rem; overflow-wrap: anywhere;
 }
-.admin-list input {
+.admin-list input,
+.admin-list select {
   width: 100%; border: 1px solid var(--hair); border-radius: var(--r-sm);
   padding: .5rem .6rem; background: var(--surface); color: var(--text);
+}
+.desk-payments {
+  list-style: none; margin: .35rem 0 0; padding: 0;
+  display: grid; gap: .4rem;
+}
+.desk-payments li {
+  border-style: dashed;
+  padding: .55rem;
 }
 .mini-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
 .mini-actions button {

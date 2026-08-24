@@ -8,6 +8,7 @@ export const kn: Dictionary = {
   },
 
   nav: {
+    home: "ಮುಖಪುಟ",
     circuits: "ಸರ್ಕ್ಯೂಟ್‌ಗಳು",
     destinations: "Destinations",
     services: "Services",

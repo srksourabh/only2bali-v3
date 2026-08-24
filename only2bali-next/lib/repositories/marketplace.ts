@@ -12,10 +12,11 @@ import {
   vendor,
 } from "@/lib/db/schema";
 import type { MessageInput, ProviderBidInput, TripRequestCreateInput } from "@/lib/validators/marketplace";
+import { DEFAULT_PLATFORM_FEE_RATE, resolveCommissionRate } from "@/lib/payments/fee";
 
 /** Vendor sets net; platform derives traveller-facing total. Never invert this. */
 export function deriveTravellerTotal(vendorNetAmount: number, commissionRate: number): number {
-  const rate = Number.isFinite(commissionRate) ? commissionRate : 0.15;
+  const rate = Number.isFinite(commissionRate) ? commissionRate : DEFAULT_PLATFORM_FEE_RATE;
   const safe = Math.min(Math.max(rate, 0), 0.9);
   return Math.ceil(vendorNetAmount / (1 - safe));
 }
@@ -129,7 +130,7 @@ export async function createProviderBid(
     return { ok: false as const, reason: "request_closed" };
   }
 
-  const commissionRate = Number(provider.commissionRate ?? "0.15");
+  const commissionRate = resolveCommissionRate(provider.commissionRate, DEFAULT_PLATFORM_FEE_RATE);
   const totalAmount = deriveTravellerTotal(input.vendorNetAmount, commissionRate);
 
   const [thread] = await db
@@ -422,7 +423,7 @@ export async function acceptOffer(accountId: string, offerId: string) {
       .for("update");
     if (!req || req.travellerId !== profile.id) return { ok: false as const, reason: "forbidden" };
 
-    const commissionRate = Number(row.commissionRate ?? "0.15");
+    const commissionRate = resolveCommissionRate(row.commissionRate, DEFAULT_PLATFORM_FEE_RATE);
     const gross = row.totalAmount;
     const net = row.vendorNetAmount ?? Math.floor(gross * (1 - commissionRate));
     const commissionAmount = gross - net;

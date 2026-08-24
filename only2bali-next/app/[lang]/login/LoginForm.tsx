@@ -21,10 +21,12 @@ export default function LoginForm({
   dict,
   lang,
   next,
+  otpOffered = true,
 }: {
   dict: Dictionary;
   lang: Locale;
   next: string;
+  otpOffered?: boolean;
 }) {
   const t = dict.auth;
   const router = useRouter();
@@ -168,6 +170,7 @@ export default function LoginForm({
             onClick={() => {
               setRole(r);
               setMode("signin");
+              setStep("password");
               setError(null);
             }}
           >
@@ -223,7 +226,7 @@ export default function LoginForm({
 
           {role !== "admin" && clerkEnabled && (
             <p className="empty" style={{ fontSize: ".85rem" }}>
-              Or use password / OTP below.
+              {otpOffered ? "Or use password / OTP below." : "Or use password below."}
             </p>
           )}
 
@@ -272,7 +275,7 @@ export default function LoginForm({
             {busy ? "Checking..." : mode === "signup" ? "Create account" : "Sign in"}
           </button>
 
-          {role !== "admin" && (
+          {otpOffered && role === "traveller" && (
             <div className="authalt">
               <button type="button" onClick={() => setStep("identifier")}>
                 Use OTP instead
