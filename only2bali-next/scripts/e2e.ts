@@ -226,7 +226,7 @@ async function main() {
     const res = await call("/en");
     const html = await res.text();
     check("the English homepage renders", res.status === 200, `HTTP ${res.status}`);
-    check("it declares itself English", /<html[^>]*lang="en"/.test(html));
+    check("it declares itself English", /<html[^>]*lang="en(-[A-Za-z]+)?"/.test(html));
 
     const [pkg] = (await db.execute(sql`
       select name from package where status = 'published' order by name limit 1
