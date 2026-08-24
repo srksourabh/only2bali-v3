@@ -125,16 +125,30 @@ delete from account where email like '%@demo.only2bali.com';
 Both statements are documented in `infra/postgres/seed-demo.sql`. Run them
 against the production database, not a local one.
 
-## 7 — Connection pooling
+## 7 — Database round-trip latency
 
-`/api/health` answered in 10.0s and 9.98s on two consecutive probes;
-`/api/services` in 3.6s; static pages in 0.5s. Every database-backed page pays
-this, on every request.
+`/api/health` answered in 10.7s, 9.8s and 10.0s on three **back-to-back**
+probes. `/api/services` takes 3.6s; static pages 0.5s. Every database-backed
+page pays this, on every request.
 
-Check that `DATABASE_URL` / `o2b_DATABASE_URL` in Vercel is Neon's **pooled**
-connection string — the host contains `-pooler`. A direct connection from
-serverless opens a new Postgres session per invocation, which is what this
-latency profile looks like.
+Two explanations are already ruled out:
+
+- **Not a cold start.** A Neon scale-to-zero wake would be slow once and fast
+  immediately after. Three consecutive probes were all ~10s.
+- **Probably not pooling.** `docs/memory.md` records `DATABASE_URL` as Neon's
+  pooled `sslmode=require` string. Confirm the host still contains `-pooler`,
+  but do not stop there if it does.
+
+`latencyMs` covers the whole handler, which makes roughly five round trips
+(applied-migration count, three schema probes, one ping). Ten seconds across
+those is about two seconds per round trip, which points at distance rather than
+connection setup.
+
+**Check first:** the Neon project's region against the Vercel function region.
+A database in one continent and a function in another produces exactly this
+profile, and it is invisible locally — `npm run db:verify` reports 1ms average
+against the Docker Postgres. Co-locating them is a Neon project setting, not a
+code change.
 
 ## After each change
 

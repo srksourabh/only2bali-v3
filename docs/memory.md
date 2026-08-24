@@ -594,3 +594,44 @@ Password is in Vercel `ADMIN_PASSWORD`, not printed here.
 Committed `5514d04` on `feat/schema-status-health` and pushed to origin.
 Production CLI deploy `dpl_CL19V7Hgp2setxjPKi4GLz56vXgM` is Ready at
 https://only2bali.vercel.app. `main` was not merged.
+
+### 2026-08-25 — Test coverage, two upload bugs, seven food protocols
+
+**Coverage.** End-to-end went from 134 checks to 322 and now covers every loop
+that moves money or trust: bids and offers, escrow through payout and refund,
+KYC documents, provider fulfilment, reviews, the admin desk, the sign-in methods
+that are not OTP, and the public pages. Unit 249, `db:verify` 43.
+
+**Three defects, all found by writing the tests, none by reading the code.**
+
+- `storeUpload` wrote KYC documents to `.uploads/providers/<vendor>/…` while
+  `readDocumentBytes` looked under `.uploads/<vendor>/…`. Every document
+  uploaded on a developer machine was stored once and never readable again.
+  The unit test round-trips a write and a read now instead of asserting either
+  path.
+- `EXT_CONTENT_TYPE` was built with `Object.entries()` over a `Map`, which
+  returns nothing, so the map was empty and every stored document came back as
+  `application/octet-stream`.
+- Reviewing the same booking twice in one direction hit a unique index and
+  surfaced as a 500. A double-tapped button is enough. It answers 409 now.
+
+**Food protocols went from three to seven** — satvik, eggetarian, halal and
+non_veg joined Jain, vegetarian and vegan. The list had been written out by hand
+in sixteen files; it lives in `lib/protocols.ts` now and the Drizzle enum reads
+from it, so the database and the application cannot disagree. Migration 0008 is
+additive (`ALTER TYPE … ADD VALUE`). See ADR-007 for why launch is Razorpay-only.
+
+**Production, measured not assumed.** `database: connected`, schema 8/8 — the
+"unreachable" line in CLAUDE.md had been false for some time and is corrected.
+Still open, all of them switches outside this repository: OTP delivery is
+`["none"]`, uploads are `none`/`none`, contact details unset, and **live
+Razorpay keys are accepting payments while Google-via-Clerk is the only working
+sign-in**. `docs/launch-checklist.md` has the runbook; `npm run verify:launch`
+reads production and exits non-zero while anything is open. Database round trips
+are ~2s (health 10s across ~5 queries) with pooling already configured, which
+points at Neon/Vercel region mismatch rather than connection setup.
+
+### Decision log
+
+- ADR-007 (2026-08-25) — launch on Razorpay alone; keep the Stripe code
+  unconfigured, listed as unavailable with a reason.

@@ -282,11 +282,26 @@ Not done - this is what blocks retiring the React app:
 
 ## Next up
 
+- [ ] **Resolve live payments behind Google-only sign-in.** Production takes live
+      Razorpay while OTP cannot deliver and Google-via-Clerk is the only working door.
+      Either move to test keys or close the door — `docs/launch-checklist.md` item 1.
 - [ ] **Revoke the two leaked credentials** (Zoho, SpringEdge). Nothing else on this list
       matters as much.
 - [ ] **Move production to Sourabh's Vercel** — `docs/vercel-handover.md`. This unblocks
       contact details and login in one step.
 - [ ] Choose an email provider and set `RESEND_API_KEY`, so people can actually sign in.
+      The Resend code is written and unused; this is a Vercel variable, not a build.
+- [ ] Set `BLOB_READ_WRITE_TOKEN` and `BLOB_PRIVATE_READ_WRITE_TOKEN`. Without them
+      production stores no vendor photos and no KYC documents at all.
+- [ ] Check the Neon region against the Vercel function region — every database-backed
+      page costs ~2s per round trip in production and 1ms locally.
+- [x] **End-to-end coverage of the money and trust loops** — bids, offers, escrow,
+      payout, refund, KYC documents, reviews, fulfilment, admin. 134 checks to 322.
+      Found three real defects; see `docs/memory.md` 2026-08-25.
+- [x] **Seven food protocols** — satvik, eggetarian, halal and non_veg added, list
+      centralised in `lib/protocols.ts`, migration 0008 additive.
+- [x] **Single gateway at launch** — ADR-007. Razorpay only; Stripe stays in the tree,
+      unconfigured and honestly labelled.
 - [x] **Wire Razorpay** — order create (`POST /api/payments/checkout`), Checkout.js verify
       (`POST /api/payments/verify`), webhook with idempotent `payment_event`
       (`POST /api/payments/webhook`), account Pay button. Still needs
