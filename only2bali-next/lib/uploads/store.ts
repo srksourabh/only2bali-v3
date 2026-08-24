@@ -33,7 +33,10 @@ const ALLOWED = new Map<string, string>([
   ["image/webp", "webp"],
   ["application/pdf", "pdf"],
 ]);
-const EXT_CONTENT_TYPE = new Map(Object.entries(ALLOWED).map(([type, ext]) => [ext, type]));
+// ALLOWED is a Map, and Object.entries() on a Map returns nothing at all, so
+// this lookup was silently empty and every stored document came back as
+// application/octet-stream.
+const EXT_CONTENT_TYPE = new Map([...ALLOWED].map(([type, ext]) => [ext, type]));
 const HANDLE_TTL_MS = 15 * 60_000;
 /** Documents live outside `public/` so the dev server can never serve them statically. */
 const LOCAL_PRIVATE_ROOT = ".uploads";
@@ -257,9 +260,12 @@ export async function readDocumentBytes(fileUrl: string): Promise<{ bytes: Buffe
     }
     if (process.env.NODE_ENV === "production") return null;
     try {
-      const rel = fileUrl.replace(/^providers\//, "");
+      // The write side stores at `.uploads/providers/<vendor>/documents/<file>`,
+      // so the reference is already the path under the private root. Stripping
+      // the `providers/` segment here looked symmetrical and meant every
+      // locally stored KYC document was written once and never readable again.
       return {
-        bytes: await readFile(path.join(process.cwd(), LOCAL_PRIVATE_ROOT, rel)),
+        bytes: await readFile(path.join(process.cwd(), LOCAL_PRIVATE_ROOT, fileUrl)),
         contentType: EXT_CONTENT_TYPE.get(ext) ?? "application/octet-stream",
       };
     } catch {

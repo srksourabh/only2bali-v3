@@ -18,6 +18,7 @@
     "db:seed:demo": "tsx --env-file-if-exists=.env.local lib/db/seed-marketplace.ts",
     "db:seed:samples": "tsx --env-file-if-exists=.env.local lib/db/seed-sample-marketplace.ts",
     "db:verify": "tsx --env-file-if-exists=.env.local scripts/verify-db.ts",
+    "verify:launch": "tsx scripts/verify-launch.ts",
     "admin:create": "tsx --env-file-if-exists=.env.local scripts/create-admin.ts",
     "dev:local": "bash scripts/dev-up.sh",
     "dev:down": "bash scripts/dev-down.sh"

@@ -93,6 +93,9 @@ let bidThreadId = "";
 let offerBookingId = "";
 let offerPaymentId = "";
 let disbursementId = "";
+let documentRef = "";
+let documentHandle = "";
+let documentId = "";
 /** Set once a booking has taken seats, so cleanup can give them back. */
 let bookedDepartureId = "";
 
@@ -1213,6 +1216,466 @@ async function main() {
       body: { reason: "already chosen" },
     });
     check("a closed offer cannot then be declined", declineClosed.status === 409, `HTTP ${declineClosed.status}`);
+  }
+
+  // ---------- KYC documents ----------
+  //
+  // The one place private bytes leave the server. A licence or a passport scan
+  // reachable by anyone who can guess a UUID is the failure worth proving does
+  // not happen, so every read of it is tried from the wrong side first.
+  console.log("\nDocuments and KYC");
+  {
+    const form = new FormData();
+    form.set("file", new File([new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34])], "licence.pdf", { type: "application/pdf" }));
+    form.set("folder", "documents");
+
+    const res = await fetch(`${BASE}/api/provider/uploads`, {
+      method: "POST",
+      headers: { cookie: vendorCookie, "x-forwarded-for": IP_MAIN, "user-agent": "only2bali-e2e" },
+      body: form,
+      redirect: "manual",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    const body = await json(res);
+    documentRef = body?.data?.upload?.ref ?? "";
+    documentHandle = body?.data?.upload?.handle ?? "";
+    check("a provider can upload a private document", res.status === 201 && Boolean(documentRef), `HTTP ${res.status}`);
+    check("the upload returns a signed handle, never a storage location", Boolean(documentHandle) && !documentRef.startsWith("http"), documentRef);
+
+    const anonForm = new FormData();
+    anonForm.set("file", new File([new Uint8Array([1, 2, 3])], "x.pdf", { type: "application/pdf" }));
+    const anon = await fetch(`${BASE}/api/provider/uploads`, {
+      method: "POST",
+      headers: { "x-forwarded-for": IP_MAIN, "user-agent": "only2bali-e2e" },
+      body: anonForm,
+      redirect: "manual",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    check("an anonymous caller cannot upload", anon.status === 401, `HTTP ${anon.status}`);
+  }
+  {
+    const tampered = await call("/api/provider/documents", {
+      cookie: vendorCookie,
+      body: { kind: "business_licence", ref: documentRef, handle: `${documentHandle}tampered` },
+    });
+    check("a document with a tampered handle is refused", tampered.status === 400, `HTTP ${tampered.status}`);
+
+    const mismatched = await call("/api/provider/documents", {
+      cookie: vendorCookie,
+      body: { kind: "business_licence", ref: "providers/someone-else/documents/forged.pdf", handle: documentHandle },
+    });
+    check("a handle cannot be pointed at another provider's path", mismatched.status === 400, `HTTP ${mismatched.status}`);
+
+    const res = await call("/api/provider/documents", {
+      cookie: vendorCookie,
+      body: { kind: "business_licence", ref: documentRef, handle: documentHandle },
+    });
+    const body = await json(res);
+    documentId = body?.data?.document?.id ?? "";
+    check("a provider can attach the uploaded document", res.status === 201 && Boolean(documentId), `HTTP ${res.status}`);
+    check("a new document waits for review", body?.data?.document?.status === "pending", body?.data?.document?.status);
+
+    const list = await call("/api/provider/documents", { cookie: vendorCookie });
+    const listBody = await json(list);
+    const docs: Array<{ id: string; fileUrl?: string }> = listBody?.data?.documents ?? [];
+    check("the provider can list its documents", list.status === 200 && docs.some((d) => d.id === documentId), `HTTP ${list.status}`);
+  }
+  {
+    const anon = await call(`/api/documents/${documentId}/file`);
+    check("document bytes are not served anonymously", anon.status === 401, `HTTP ${anon.status}`);
+
+    const asTraveller = await call(`/api/documents/${documentId}/file`, { cookie: sessionCookie });
+    check("another signed-in account cannot read a provider's document", asTraveller.status === 403, `HTTP ${asTraveller.status}`);
+
+    const asOwner = await call(`/api/documents/${documentId}/file`, { cookie: vendorCookie });
+    check("the owning provider can read it back", asOwner.status === 200, `HTTP ${asOwner.status}`);
+    check("and it is sent as an attachment, not rendered", (asOwner.headers.get("content-disposition") ?? "").startsWith("attachment"), asOwner.headers.get("content-disposition") ?? "none");
+    check("with sniffing turned off", asOwner.headers.get("x-content-type-options") === "nosniff");
+    check("and never cached", asOwner.headers.get("cache-control") === "no-store");
+
+    const asAdmin = await call(`/api/documents/${documentId}/file`, { cookie: adminCookie });
+    check("an admin can read it for review", asAdmin.status === 200, `HTTP ${asAdmin.status}`);
+
+    const missing = await call("/api/documents/00000000-0000-0000-0000-000000000000/file", { cookie: adminCookie });
+    check("an unknown document is a not-found", missing.status === 404, `HTTP ${missing.status}`);
+  }
+  {
+    const asVendor = await call(`/api/admin/documents/${documentId}`, {
+      cookie: vendorCookie,
+      method: "PATCH",
+      body: { status: "approved" },
+    });
+    check("a provider cannot approve its own document", asVendor.status === 403, `HTTP ${asVendor.status}`);
+
+    const res = await call(`/api/admin/documents/${documentId}`, {
+      cookie: adminCookie,
+      method: "PATCH",
+      body: { status: "approved" },
+    });
+    const body = await json(res);
+    check("an admin can approve the document", res.status === 200 && body?.data?.document?.status === "approved", `HTTP ${res.status} status=${body?.data?.document?.status}`);
+
+    const again = await call(`/api/admin/documents/${documentId}`, {
+      cookie: adminCookie,
+      method: "PATCH",
+      body: { status: "rejected" },
+    });
+    check("an already-reviewed document is not re-reviewed", again.status === 404, `HTTP ${again.status}`);
+  }
+
+  // ---------- provider fulfilment ----------
+  console.log("\nProvider fulfilment");
+  {
+    const anon = await call("/api/provider/board");
+    check("the provider board is not readable anonymously", anon.status === 401, `HTTP ${anon.status}`);
+
+    const asTraveller = await call("/api/provider/board", { cookie: sessionCookie });
+    check("a traveller cannot open the provider board", asTraveller.status === 403, `HTTP ${asTraveller.status}`);
+
+    const res = await call("/api/provider/board", { cookie: vendorCookie });
+    check("a provider can open its board", res.status === 200, `HTTP ${res.status}`);
+  }
+  {
+    const res = await call("/api/provider/bookings", { cookie: vendorCookie });
+    const body = await json(res);
+    const rows: Array<{ bookingId: string }> = body?.data?.bookings ?? [];
+    check("a provider can list the bookings it must deliver", res.status === 200, `HTTP ${res.status}`);
+    check(
+      "the marketplace booking is on that list",
+      rows.some((b) => b.bookingId === marketplaceBookingId),
+      `${rows.length} rows`
+    );
+
+    const asTraveller = await call("/api/provider/bookings", { cookie: sessionCookie });
+    check("a traveller cannot list provider bookings", asTraveller.status === 403, `HTTP ${asTraveller.status}`);
+  }
+  {
+    const badStatus = await call(`/api/provider/bookings/${marketplaceBookingId}`, {
+      cookie: vendorCookie,
+      method: "PATCH",
+      body: { status: "cancelled" },
+    });
+    check("a provider cannot invent a booking status", badStatus.status === 400, `HTTP ${badStatus.status}`);
+
+    const notMine = await call(`/api/provider/bookings/${offerBookingId}`, {
+      cookie: vendorCookie,
+      method: "PATCH",
+      body: { status: "in_progress" },
+    });
+    check(
+      "a provider cannot move a booking that is not yet theirs to move",
+      notMine.status === 409 || notMine.status === 404,
+      `HTTP ${notMine.status}`
+    );
+
+    const res = await call(`/api/provider/bookings/${marketplaceBookingId}`, {
+      cookie: vendorCookie,
+      method: "PATCH",
+      body: { status: "in_progress" },
+    });
+    check("a provider can start the trip", res.status === 200, `HTTP ${res.status}`);
+
+    const done = await call(`/api/provider/bookings/${marketplaceBookingId}`, {
+      cookie: vendorCookie,
+      method: "PATCH",
+      body: { status: "completed" },
+    });
+    check("and complete it", done.status === 200, `HTTP ${done.status}`);
+
+    const backwards = await call(`/api/provider/bookings/${marketplaceBookingId}`, {
+      cookie: vendorCookie,
+      method: "PATCH",
+      body: { status: "in_progress" },
+    });
+    check("a completed booking cannot be restarted", backwards.status === 409, `HTTP ${backwards.status}`);
+  }
+  {
+    const res = await call("/api/provider/profile", {
+      cookie: vendorCookie,
+      method: "PUT",
+      body: { businessName: VENDOR_BUSINESS, baseArea: "Ubud", city: "Ubud", country: "Indonesia" },
+    });
+    check("a provider can edit its profile", res.status === 200, `HTTP ${res.status}`);
+
+    const read = await call("/api/provider/profile", { cookie: vendorCookie });
+    check("and read it back", read.status === 200, `HTTP ${read.status}`);
+
+    const asTraveller = await call("/api/provider/profile", { cookie: sessionCookie });
+    check("a traveller has no provider profile to read", asTraveller.status === 403, `HTTP ${asTraveller.status}`);
+  }
+  {
+    const res = await call("/api/provider/promotions", { cookie: vendorCookie });
+    check("a provider can read its promotions", res.status === 200, `HTTP ${res.status}`);
+
+    const events = await call("/api/provider/events", { cookie: vendorCookie });
+    check("a provider can read its events", events.status === 200, `HTTP ${events.status}`);
+
+    const anon = await call("/api/provider/promotions");
+    check("promotions are not readable anonymously", anon.status === 401, `HTTP ${anon.status}`);
+  }
+
+  // ---------- reviews ----------
+  //
+  // Both directions, on a booking that has actually happened. The rating a
+  // traveller leaves is what the directory sorts on, so it has to roll up.
+  console.log("\nReviews");
+  {
+    const anon = await call("/api/reviews", {
+      body: { bookingId: marketplaceBookingId, direction: "traveller_to_vendor", rating: 5 },
+    });
+    check("an anonymous visitor cannot leave a review", anon.status === 401, `HTTP ${anon.status}`);
+
+    const outOfRange = await call("/api/reviews", {
+      cookie: sessionCookie,
+      body: { bookingId: marketplaceBookingId, direction: "traveller_to_vendor", rating: 9 },
+    });
+    check("a rating outside one to five is refused", outOfRange.status === 400, `HTTP ${outOfRange.status}`);
+
+    const unpaid = await call("/api/reviews", {
+      cookie: sessionCookie,
+      body: { bookingId: offerBookingId, direction: "traveller_to_vendor", rating: 5 },
+    });
+    check("a trip that has not happened yet cannot be reviewed", unpaid.status === 400, `HTTP ${unpaid.status}`);
+
+    const wrongWay = await call("/api/reviews", {
+      cookie: sessionCookie,
+      body: { bookingId: marketplaceBookingId, direction: "vendor_to_traveller", rating: 5 },
+    });
+    check("a traveller cannot review as the provider", wrongWay.status === 403, `HTTP ${wrongWay.status}`);
+  }
+  {
+    const res = await call("/api/reviews", {
+      cookie: sessionCookie,
+      body: {
+        bookingId: marketplaceBookingId,
+        direction: "traveller_to_vendor",
+        rating: 5,
+        comment: `Kitchen kept the protocol all week. ${run}`,
+        foodComplianceKept: true,
+      },
+    });
+    check("a traveller can review the provider", res.status === 201, `HTTP ${res.status}`);
+
+    const twice = await call("/api/reviews", {
+      cookie: sessionCookie,
+      body: { bookingId: marketplaceBookingId, direction: "traveller_to_vendor", rating: 1 },
+    });
+    check("the same booking cannot be reviewed twice in one direction", twice.status === 409, `HTTP ${twice.status}`);
+
+    const back = await call("/api/reviews", {
+      cookie: vendorCookie,
+      body: { bookingId: marketplaceBookingId, direction: "vendor_to_traveller", rating: 4, comment: `Easy group. ${run}` },
+    });
+    check("the provider can review the traveller back", back.status === 201, `HTTP ${back.status}`);
+  }
+  {
+    const [row] = (await db.execute(sql`
+      select rating_avg, rating_count from vendor where id = ${vendorId}
+    `)) as unknown as [{ rating_avg: string | null; rating_count: number } | undefined];
+    check("the traveller's rating rolls up onto the provider", Number(row?.rating_count) === 1, `count=${row?.rating_count}`);
+    check("and the average is the rating given", Number(row?.rating_avg) === 5, `avg=${row?.rating_avg}`);
+
+    const res = await call(`/api/reviews?vendorId=${vendorId}`);
+    const body = await json(res);
+    const reviews: Array<{ rating: number; direction?: string }> = body?.data?.reviews ?? [];
+    check("published reviews are readable without signing in", res.status === 200, `HTTP ${res.status}`);
+    check("the traveller's review is public", reviews.some((r) => r.rating === 5), `${reviews.length} reviews`);
+    check(
+      "the provider's review of the traveller is not on the public listing",
+      reviews.every((r) => r.direction !== "vendor_to_traveller")
+    );
+
+    const noVendor = await call("/api/reviews");
+    check("asking for reviews without a provider is refused", noVendor.status === 400, `HTTP ${noVendor.status}`);
+  }
+
+  // ---------- admin desk ----------
+  console.log("\nAdmin desk");
+  {
+    const anon = await call("/api/admin/overview");
+    check("the admin overview is not readable anonymously", anon.status === 401, `HTTP ${anon.status}`);
+
+    const asVendor = await call("/api/admin/overview", { cookie: vendorCookie });
+    check("a provider cannot read the admin overview", asVendor.status === 403, `HTTP ${asVendor.status}`);
+
+    const res = await call("/api/admin/overview", { cookie: adminCookie });
+    check("an admin can read the overview", res.status === 200, `HTTP ${res.status}`);
+  }
+  {
+    const res = await call("/api/admin/settings", { cookie: adminCookie });
+    const body = await json(res);
+    check("an admin can read platform settings", res.status === 200, `HTTP ${res.status}`);
+
+    const asTraveller = await call("/api/admin/settings", { cookie: sessionCookie });
+    check("a traveller cannot", asTraveller.status === 403, `HTTP ${asTraveller.status}`);
+
+    const silly = await call("/api/admin/settings", {
+      cookie: adminCookie,
+      method: "PATCH",
+      body: { platformFeeRate: 0.99 },
+    });
+    check("the platform fee cannot be set past its ceiling", silly.status === 400, `HTTP ${silly.status}`);
+
+    // Restore whatever it was, so the rest of the run prices as it did.
+    const current = body?.data?.platformFeeRate ?? body?.data?.settings?.platformFeeRate;
+    if (typeof current === "number") {
+      const restore = await call("/api/admin/settings", {
+        cookie: adminCookie,
+        method: "PATCH",
+        body: { platformFeeRate: current },
+      });
+      check("a valid platform fee is accepted", restore.status === 200, `HTTP ${restore.status}`);
+    }
+  }
+
+  // ---------- availability, planner and gateway choice ----------
+  console.log("\nAvailability, planner and gateways");
+  {
+    const res = await call(`/api/services/${marketplaceListingId}/availability`);
+    check("availability for a public listing is readable", res.status === 200, `HTTP ${res.status}`);
+
+    const missing = await call("/api/services/00000000-0000-0000-0000-000000000000/availability");
+    check("availability for an unknown listing is a not-found", missing.status === 404, `HTTP ${missing.status}`);
+  }
+  {
+    const res = await call("/api/planner", {
+      body: {
+        protocol: "jain",
+        groupSize: 6,
+        nights: 5,
+        interests: ["temples", "beaches"],
+        departureCity: "Mumbai",
+      },
+    });
+    check("the planner answers even with no AI key configured", res.status === 200, `HTTP ${res.status}`);
+
+    // Every field is optional or defaulted on purpose - the planner takes free
+    // text - so the boundary worth proving is the one below the schema.
+    const broken = await fetch(`${BASE}/api/planner`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-forwarded-for": IP_MAIN, "user-agent": "only2bali-e2e" },
+      body: "{not json",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    check("a planner request that is not JSON is refused", broken.status === 400, `HTTP ${broken.status}`);
+  }
+  {
+    const res = await call("/api/payments/options");
+    const body = await json(res);
+    const gateways: Array<{ id: string; available: boolean; reason: string | null }> = [
+      body?.data?.razorpay,
+      body?.data?.stripe,
+    ].filter(Boolean);
+    check("the gateway list is readable", res.status === 200, `HTTP ${res.status}`);
+    check("both gateways are named", gateways.length === 2, `${gateways.length} gateways`);
+    check(
+      "an unconfigured gateway is offered as unavailable with a reason, rather than hidden",
+      gateways.every((g) => g.available || Boolean(g.reason)),
+      gateways.map((g) => `${g.id}:${g.available ? "on" : g.reason}`).join(" ")
+    );
+    check(
+      "no secret leaks into the public gateway list",
+      !JSON.stringify(body ?? {}).includes(E2E_RAZORPAY_KEY_SECRET)
+    );
+  }
+
+  // ---------- the other ways in ----------
+  //
+  // Production's only working sign-in is Google, and it had no coverage at all.
+  // Neither Google nor Clerk is configured here, so what is proven is that both
+  // refuse cleanly instead of half-signing somebody in.
+  console.log("\nSign-in alternatives");
+  {
+    const res = await call("/api/auth/password/signin", {
+      body: { username: VENDOR_USERNAME, password: VENDOR_PASSWORD, role: "vendor" },
+    });
+    const cookie = cookieFrom(res);
+    check("a provider can sign in with its password", res.status === 200 && Boolean(cookie), `HTTP ${res.status}`);
+
+    const session = await call("/api/auth/session", { cookie });
+    const body = await json(session);
+    check("that session resolves to the provider", body?.data?.user?.role === "vendor", body?.data?.user?.role);
+
+    const wrong = await call("/api/auth/password/signin", {
+      body: { username: VENDOR_USERNAME, password: `${VENDOR_PASSWORD}-wrong`, role: "vendor" },
+    });
+    check("a wrong password is refused", wrong.status === 401, `HTTP ${wrong.status}`);
+
+    const unknown = await call("/api/auth/password/signin", {
+      body: { username: `nobody-${run}`, password: VENDOR_PASSWORD, role: "vendor" },
+    });
+    check("an unknown username is refused the same way", unknown.status === 401, `HTTP ${unknown.status}`);
+
+    // Sign the extra session out again so it cannot outlive the run.
+    await call("/api/auth/logout", { cookie, method: "POST" });
+  }
+  {
+    const res = await call("/api/auth/google/start?role=traveller");
+    check(
+      "Google sign-in refuses cleanly when it is not configured",
+      res.status === 503 || res.status === 307,
+      `HTTP ${res.status}`
+    );
+
+    const badRole = await call("/api/auth/google/start?role=admin");
+    check(
+      "Google sign-in never offers an admin role",
+      badRole.status === 400 || badRole.status === 503,
+      `HTTP ${badRole.status}`
+    );
+
+    const bridge = await call("/api/auth/clerk/bridge", { body: { role: "traveller" } });
+    check(
+      "the Clerk bridge refuses without a Clerk session",
+      bridge.status === 401 || bridge.status === 503,
+      `HTTP ${bridge.status}`
+    );
+
+    const bridgeAdmin = await call("/api/auth/clerk/bridge", { body: { role: "admin" } });
+    check(
+      "the Clerk bridge never mints an admin",
+      bridgeAdmin.status === 400 || bridgeAdmin.status === 401 || bridgeAdmin.status === 403 || bridgeAdmin.status === 503,
+      `HTTP ${bridgeAdmin.status}`
+    );
+  }
+
+  // ---------- the rest of the public site ----------
+  console.log("\nRemaining public pages");
+  {
+    const pages: Array<[string, string]> = [
+      ["/en/planner", "the planner page"],
+      ["/en/inquiry", "the enquiry page"],
+      ["/en/destinations", "the destinations index"],
+      ["/en/vendors", "the become-a-provider page"],
+      ["/en/about", "the about page"],
+      ["/en/faq", "the FAQ"],
+      ["/en/privacy", "the privacy policy"],
+      ["/en/terms", "the terms"],
+    ];
+    for (const [path, name] of pages) {
+      const res = await call(path);
+      check(`${name} renders`, res.status === 200, `HTTP ${res.status}`);
+    }
+  }
+  {
+    const [region] = (await db.execute(sql`
+      select slug from region where slug is not null order by slug limit 1
+    `).catch(() => [[]] as unknown)) as unknown as [{ slug: string } | undefined];
+    if (region?.slug) {
+      const res = await call(`/en/destinations/${region.slug}`);
+      check("a destination page renders", res.status === 200, `HTTP ${res.status}`);
+    }
+
+    const [slug] = (await db.execute(sql`
+      select slug from vendor where verification_status = 'verified' and slug is not null limit 1
+    `)) as unknown as [{ slug: string } | undefined];
+    if (slug?.slug) {
+      const res = await call(`/en/providers/${slug.slug}`);
+      check("a verified provider's public profile renders", res.status === 200, `HTTP ${res.status}`);
+    }
+
+    const missing = await call("/en/providers/no-such-provider-anywhere");
+    check("an unknown provider profile is a not-found", missing.status === 404, `HTTP ${missing.status}`);
   }
 
   // ---------- the money tail: escrow, payout queue, refund ----------

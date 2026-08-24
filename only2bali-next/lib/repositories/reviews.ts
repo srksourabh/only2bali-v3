@@ -89,6 +89,19 @@ export async function createReview(accountId: string, role: string, input: Creat
     });
   }
 
+  // One review per booking per direction is a unique index. Without this check
+  // a second submission - a double-tapped button is enough - reaches Postgres
+  // and comes back as an unhandled constraint violation, which the API layer
+  // can only render as a 500. Answer the question that was actually asked.
+  const [existing] = await db
+    .select({ id: review.id })
+    .from(review)
+    .where(and(eq(review.bookingId, input.bookingId), eq(review.direction, input.direction)))
+    .limit(1);
+  if (existing) {
+    throw Object.assign(new Error("You have already reviewed this booking."), { status: 409 });
+  }
+
   if (input.direction === "traveller_to_vendor") {
     if (role !== "traveller" && role !== "admin") {
       throw Object.assign(new Error("Only travellers can rate providers."), { status: 403 });
