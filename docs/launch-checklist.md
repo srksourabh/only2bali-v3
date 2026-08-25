@@ -141,53 +141,34 @@ delete from account where email like '%@demo.only2bali.com';
 Both statements are documented in `infra/postgres/seed-demo.sql`. Run them
 against the production database, not a local one.
 
-## 7 — Database round-trip latency
+## 7 — Database round-trip latency ✅ done
 
-**Root cause found and fixed in code (commit `a6618a4`). This item is now just
-"deploy it, then confirm".**
+Fixed and deployed on 2026-08-25. **`latencyMs` went from ~10,000 to 12.**
 
-`lib/db/index.ts` cached the connection pool on `globalThis` behind
-`NODE_ENV !== "production"`. It reads as a hot-reload convenience; it was the
-opposite. In production nothing was ever cached, and because `db` is a Proxy
-that calls `connect()` on every property access, **every single query built a
-fresh pool** — TCP handshake, TLS handshake, authentication — and discarded it.
+Two separate causes, found in that order:
 
-Nothing ever failed, which is why it lasted. It was only slow. At roughly two
-seconds per query and about five queries in the health handler, that is the ten
-seconds every probe of production reported. Static pages answered in 0.5s and
-hid it completely.
+1. **The pool was never reused in production.** `lib/db/index.ts` cached the
+   connection pool on `globalThis` behind `NODE_ENV !== "production"`, so
+   production cached nothing and - because `db` is a Proxy calling `connect()`
+   on every property access - every query built a fresh pool: TCP handshake,
+   TLS handshake, authentication. Nothing failed, it was only slow, which is
+   why it lasted. Fixing it took health from 10.0s to 1.09s warm.
+2. **Functions ran a hemisphere from the database.** The remaining ~1.1s was
+   distance: Neon in `ap-southeast-1` (Singapore), functions in `iad1`
+   (Virginia), about 230ms per round trip across roughly five sequential
+   queries. `only2bali-next/vercel.json` now pins functions to `sin1`.
 
-The cache now applies in every environment, which is what the comment above it
-already claimed. `lib/db/index.test.ts` asserts reuse rather than the
-environment, and was run against the unfixed code first to confirm it fails
-there.
+`sin1` rather than `bom1`: a request makes one hop to the user but several
+sequential hops to the database, so sitting next to Postgres wins. Mumbai to
+Singapore is ~40ms; Singapore to the database is now ~1ms.
 
-### After deploying, confirm
-
-`/api/health` now reports `placement`:
+Confirm it stayed fixed with `/api/health`:
 
 ```json
-"placement": { "database": "...", "function": "iad1", "colocated": true|false }
+"placement": { "database": "ap-southeast-1", "function": "sin1", "colocated": true }
 ```
 
-- **`colocated: true`** — nothing more to do. Expect `latencyMs` to fall from
-  ~10s to well under a second.
-- **`colocated: false`** — the pool fix alone still helps a great deal, but
-  every query is crossing regions. Functions currently execute in **iad1**
-  (confirmed from the `x-vercel-id` header; the `bom1` in that header is only
-  the edge PoP that accepted the request, not where the code ran). Move them to
-  the database's region by adding a `vercel.json` beside `package.json`:
-
-  ```json
-  { "regions": ["<the vercel region matching placement.database>"] }
-  ```
-
-  `lib/db/placement.ts` carries the Vercel-region-to-cloud-region table — for
-  example `ap-south-1` is `bom1`, `us-east-1` is `iad1`. Redeploy after adding
-  it.
-
-Neon regions cannot be changed in place, so moving the functions is the cheap
-direction. Do not guess: read `placement` first.
+`verify:launch` blocks if `colocated` ever goes false again.
 
 ## After each change
 
