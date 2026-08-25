@@ -236,6 +236,24 @@ async function main() {
       [307, 308].includes(res.status) && /\/(en|hi|ta|gu|te|kn|mr)$/.test(location),
       `HTTP ${res.status} → ${location || "(none)"}`
     );
+
+    /**
+     * The target depends on the visitor's cookie and Accept-Language, so a
+     * shared cache must never reuse it. It shipped `public` with no Vary,
+     * which let a browser pin one answer and stop asking - a bare domain that
+     * would not open while every other path worked.
+     */
+    const cache = res.headers.get("cache-control") ?? "";
+    check(
+      "the locale redirect is never stored by a shared cache",
+      /no-store/.test(cache) && !/public/.test(cache),
+      cache || "(no cache-control)"
+    );
+    check(
+      "and it says what it varies on",
+      /accept-language/i.test(res.headers.get("vary") ?? ""),
+      res.headers.get("vary") || "(no vary)"
+    );
   }
   {
     const res = await call("/en");
