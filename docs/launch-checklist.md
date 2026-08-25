@@ -58,13 +58,36 @@ which is what every mail provider already speaks.
 
 Pick whichever you already have, or whichever free tier you prefer:
 
-| Provider | Free tier | Host | Port |
-|---|---|---|---|
-| Brevo | 300/day, forever | `smtp-relay.brevo.com` | 587 |
-| Resend | 3,000/month | `smtp.resend.com` (or `RESEND_API_KEY`) | 465 |
-| Zoho Mail | free on a custom domain | `smtp.zoho.in` | 465 |
-| Gmail | ~500/day | `smtp.gmail.com` | 465 |
-| Mailtrap | 1,000/month | `live.smtp.mailtrap.io` | 587 |
+| Provider | Free tier | Host | Port | Notes |
+|---|---|---|---|---|
+| **Brevo** *(recommended)* | 300/day, forever | `smtp-relay.brevo.com` | 587 | Built for transactional mail |
+| Resend | 3,000/month | its own API via `RESEND_API_KEY` | — | Needs a verified domain |
+| Mailtrap | 1,000/month | `live.smtp.mailtrap.io` | 587 | |
+| Gmail | ~500/day | `smtp.gmail.com` | 465 | App password, needs 2FA first |
+| Zoho Mail | 500/day | `smtp.zoho.com`, or `smtppro.zoho.com` on a paid domain plan | 465 / 587 | See the caution below |
+
+**Brevo is the recommendation.** Sending a sign-in code is transactional mail,
+and Brevo is built for it: no protocol restrictions, bounce handling, and a
+free tier that does not expire.
+
+**Zoho Mail is a mailbox product, not a transactional sender.** Three things to
+know before choosing it:
+
+- The host is **not** `smtp.zoho.in` in general. Free and personal accounts use
+  `smtp.zoho.com`; paid organisation accounts on a custom domain use
+  `smtppro.zoho.com`. The `.in` variants are the India data centre only.
+- Zoho's own documentation says newly signed-up **free** users do not get
+  IMAP/POP access, and that the free plan exists only in the US, IN and EU data
+  centres. SMTP appears to remain available to free organisation users, but the
+  sources conflict — verify it sends before depending on it for login.
+- **Zoho tokens for this project were committed to a public repository and have
+  never been revoked.** See item 5. If you are logging into Zoho anyway, revoke
+  them in the same visit.
+
+Zoho Mail is still worth having for a different job: somebody has to actually
+receive mail at `hello@only2bali.com`, which is what `NEXT_PUBLIC_CONTACT_EMAIL`
+now points at. Receiving there and sending codes through Brevo is the sensible
+split.
 
 Set **either**:
 
