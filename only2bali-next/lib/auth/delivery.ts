@@ -7,6 +7,8 @@
  * that silently sends nothing.
  */
 
+import { emailConfigured, sendEmail as sendEmailVia } from "./email-transport";
+
 export interface DeliveryResult {
   delivered: boolean;
   channel: "email" | "sms" | "console";
@@ -29,7 +31,8 @@ export class DeliveryNotConfiguredError extends Error {
 export function deliveryChannels(): Array<"email" | "sms" | "console"> {
   if (process.env.NODE_ENV !== "production") return ["console"];
   const channels: Array<"email" | "sms"> = [];
-  if (process.env.RESEND_API_KEY) channels.push("email");
+  // Any configured mail path counts, not one named vendor.
+  if (emailConfigured()) channels.push("email");
   if (process.env.SPRINGEDGE_API_KEY) channels.push("sms");
   return channels;
 }
@@ -62,7 +65,7 @@ export async function deliverOtp(
     return sendSms(identifier.mobile!, code);
   }
 
-  if (channel === "email" && process.env.RESEND_API_KEY) {
+  if (channel === "email" && emailConfigured()) {
     return sendEmail(identifier.email!, code);
   }
 
@@ -89,24 +92,14 @@ async function sendSms(mobileNumber: string, code: string): Promise<DeliveryResu
 }
 
 async function sendEmail(address: string, code: string): Promise<DeliveryResult> {
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: process.env.EMAIL_FROM ?? "Only2Bali <hello@only2bali.com>",
-      to: address,
-      subject: `${code} is your Only2Bali code`,
-      text: `Your Only2Bali sign-in code is ${code}.\n\nIt expires in 10 minutes and can be used once.\nIf you did not request it, you can ignore this email.`,
-    }),
-    signal: AbortSignal.timeout(8000),
-  });
+  const { delivered } = await sendEmailVia(
+    address,
+    `${code} is your Only2Bali code`,
+    `Your Only2Bali sign-in code is ${code}.
 
-  if (!res.ok) {
-    console.error("[auth] email delivery failed", res.status, await res.text().catch(() => ""));
-    return { delivered: false, channel: "email" };
-  }
-  return { delivered: true, channel: "email" };
+It expires in 10 minutes and can be used once.
+If you did not request it, you can ignore this email.`
+  );
+  return { delivered, channel: "email" };
 }
+

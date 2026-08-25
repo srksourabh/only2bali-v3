@@ -51,40 +51,75 @@ users will take and it has never been exercised end to end.
 
 ## 2 — Email delivery, so people can sign in
 
-Nothing to build. `lib/auth/delivery.ts` already speaks Resend.
+Nothing to build, and **no vendor is forced on you**. The code used to speak
+Resend and nothing else, which made "let people log in" mean "open an account
+with one specific company". It now takes either Resend's API or plain SMTP,
+which is what every mail provider already speaks.
 
-In Vercel, set:
+Pick whichever you already have, or whichever free tier you prefer:
 
-| Variable | Value |
-|---|---|
-| `RESEND_API_KEY` | from the Resend dashboard |
-| `EMAIL_FROM` | `Only2Bali <hello@only2bali.com>` — must be a verified sender |
+| Provider | Free tier | Host | Port |
+|---|---|---|---|
+| Brevo | 300/day, forever | `smtp-relay.brevo.com` | 587 |
+| Resend | 3,000/month | `smtp.resend.com` (or `RESEND_API_KEY`) | 465 |
+| Zoho Mail | free on a custom domain | `smtp.zoho.in` | 465 |
+| Gmail | ~500/day | `smtp.gmail.com` | 465 |
+| Mailtrap | 1,000/month | `live.smtp.mailtrap.io` | 587 |
 
-Verify the sending domain in Resend first; an unverified domain fails at send
-time, not at deploy time, which looks exactly like a working login that never
-arrives.
+Set **either**:
+
+- `RESEND_API_KEY` and `EMAIL_FROM`, or
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` and `EMAIL_FROM`.
+
+Gmail needs an **app password**, not the account password, and that requires
+2FA on the account first.
+
+`EMAIL_FROM` must be an address the provider has authorised you to send from.
+An unverified sender fails at send time, not at deploy time, which looks
+exactly like a working login whose code never arrives.
+
+Half-configured SMTP is treated as unconfigured on purpose, so a missing
+password shows up as `otpDelivery: ["none"]` rather than as a timeout.
 
 After redeploy, `/api/health` reports `"otpDelivery": ["email"]` and the login
 submit button stops being disabled.
 
 **Do not set `SPRINGEDGE_API_KEY` for SMS yet.** See item 5.
 
-## 3 — Blob storage, so uploads work
+## 3 — Storage for uploads
 
 Production reports `uploads: {media: "none", documents: "none"}`. Vendor photos
 and KYC documents — the whole of Phase C — are dead in production without this.
 
-In Vercel, create a Blob store and set:
+Again, two options, and the S3 one has the more generous free tier:
 
-| Variable | Holds |
-|---|---|
-| `BLOB_READ_WRITE_TOKEN` | public media: listing photos, provider galleries |
-| `BLOB_PRIVATE_READ_WRITE_TOKEN` | private documents: KYC, licences |
+**Vercel Blob** — set `BLOB_READ_WRITE_TOKEN` and `BLOB_PRIVATE_READ_WRITE_TOKEN`.
 
-Two separate stores on purpose. `lib/uploads/store.ts` keeps public media and
-private documents apart so a public listing photo URL can never be guessed into
-a vendor's identity document. Pointing both variables at the same store defeats
-that, silently.
+**Any S3-compatible store** — Cloudflare R2 gives 10 GB with no egress charge;
+Backblaze B2 gives 10 GB. Set:
+
+```
+S3_ENDPOINT=https://<account>.r2.cloudflarestorage.com
+S3_REGION=auto
+S3_ACCESS_KEY_ID=…
+S3_SECRET_ACCESS_KEY=…
+S3_BUCKET_MEDIA=o2b-media
+S3_BUCKET_DOCUMENTS=o2b-documents
+S3_PUBLIC_BASE_URL=https://<your media domain>
+```
+
+**Two buckets, not one.** Public listing photos and private KYC documents are
+kept in separate buckets so a guessable photo URL can never be walked into
+somebody's passport scan. The code refuses to let one stand in for the other,
+and a test pins that.
+
+`S3_PUBLIC_BASE_URL` applies to the media bucket only. Without it a media
+upload is refused rather than returning a URL that would answer 403 forever.
+The documents bucket must stay private — its bytes only ever leave through
+`/api/documents/[id]/file`, which checks that the caller is the owning provider
+or an admin.
+
+Blob keeps precedence if both are set, so an existing deployment is unaffected.
 
 ## 4 — Contact details
 
