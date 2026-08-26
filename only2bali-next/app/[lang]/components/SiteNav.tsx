@@ -31,7 +31,12 @@ export default function SiteNav({ lang, dict }: { lang: Locale; dict: Dictionary
 
         <div className="navactions">
           <LanguageSwitcher lang={lang} label={dict.nav.language} />
-          <NavAuth lang={lang} signInLabel={dict.auth.signIn} accountLabel={dict.auth.account} />
+          <NavAuth
+            lang={lang}
+            signInLabel={dict.auth.signIn}
+            accountLabel={dict.auth.account}
+            signOutLabel={dict.auth.signOut}
+          />
           <Link className="btn btn-primary" href={`/${lang}/planner`}>
             {dict.nav.plan}
           </Link>

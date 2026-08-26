@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 
 const clerkEnabled = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim());
@@ -17,14 +16,15 @@ export default function SignOutButton({ label, lang }: { label: string; lang: st
 
 function AppOnlySignOut({ label, lang }: { label: string; lang: string }) {
   const [busy, setBusy] = useState(false);
-  const router = useRouter();
 
   async function signOut() {
     setBusy(true);
     try {
       await fetch("/api/auth/logout", { method: "POST" });
-      router.push(`/${lang}`);
-      router.refresh();
+      // Full navigation, not router.push: client components elsewhere on the
+      // page (like the nav's own signed-in state) only ever check once on
+      // mount and would otherwise keep showing "Sign out" after signing out.
+      window.location.href = `/${lang}`;
     } finally {
       setBusy(false);
     }
