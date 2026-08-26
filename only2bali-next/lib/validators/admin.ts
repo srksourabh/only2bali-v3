@@ -35,6 +35,14 @@ export const adminVendorVerificationSchema = z.object({
   "Give a verification status or an assigned developer."
 );
 
+export const adminLeadStatusSchema = z.object({
+  status: z.enum(["new", "contacted", "quoted", "converted", "lost"]),
+});
+
+export const adminThreadStatusSchema = z.object({
+  status: z.enum(["open", "closed", "flagged"]),
+});
+
 export const bootstrapAdminSchema = z.object({
   username: z
     .string()
@@ -52,6 +60,8 @@ export type AdminContentStatusInput = z.infer<typeof adminContentStatusSchema>;
 export type AdminPromotionPatchInput = z.infer<typeof adminPromotionPatchSchema>;
 export type AdminApplicationDecisionInput = z.infer<typeof adminApplicationDecisionSchema>;
 export type AdminVendorVerificationInput = z.infer<typeof adminVendorVerificationSchema>;
+export type AdminLeadStatusInput = z.infer<typeof adminLeadStatusSchema>;
+export type AdminThreadStatusInput = z.infer<typeof adminThreadStatusSchema>;
 export const platformFeePatchSchema = z.object({
   platformFeePercent: z
     .number()

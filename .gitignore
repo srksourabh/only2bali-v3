@@ -57,3 +57,6 @@ only2bali-next/.vercel
 .claude/
 .qodo/
 saas-audit-output/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/

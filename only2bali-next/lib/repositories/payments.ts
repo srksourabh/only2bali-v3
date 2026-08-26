@@ -24,6 +24,7 @@ import { razorpayConfig, stripeConfig } from "@/lib/payments/config";
 import { stripeEventId, stripeWebhookEvent } from "@/lib/payments/stripe";
 import type { PaymentIntentInput, RazorpayVerifyInput, StripeConfirmInput } from "@/lib/validators/payments";
 import { createHeldDisbursementForBooking } from "@/lib/repositories/disbursements";
+import { notifyBookingConfirmed } from "@/lib/notifications/notify";
 import Stripe from "stripe";
 
 export class PaymentSetupError extends Error {
@@ -570,13 +571,19 @@ export async function verifyRazorpayCheckout(
     throw new PaymentContactError("Payment not found for this account.");
   }
 
-  return db.transaction((tx) =>
+  const result = await db.transaction((tx) =>
     confirmBookingFromPayment(tx, {
       bookingId: row.bookingId,
       paymentId: row.paymentId,
       providerPaymentId: input.razorpay_payment_id,
     })
   );
+  if (result.status === "captured") {
+    notifyBookingConfirmed(result.bookingId).catch((err) =>
+      console.error("[payments] booking-confirmed notification failed", err)
+    );
+  }
+  return result;
 }
 
 type RazorpayWebhookPayload = {
@@ -755,13 +762,18 @@ export async function ingestRazorpayWebhook(args: {
         .where(eq(payment.id, paymentId))
         .limit(1);
       if (pay) {
-        await db.transaction((tx) =>
+        const result = await db.transaction((tx) =>
           confirmBookingFromPayment(tx, {
             bookingId: pay.bookingId,
             paymentId,
             providerPaymentId,
           })
         );
+        if (result.status === "captured") {
+          notifyBookingConfirmed(result.bookingId).catch((err) =>
+            console.error("[payments] booking-confirmed notification failed", err)
+          );
+        }
         processed = true;
       } else {
         processingError = "payment_row_missing";
@@ -849,13 +861,19 @@ export async function confirmStripeCheckout(
     throw new PaymentContactError("Payment not found for this account.");
   }
 
-  return db.transaction((tx) =>
+  const result = await db.transaction((tx) =>
     confirmBookingFromPayment(tx, {
       bookingId: row.bookingId,
       paymentId: row.paymentId,
       providerPaymentId: paymentIntentId,
     })
   );
+  if (result.status === "captured") {
+    notifyBookingConfirmed(result.bookingId).catch((err) =>
+      console.error("[payments] booking-confirmed notification failed", err)
+    );
+  }
+  return result;
 }
 
 function stripeSessionFromEvent(event: Stripe.Event): Stripe.Checkout.Session | null {
@@ -992,13 +1010,18 @@ export async function ingestStripeWebhook(args: {
         .where(eq(payment.id, paymentId))
         .limit(1);
       if (pay) {
-        await db.transaction((tx) =>
+        const result = await db.transaction((tx) =>
           confirmBookingFromPayment(tx, {
             bookingId: pay.bookingId,
             paymentId,
             providerPaymentId: providerPaymentId ?? providerOrderId!,
           })
         );
+        if (result.status === "captured") {
+          notifyBookingConfirmed(result.bookingId).catch((err) =>
+            console.error("[payments] booking-confirmed notification failed", err)
+          );
+        }
         processed = true;
       } else {
         processingError = "payment_row_missing";

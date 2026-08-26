@@ -668,6 +668,12 @@ a.chip-on, button.chip-on, .chip-on { background: var(--emerald); color: var(--i
   border-style: dashed;
   padding: .55rem;
 }
+.admin-thread-view {
+  margin-top: .4rem; padding: .6rem; border: 1px dashed var(--hair); border-radius: var(--r-sm);
+  background: var(--surface);
+}
+.admin-thread-view .admin-list li { background: var(--page); }
+.admin-thread-view p { font-size: .82rem; color: var(--text); margin: .2rem 0 0; overflow-wrap: anywhere; }
 .mini-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
 .mini-actions button {
   border: 1px solid var(--hair); background: var(--surface); color: var(--head);

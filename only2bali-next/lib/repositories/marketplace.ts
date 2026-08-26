@@ -13,6 +13,7 @@ import {
 } from "@/lib/db/schema";
 import type { MessageInput, ProviderBidInput, TripRequestCreateInput } from "@/lib/validators/marketplace";
 import { DEFAULT_PLATFORM_FEE_RATE, resolveCommissionRate } from "@/lib/payments/fee";
+import { notifyNewMessage, notifyOfferAccepted, notifyOfferReceived } from "@/lib/notifications/notify";
 
 /** Vendor sets net; platform derives traveller-facing total. Never invert this. */
 export function deriveTravellerTotal(vendorNetAmount: number, commissionRate: number): number {
@@ -103,6 +104,7 @@ export async function createProviderBid(
       id: vendor.id,
       verificationStatus: vendor.verificationStatus,
       commissionRate: vendor.commissionRate,
+      businessName: vendor.businessName,
     })
     .from(vendor)
     .where(eq(vendor.id, vendorId))
@@ -115,6 +117,7 @@ export async function createProviderBid(
       visibility: tripRequest.visibility,
       status: tripRequest.status,
       bidsCloseAt: tripRequest.bidsCloseAt,
+      travellerId: tripRequest.travellerId,
     })
     .from(tripRequest)
     .where(eq(tripRequest.id, requestId))
@@ -159,6 +162,14 @@ export async function createProviderBid(
       submittedAt: new Date(),
     })
     .returning();
+
+  notifyOfferReceived({
+    travellerId: request.travellerId,
+    vendorName: provider.businessName,
+    offerTitle: row.title,
+    totalAmount: row.totalAmount,
+    currency: row.currency,
+  }).catch((err) => console.error("[marketplace] offer-received notification failed", err));
 
   return { ok: true as const, bid: row, threadId: thread.id };
 }
@@ -226,6 +237,22 @@ export async function sendMarketplaceMessage(
       contactAttemptDetected: detected,
     })
     .returning();
+
+  const [recipients] = await db
+    .select({ vendorId: messageThread.vendorId, travellerId: tripRequest.travellerId })
+    .from(messageThread)
+    .leftJoin(tripRequest, eq(messageThread.tripRequestId, tripRequest.id))
+    .where(eq(messageThread.id, threadId))
+    .limit(1);
+
+  if (recipients) {
+    const senderLabel = role === "vendor" ? "A vendor" : role === "traveller" ? "A traveller" : "An Only2Bali admin";
+    notifyNewMessage({
+      recipientTravellerId: role !== "traveller" ? recipients.travellerId : null,
+      recipientVendorId: role !== "vendor" ? recipients.vendorId : null,
+      senderLabel,
+    }).catch((err) => console.error("[marketplace] new-message notification failed", err));
+  }
 
   return { ok: true as const, message: row };
 }
@@ -392,7 +419,7 @@ export async function acceptOffer(accountId: string, offerId: string) {
   const [profile] = await db.select().from(traveller).where(eq(traveller.accountId, accountId)).limit(1);
   if (!profile) return { ok: false as const, reason: "forbidden" };
 
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const [row] = await tx
       .select({
         id: offer.id,
@@ -470,6 +497,13 @@ export async function acceptOffer(accountId: string, offerId: string) {
 
     return { ok: true as const, booking: created!, offerTitle: row.title };
   });
+
+  if (result.ok) {
+    notifyOfferAccepted(result.booking.id).catch((err) =>
+      console.error("[marketplace] offer-accepted notification failed", err)
+    );
+  }
+  return result;
 }
 
 export async function declineOffer(accountId: string, offerId: string, reason?: string) {
@@ -557,6 +591,16 @@ export async function listMessageThreads(accountId: string, role: "traveller" | 
     .where(eq(tripRequest.travellerId, profile.id))
     .orderBy(desc(messageThread.createdAt))
     .limit(40);
+}
+
+/** Admin moderation: close a resolved thread, or flag one for review. */
+export async function adminSetThreadStatus(threadId: string, status: "open" | "closed" | "flagged") {
+  const [row] = await db
+    .update(messageThread)
+    .set({ status })
+    .where(eq(messageThread.id, threadId))
+    .returning();
+  return row ?? null;
 }
 
 export async function listMessagesForThread(

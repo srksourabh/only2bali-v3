@@ -21,6 +21,9 @@ import type {
 } from "@/lib/validators/admin";
 import { listAdminVendorDesk } from "@/lib/repositories/admin-desk";
 import { listRecentDocuments } from "@/lib/repositories/vendor-documents";
+import { listRecentLeads } from "@/lib/repositories/leads";
+import { listMessageThreads } from "@/lib/repositories/marketplace";
+import { notifyVendorApplicationDecision } from "@/lib/notifications/notify";
 import {
   planApplicationOnboarding,
   slugifyBusinessName,
@@ -60,18 +63,21 @@ export async function upsertAdminAccount(input: BootstrapAdminInput) {
 }
 
 export async function getAdminOverview() {
-  const [vendors, applications, listings, media, events, promotions, documents, desk] = await Promise.all([
-    db.select().from(vendor).orderBy(desc(vendor.createdAt)).limit(50),
-    db.select().from(vendorApplication).orderBy(desc(vendorApplication.createdAt)).limit(50),
-    db.select().from(serviceListing).orderBy(desc(serviceListing.updatedAt)).limit(80),
-    db.select().from(vendorMedia).orderBy(desc(vendorMedia.uploadedAt)).limit(80),
-    db.select().from(vendorEvent).orderBy(desc(vendorEvent.createdAt)).limit(80),
-    db.select().from(vendorPromotion).orderBy(desc(vendorPromotion.createdAt)).limit(80),
-    listRecentDocuments(80),
-    listAdminVendorDesk(),
-  ]);
+  const [vendors, applications, listings, media, events, promotions, documents, desk, leads, threads] =
+    await Promise.all([
+      db.select().from(vendor).orderBy(desc(vendor.createdAt)).limit(50),
+      db.select().from(vendorApplication).orderBy(desc(vendorApplication.createdAt)).limit(50),
+      db.select().from(serviceListing).orderBy(desc(serviceListing.updatedAt)).limit(80),
+      db.select().from(vendorMedia).orderBy(desc(vendorMedia.uploadedAt)).limit(80),
+      db.select().from(vendorEvent).orderBy(desc(vendorEvent.createdAt)).limit(80),
+      db.select().from(vendorPromotion).orderBy(desc(vendorPromotion.createdAt)).limit(80),
+      listRecentDocuments(80),
+      listAdminVendorDesk(),
+      listRecentLeads(80),
+      listMessageThreads("", "admin"),
+    ]);
 
-  return { vendors, applications, listings, media, events, promotions, documents, desk };
+  return { vendors, applications, listings, media, events, promotions, documents, desk, leads, threads };
 }
 
 async function audit(adminId: string, action: string, resourceType: string, resourceId: string, details: unknown) {
@@ -272,6 +278,11 @@ export async function adminDecideApplication(
     onboardedAccountId,
     onboarding: plan.kind,
   });
+
+  notifyVendorApplicationDecision(id, input.status).catch((err) =>
+    console.error("[admin] application-decision notification failed", err)
+  );
+
   return row ?? null;
 }
 
