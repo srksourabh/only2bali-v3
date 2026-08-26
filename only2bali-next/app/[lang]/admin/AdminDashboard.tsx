@@ -168,8 +168,12 @@ export default function AdminDashboard() {
           </div>
         </header>
 
-        {error && <p className="errmsg" role="alert">{error}</p>}
-        {saved && <p className="okbox">{saved}</p>}
+        {(error || saved) && (
+          <div className="admin-feedback">
+            {error && <p className="errmsg" role="alert">{error}</p>}
+            {saved && <p className="okbox">{saved}</p>}
+          </div>
+        )}
 
         <div className="accountgrid admin-grid">
           <section className="acard">

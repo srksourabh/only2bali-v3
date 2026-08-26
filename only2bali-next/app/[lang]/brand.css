@@ -599,6 +599,12 @@ a.chip-on, button.chip-on, .chip-on { background: var(--emerald); color: var(--i
   padding: .26rem .7rem; border-radius: var(--r-pill);
 }
 
+.admin-feedback {
+  position: sticky; top: .6rem; z-index: 20;
+  margin: 0 0 .8rem; display: grid; gap: .4rem;
+}
+.admin-feedback .errmsg, .admin-feedback .okbox { margin-top: 0; box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+
 .accountgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; }
 .accountgrid.admin-grid { grid-template-columns: repeat(2, 1fr); align-items: start; }
 .admin-grid .desk-card { grid-column: 1 / -1; width: 100%; }
