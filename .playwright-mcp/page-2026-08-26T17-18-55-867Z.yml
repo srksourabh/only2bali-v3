@@ -1,0 +1,75 @@
+- generic [active] [ref=f12e1]:
+  - banner [ref=f12e2]:
+    - generic [ref=f12e3]:
+      - link "Only2Bali Only2Bali" [ref=f12e4] [cursor=pointer]:
+        - /url: /en
+        - img "Only2Bali" [ref=f12e5]
+        - generic [ref=f12e9]: Only2Bali
+      - navigation "Primary" [ref=f12e11]:
+        - menubar [ref=f12e13]:
+          - menuitem "Home" [ref=f12e14] [cursor=pointer]
+          - menuitem "Destinations" [ref=f12e16] [cursor=pointer]
+          - menuitem "Providers" [ref=f12e18] [cursor=pointer]
+          - menuitem "Services" [ref=f12e20] [cursor=pointer]
+          - menuitem "Packages" [ref=f12e22] [cursor=pointer]
+          - menuitem "Trip quality" [ref=f12e24] [cursor=pointer]
+      - generic [ref=f12e26]:
+        - button "Language" [ref=f12e28] [cursor=pointer]:
+          - generic [ref=f12e32]: English
+        - link "Sign in" [ref=f12e33] [cursor=pointer]:
+          - /url: /en/login
+        - link "Plan your trip" [ref=f12e34] [cursor=pointer]:
+          - /url: /en/planner
+  - main [ref=f12e35]:
+    - generic [ref=f12e37]:
+      - link "← All services" [ref=f12e38] [cursor=pointer]:
+        - /url: /en/services
+      - generic [ref=f12e40]:
+        - generic [ref=f12e41]: restaurant · Bali
+        - heading "Jain and vegetarian group thali" [level=1] [ref=f12e42]
+        - paragraph [ref=f12e43]:
+          - link "Shuddh Bhojan Ubud" [ref=f12e44] [cursor=pointer]:
+            - /url: /en/providers/sample-shuddh-bhojan-ubud
+          - text: · ★ 4.80 (74)
+      - generic [ref=f12e45]:
+        - generic [ref=f12e46]:
+          - text: ₹1,450
+          - generic [ref=f12e47]: from · per person · comfort
+        - paragraph [ref=f12e48]: Reserved group seating with Jain, vegetarian and vegan options labeled before service.
+        - heading "Inclusions" [level=2] [ref=f12e49]
+        - list [ref=f12e50]:
+          - listitem [ref=f12e51]: Thali
+          - listitem [ref=f12e52]: Protocol labeling
+          - listitem [ref=f12e53]: Group seating
+      - generic [ref=f12e54]:
+        - generic [ref=f12e55]:
+          - generic [ref=f12e56]:
+            - text: Service date
+            - textbox "Service date" [ref=f12e57]
+          - generic [ref=f12e58]:
+            - text: Group size
+            - spinbutton "Group size" [ref=f12e59]: "4"
+          - generic [ref=f12e60]:
+            - text: Food protocol
+            - combobox "Food protocol" [ref=f12e61]:
+              - option "Jain"
+              - option "Satvik (no onion or garlic)"
+              - option "Vegan"
+              - option "Vegetarian" [selected]
+              - option "Vegetarian with egg"
+              - option "Halal"
+              - option "No restriction"
+          - generic [ref=f12e62]:
+            - text: Lead traveller full name
+            - textbox "Lead traveller full name" [ref=f12e63]
+        - button "Book and pay" [disabled] [ref=f12e64] [cursor=pointer]
+        - generic [ref=f12e65]: EN · seats held 15 minutes after booking
+  - contentinfo [ref=f12e66]:
+    - generic [ref=f12e68]:
+      - generic [ref=f12e69]: Only2Bali
+      - paragraph [ref=f12e75]: Indonesia travel marketplace for Indian groups — Bali, Jakarta and beyond.
+      - paragraph [ref=f12e76]:
+        - text: © 2026 Only2Bali · Photography and palette from the existing site. ·
+        - link "hello@only2bali.com" [ref=f12e77] [cursor=pointer]:
+          - /url: mailto:hello@only2bali.com
+  - alert [ref=f12e78]

@@ -1,0 +1,117 @@
+- generic [active] [ref=f1e1]:
+  - banner [ref=f1e2]:
+    - generic [ref=f1e3]:
+      - link "Only2Bali Only2Bali" [ref=f1e4] [cursor=pointer]:
+        - /url: /en
+        - img "Only2Bali" [ref=f1e5]
+        - generic [ref=f1e9]: Only2Bali
+      - navigation "Primary" [ref=f1e11]:
+        - menubar [ref=f1e13]:
+          - menuitem "Home" [ref=f1e14] [cursor=pointer]
+          - menuitem "Destinations" [ref=f1e16] [cursor=pointer]
+          - menuitem "Providers" [ref=f1e18] [cursor=pointer]
+          - menuitem "Services" [ref=f1e20] [cursor=pointer]
+          - menuitem "Packages" [ref=f1e22] [cursor=pointer]
+          - menuitem "Trip quality" [ref=f1e24] [cursor=pointer]
+      - generic [ref=f1e26]:
+        - button "Language" [ref=f1e28] [cursor=pointer]:
+          - generic [ref=f1e32]: English
+        - link "Sign in" [ref=f1e33] [cursor=pointer]:
+          - /url: /en/login
+        - link "Plan your trip" [ref=f1e34] [cursor=pointer]:
+          - /url: /en/planner
+  - main [ref=f1e35]:
+    - generic [ref=f1e36]:
+      - generic [ref=f1e38]:
+        - text: Signed in as
+        - heading "o2b-webhook-test@only2bali.com" [level=1] [ref=f1e39]
+        - generic [ref=f1e40]: Traveller
+      - generic [ref=f1e41]:
+        - generic [ref=f1e42]:
+          - heading "Your trip requests" [level=2] [ref=f1e43]
+          - paragraph [ref=f1e44]: Compare provider offers. Contact details stay masked until booking is confirmed.
+          - list
+          - generic [ref=f1e45]:
+            - heading "Post a trip request" [level=3] [ref=f1e46]
+            - generic [ref=f1e47]:
+              - text: Food protocol
+              - combobox "Food protocol" [ref=f1e48]:
+                - option "Jain"
+                - option "Vegetarian" [selected]
+                - option "Vegan"
+            - generic [ref=f1e49]:
+              - text: Group size
+              - spinbutton "Group size" [ref=f1e50]: "8"
+            - generic [ref=f1e51]:
+              - text: Departure city
+              - textbox "Departure city" [ref=f1e52]:
+                - /placeholder: Mumbai
+            - generic [ref=f1e53]:
+              - text: Travel month
+              - textbox "Travel month" [ref=f1e54]:
+                - /placeholder: October
+            - generic [ref=f1e55]:
+              - text: What do you need?
+              - textbox "What do you need?" [ref=f1e56]:
+                - /placeholder: Villa with Jain kitchen, Hindi guide, 6 nights
+            - button "Send to verified providers" [ref=f1e57] [cursor=pointer]
+          - link "Or start from the enquiry form" [ref=f1e58] [cursor=pointer]:
+            - /url: /en/inquiry
+        - generic [ref=f1e59]:
+          - heading "Messages" [level=2] [ref=f1e60]
+          - paragraph [ref=f1e61]: "Pre-booking: phones, emails and links are masked."
+          - list
+        - generic [ref=f1e62]:
+          - heading "Bookings" [level=2] [ref=f1e63]
+          - list [ref=f1e64]:
+            - listitem [ref=f1e65]:
+              - generic [ref=f1e66]:
+                - strong [ref=f1e67]: TEST -- delete me -- webhook verification service
+                - paragraph [ref=f1e68]: O2B-XFHM-ESUU · 1 pax · ₹1,000 · Confirmed
+                - link "TEST -- delete me -- webhook verification service" [ref=f1e69] [cursor=pointer]:
+                  - /url: /en/services/eeecc27b-9b36-4ab2-adcf-0749201ebd8c
+              - generic [ref=f1e70]:
+                - paragraph [ref=f1e71]: Rate this provider
+                - generic [ref=f1e72]:
+                  - text: Leave a rating
+                  - combobox "Rating" [ref=f1e73]:
+                    - option "5 / 5" [selected]
+                    - option "4 / 5"
+                    - option "3 / 5"
+                    - option "2 / 5"
+                    - option "1 / 5"
+                - textbox "Optional comment" [ref=f1e74]
+                - button "Submit rating" [ref=f1e75] [cursor=pointer]
+            - listitem [ref=f1e76]:
+              - generic [ref=f1e77]:
+                - strong [ref=f1e78]: TEST -- delete me -- webhook verification service
+                - paragraph [ref=f1e79]: O2B-BDUM-VNFP · 1 pax · ₹1,000 · Confirmed
+                - link "TEST -- delete me -- webhook verification service" [ref=f1e80] [cursor=pointer]:
+                  - /url: /en/services/eeecc27b-9b36-4ab2-adcf-0749201ebd8c
+              - generic [ref=f1e81]:
+                - paragraph [ref=f1e82]: Rate this provider
+                - generic [ref=f1e83]:
+                  - text: Leave a rating
+                  - combobox "Rating" [ref=f1e84]:
+                    - option "5 / 5" [selected]
+                    - option "4 / 5"
+                    - option "3 / 5"
+                    - option "2 / 5"
+                    - option "1 / 5"
+                - textbox "Optional comment" [ref=f1e85]
+                - button "Submit rating" [ref=f1e86] [cursor=pointer]
+        - generic [ref=f1e87]:
+          - heading "Saved packages" [level=2] [ref=f1e88]
+          - paragraph [ref=f1e89]: Packages you save will show up here.
+          - link "Browse packages" [ref=f1e90] [cursor=pointer]:
+            - /url: /en/packages
+      - paragraph [ref=f1e91]: Set your food protocol once and every itinerary we build respects it.
+  - contentinfo [ref=f1e92]:
+    - generic [ref=f1e94]:
+      - generic [ref=f1e95]: Only2Bali
+      - paragraph [ref=f1e101]: Indonesia travel marketplace for Indian groups — Bali, Jakarta and beyond.
+      - paragraph [ref=f1e102]:
+        - text: © 2026 Only2Bali · Photography and palette from the existing site. ·
+        - link "hello@only2bali.com" [ref=f1e103] [cursor=pointer]:
+          - /url: mailto:hello@only2bali.com
+  - alert [ref=f1e104]

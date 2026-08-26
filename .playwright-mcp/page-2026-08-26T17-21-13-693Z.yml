@@ -1,0 +1,55 @@
+- generic [active] [ref=f16e1]:
+  - banner [ref=f16e2]:
+    - generic [ref=f16e3]:
+      - link "Only2Bali Only2Bali" [ref=f16e4] [cursor=pointer]:
+        - /url: /en
+        - img "Only2Bali" [ref=f16e5]
+        - generic [ref=f16e9]: Only2Bali
+      - navigation "Primary" [ref=f16e11]:
+        - menubar [ref=f16e13]:
+          - menuitem "Home" [ref=f16e14] [cursor=pointer]
+          - menuitem "Destinations" [ref=f16e16] [cursor=pointer]
+          - menuitem "Providers" [ref=f16e18] [cursor=pointer]
+          - menuitem "Services" [ref=f16e20] [cursor=pointer]
+          - menuitem "Packages" [ref=f16e22] [cursor=pointer]
+          - menuitem "Trip quality" [ref=f16e24] [cursor=pointer]
+      - generic [ref=f16e26]:
+        - button "Language" [ref=f16e28] [cursor=pointer]:
+          - generic [ref=f16e32]: English
+        - link "My account" [ref=f16e74] [cursor=pointer]:
+          - /url: /en/account
+        - link "Plan your trip" [ref=f16e34] [cursor=pointer]:
+          - /url: /en/planner
+  - main [ref=f16e35]:
+    - generic [ref=f16e37]:
+      - link "← All services" [ref=f16e38] [cursor=pointer]:
+        - /url: /en/services
+      - generic [ref=f16e40]:
+        - generic [ref=f16e41]: transport · Kuta
+        - heading "TEST -- delete me -- webhook verification service" [level=1] [ref=f16e42]
+        - paragraph [ref=f16e43]:
+          - link "TEST -- delete me -- webhook verification" [ref=f16e44] [cursor=pointer]:
+            - /url: /en/providers/test-delete-me-webhook-verification
+      - generic [ref=f16e45]:
+        - generic [ref=f16e46]:
+          - text: ₹1,000
+          - generic [ref=f16e47]: from · per trip · comfort
+        - paragraph [ref=f16e48]: Internal test listing to verify Razorpay webhook. Safe to delete.
+      - generic [ref=f16e49]:
+        - paragraph [ref=f16e75]: Held — reference O2B-BDUM-VNFP
+        - generic [ref=f16e76]:
+          - paragraph [ref=f16e77]: Pay ₹1,000
+          - group "Payment methods" [ref=f16e78]:
+            - generic [ref=f16e79]:
+              - button "Stripe · ₹1,000" [disabled] [ref=f16e80] [cursor=pointer]
+              - paragraph [ref=f16e81]: Stripe secret key is not configured.
+            - button "Razorpay · ₹1,000" [ref=f16e83] [cursor=pointer]
+  - contentinfo [ref=f16e61]:
+    - generic [ref=f16e63]:
+      - generic [ref=f16e64]: Only2Bali
+      - paragraph [ref=f16e70]: Indonesia travel marketplace for Indian groups — Bali, Jakarta and beyond.
+      - paragraph [ref=f16e71]:
+        - text: © 2026 Only2Bali · Photography and palette from the existing site. ·
+        - link "hello@only2bali.com" [ref=f16e72] [cursor=pointer]:
+          - /url: mailto:hello@only2bali.com
+  - alert [ref=f16e73]
