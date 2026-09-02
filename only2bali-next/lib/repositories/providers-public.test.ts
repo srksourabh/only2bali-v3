@@ -13,8 +13,13 @@ describe("isPubliclyVisibleProvider", () => {
     expect(isPubliclyVisibleProvider("suspended")).toBe(false);
   });
 
+  it("hides verified internal test providers", () => {
+    expect(isPubliclyVisibleProvider("verified", "TEST -- delete me -- webhook verification")).toBe(false);
+    expect(isPubliclyVisibleProvider("verified", "Champahati Angana")).toBe(true);
+  });
+
   it("is the only gate the public directory may use", () => {
     const directoryStatuses = ["draft", "pending", "verified", "rejected", "suspended"] as const;
-    expect(directoryStatuses.filter(isPubliclyVisibleProvider)).toEqual(["verified"]);
+    expect(directoryStatuses.filter((status) => isPubliclyVisibleProvider(status))).toEqual(["verified"]);
   });
 });

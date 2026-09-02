@@ -357,7 +357,7 @@ const fallbackPackages: PackageDetail[] = [
     circuitKeys: ["ramayana", "culinary"],
     nextDeparture: { startDate: futureDate(28), priceAmount: 88_000 * 100, seatsAvailable: 14 },
     description:
-      "A dummy-data premium partner plan for families who want temples, strict Jain food, comfortable stay standards and predictable rides.",
+      "A premium partner plan for families who want temples, strict Jain food, comfortable stay standards and predictable rides.",
     kitchen: true,
     cookReady: true,
     groupSizeMin: 6,
@@ -466,7 +466,7 @@ const fallbackPackages: PackageDetail[] = [
     circuitKeys: ["culinary", "adventure"],
     nextDeparture: { startDate: futureDate(21), priceAmount: 39_500 * 100, seatsAvailable: 18 },
     description:
-      "A dummy-data economical plan for travelers who want Bali highlights without premium pricing. Admin can replace this with selected partner rates.",
+      "An economical plan for travellers who want Bali highlights without premium pricing. Final rates are confirmed before payment.",
     kitchen: false,
     cookReady: true,
     groupSizeMin: 2,
@@ -562,7 +562,7 @@ const fallbackPackages: PackageDetail[] = [
     ],
     circuitKeys: ["adventure"],
     nextDeparture: { startDate: futureDate(35), priceAmount: 47_500 * 100, seatsAvailable: 12 },
-    description: "A dummy-data adventure plan for active travelers who want clean food, comfortable transfers and budget clarity.",
+    description: "An adventure plan for active travellers who want clean food, comfortable transfers and budget clarity.",
     kitchen: false,
     cookReady: false,
     groupSizeMin: 2,

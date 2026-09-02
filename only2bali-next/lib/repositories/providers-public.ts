@@ -17,8 +17,12 @@ export type PublicProviderFilters = {
 type QueryMode = "full" | "legacy";
 
 /** Pure gate used by tests and by the repository. */
-export function isPubliclyVisibleProvider(verificationStatus: string): boolean {
-  return verificationStatus === "verified";
+export function isPubliclyVisibleProvider(
+  verificationStatus: string,
+  businessName = ""
+): boolean {
+  const normalizedName = typeof businessName === "string" ? businessName.trim() : "";
+  return verificationStatus === "verified" && !/^TEST\s*--/i.test(normalizedName);
 }
 
 function providerRegionClause(region: PublicProviderFilters["region"], mode: QueryMode) {
@@ -62,7 +66,10 @@ const providerCoreSelect = {
 };
 
 async function queryProviders(filters: PublicProviderFilters, mode: QueryMode) {
-  const clauses = [eq(vendor.verificationStatus, "verified")];
+  const clauses = [
+    eq(vendor.verificationStatus, "verified"),
+    sql`coalesce(${vendor.businessName}, '') not ilike 'TEST --%'`,
+  ];
   const region = providerRegionClause(filters.region, mode);
   if (region) clauses.push(region);
 
@@ -230,7 +237,7 @@ export async function getPublicProviderBySlug(slug: string) {
     row = await queryProviderRow(slug, "legacy");
   }
 
-  if (!row || !isPubliclyVisibleProvider(row.verificationStatus)) return null;
+  if (!row || !isPubliclyVisibleProvider(row.verificationStatus, row.businessName)) return null;
 
   let listings;
   try {

@@ -397,7 +397,7 @@ export default function AdminDashboard() {
                       <button onClick={() => run("Marked paid.", () => patch(`/api/admin/disbursements/${item.id}`, { action: "mark_paid" }))}>Mark paid</button>
                     )}
                     {item.paymentId && item.status !== "paid" && (
-                      <button onClick={() => run("Traveller refunded from platform.", () => fetch(`/api/admin/payments/${item.paymentId}/refund`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }).then(async (r) => { const j = await r.json(); if (!r.ok || !j.success) throw new Error(j.error); }))}>Refund traveller</button>
+                      <button onClick={() => run("Razorpay refund initiated and ledger reconciled.", () => fetch(`/api/admin/payments/${item.paymentId}/refund`, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }).then(async (r) => { const j = await r.json(); if (!r.ok || !j.success) throw new Error(j.error); }))}>Refund through Razorpay</button>
                     )}
                   </div>
                 </li>

@@ -24,6 +24,7 @@ import { razorpayConfig, stripeConfig } from "@/lib/payments/config";
 import { stripeEventId, stripeWebhookEvent } from "@/lib/payments/stripe";
 import type { PaymentIntentInput, RazorpayVerifyInput, StripeConfirmInput } from "@/lib/validators/payments";
 import { createHeldDisbursementForBooking } from "@/lib/repositories/disbursements";
+import { resilientFetch } from "@/lib/external-fetch";
 import { notifyBookingConfirmed } from "@/lib/notifications/notify";
 import Stripe from "stripe";
 
@@ -82,7 +83,7 @@ async function createCashfreeOrder(args: {
   }
 
   const orderId = `o2b_${args.reference.replace(/[^a-z0-9]/gi, "").toLowerCase()}_${args.paymentId.slice(0, 8)}`;
-  const res = await fetch(`${cashfreeBaseUrl()}/orders`, {
+  const res = await resilientFetch("cashfree", `${cashfreeBaseUrl()}/orders`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -123,7 +124,7 @@ async function createRazorpayOrder(args: { reference: string; amount: number; cu
   }
 
   const auth = Buffer.from(`${config.keyId}:${config.keySecret}`).toString("base64");
-  const res = await fetch("https://api.razorpay.com/v1/orders", {
+  const res = await resilientFetch("razorpay", "https://api.razorpay.com/v1/orders", {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -751,7 +752,7 @@ export async function ingestRazorpayWebhook(args: {
 
   try {
     if (
-      (eventType === "payment.captured" || eventType === "payment.authorized") &&
+      eventType === "payment.captured" &&
       paymentId &&
       providerPaymentId &&
       providerOrderId
@@ -778,6 +779,10 @@ export async function ingestRazorpayWebhook(args: {
       } else {
         processingError = "payment_row_missing";
       }
+    } else if (eventType === "payment.authorized" && paymentId && providerPaymentId) {
+      await db.update(payment).set({ status: "authorized", providerPaymentId, updatedAt: new Date() })
+        .where(and(eq(payment.id, paymentId), eq(payment.status, "created")));
+      processed = true;
     } else if (eventType === "payment.failed" && paymentId) {
       await db
         .update(payment)

@@ -21,7 +21,7 @@ describe("getPackageBySlug when the database cannot be reached", () => {
 
   // A refused TCP connect on a loaded CI runner can take seconds before the
   // fallback kicks in; the assertion is about behavior, not speed.
-  it("returns the curated fallback for a known package", { timeout: 20_000 }, async () => {
+  it("returns the curated fallback for a known package", async () => {
     vi.stubEnv("DATABASE_URL", DEAD_DB);
     const { getPackageBySlug } = await import("./catalog");
 

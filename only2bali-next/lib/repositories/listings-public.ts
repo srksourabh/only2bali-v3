@@ -86,6 +86,8 @@ function visibilityClauses(filters: PublicListingFilters, mode: QueryMode) {
     eq(serviceListing.status, "active"),
     eq(serviceListing.active, true),
     eq(vendor.verificationStatus, "verified"),
+    sql`${serviceListing.title} not ilike 'TEST --%'`,
+    sql`${vendor.businessName} not ilike 'TEST --%'`,
   ];
 
   if (filters.serviceType) {

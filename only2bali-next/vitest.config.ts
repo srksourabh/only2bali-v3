@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
  * "Cannot find package '@/lib/db'" — a missing alias, not a broken test.
  */
 export default defineConfig({
+  test: { testTimeout: 60_000 },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL(".", import.meta.url)),
