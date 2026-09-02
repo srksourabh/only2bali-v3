@@ -20,7 +20,7 @@ export default function NavAuth({
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/auth/session")
+    fetch("/api/auth/session", { cache: "no-store", credentials: "same-origin" })
       .then((res) => res.json())
       .then((body) => {
         if (!cancelled) setSignedIn(Boolean(body?.data?.user));
