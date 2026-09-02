@@ -53,6 +53,8 @@ only2bali-next/.vercel
 
 # Agent state - local tooling only, never in git
 .agent/
+.agents/
+skills-lock.json
 .serena/
 .claude/
 .qodo/
