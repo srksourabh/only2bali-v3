@@ -70,6 +70,30 @@ async function mustReject(name: string, statement: string, expectConstraint?: st
   }
 }
 
+/**
+ * The mirror of mustReject: prove the database ACCEPTS something it should.
+ *
+ * Rolls back, so a check that writes a row leaves nothing behind and can run
+ * against a populated database as safely as an empty one.
+ */
+async function mustAccept(name: string, statement: string) {
+  try {
+    await db.transaction(async (tx) => {
+      await tx.execute(sql.raw(statement));
+      throw new Rollback();
+    });
+    check(name, false, "the transaction did not roll back");
+  } catch (e) {
+    if (e instanceof Rollback) {
+      check(name, true, "accepted, then rolled back");
+      return;
+    }
+    check(name, false, `the database REFUSED a row it should have taken: ${errorText(e).slice(0, 90)}`);
+  }
+}
+
+class Rollback extends Error {}
+
 async function main() {
   const host = new URL(process.env.DATABASE_URL!).hostname;
   console.log(`\nVerifying database at ${host}\n`);
@@ -150,9 +174,16 @@ async function main() {
       );
     }
   }
+  // 'non_vegetarian' used to be the sentinel here. It stopped being a good one
+  // the moment 'non_veg' became real: a reader now has to know which of the two
+  // is the enum value to know what this proves.
   await mustReject(
     "an unknown food protocol is not a valid value",
-    `insert into trip_request (protocol, group_size) values ('non_vegetarian', 2)`
+    `insert into trip_request (protocol, group_size) values ('not_a_protocol', 2)`
+  );
+  await mustAccept(
+    "every protocol the application offers is a valid value",
+    `insert into trip_request (protocol, group_size) values ('non_veg', 2), ('satvik', 2), ('halal', 2), ('eggetarian', 2)`
   );
 
   // ---------- payments: the rules that must hold before real money moves ----------

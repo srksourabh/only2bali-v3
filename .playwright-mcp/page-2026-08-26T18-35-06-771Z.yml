@@ -1,0 +1,295 @@
+- generic [active] [ref=f6e1]:
+  - banner [ref=f6e2]:
+    - generic [ref=f6e3]:
+      - link "Only2Bali Only2Bali" [ref=f6e4] [cursor=pointer]:
+        - /url: /en
+        - img "Only2Bali" [ref=f6e5]
+        - generic [ref=f6e9]: Only2Bali
+      - navigation "Primary" [ref=f6e11]:
+        - menubar [ref=f6e13]:
+          - menuitem "Home" [ref=f6e14] [cursor=pointer]
+          - menuitem "Destinations" [ref=f6e16] [cursor=pointer]
+          - menuitem "Providers" [ref=f6e18] [cursor=pointer]
+          - menuitem "Services" [ref=f6e20] [cursor=pointer]
+          - menuitem "Packages" [ref=f6e22] [cursor=pointer]
+          - menuitem "Trip quality" [ref=f6e24] [cursor=pointer]
+      - generic [ref=f6e26]:
+        - button "Language" [ref=f6e28] [cursor=pointer]:
+          - generic [ref=f6e32]: English
+        - link "Sign in" [ref=f6e33] [cursor=pointer]:
+          - /url: /en/login
+        - link "Plan your trip" [ref=f6e34] [cursor=pointer]:
+          - /url: /en/planner
+  - main [ref=f6e35]:
+    - generic [ref=f6e36]:
+      - generic [ref=f6e37]:
+        - generic [ref=f6e38]: India → Indonesia · Bali · Jakarta · Circuits · Services
+        - heading [level=1] [ref=f6e39]:
+          - text: Your Indonesia trip,
+          - emphasis [ref=f6e40]: built around you
+          - text: — with verified local providers.
+        - paragraph [ref=f6e41]: Browse curated circuits and book stays, rides, guides, restaurants and packages from verified partners in Bali, Jakarta and beyond. Pay Only2Bali; we pay the providers.
+        - generic [ref=f6e42]:
+          - link "Explore circuits →" [ref=f6e43] [cursor=pointer]:
+            - /url: /en#circuits
+          - link "Browse services" [ref=f6e44] [cursor=pointer]:
+            - /url: /en/services
+      - generic [ref=f6e45]:
+        - img "Sembah — the folded-hand greeting shared by Bali and India" [ref=f6e46]
+        - generic [ref=f6e47]: Sembah — the folded-hand greeting shared by Bali and India
+    - generic [ref=f6e48]:
+      - generic [ref=f6e49]:
+        - generic [ref=f6e50]: Bali + Jakarta
+        - generic [ref=f6e51]: Destinations live now, more Indonesia next
+      - generic [ref=f6e52]:
+        - generic [ref=f6e53]: "4"
+        - generic [ref=f6e54]: Temple, adventure, food and artisan circuits
+      - generic [ref=f6e55]:
+        - generic [ref=f6e56]: "7"
+        - generic [ref=f6e57]: Indian languages spoken by our guides
+      - generic [ref=f6e58]:
+        - generic [ref=f6e59]: Verified
+        - generic [ref=f6e60]: Providers go live only after admin review
+    - generic [ref=f6e62]:
+      - generic [ref=f6e63]:
+        - heading "Where do you want to go?" [level=2] [ref=f6e64]
+        - paragraph [ref=f6e65]: Start with Bali or Jakarta. Every service and package is tied to a place, not a vague brochure.
+      - generic [ref=f6e66]:
+        - link "Bali Bali Temples, coasts, Ubud, Nusa islands — the core circuits and most of our verified supply." [ref=f6e67] [cursor=pointer]:
+          - /url: /en/destinations/bali
+          - generic [ref=f6e68]: Bali
+          - generic [ref=f6e70]:
+            - heading "Bali" [level=3] [ref=f6e71]
+            - paragraph [ref=f6e72]: Temples, coasts, Ubud, Nusa islands — the core circuits and most of our verified supply.
+        - link "Jakarta Jakarta City stays, airport logistics, dining and add-on services for groups entering Indonesia." [ref=f6e73] [cursor=pointer]:
+          - /url: /en/destinations/jakarta
+          - generic [ref=f6e74]: Jakarta
+          - generic [ref=f6e76]:
+            - heading "Jakarta" [level=3] [ref=f6e77]
+            - paragraph [ref=f6e78]: City stays, airport logistics, dining and add-on services for groups entering Indonesia.
+    - generic [ref=f6e80]:
+      - generic [ref=f6e81]:
+        - heading "Choose the Indonesia you actually came for." [level=2] [ref=f6e82]
+        - paragraph [ref=f6e83]: Four circuits, each backed by real providers for kitchens, hotels, villas, cars, guides and activities. Pick your route and we match the whole trip around your comfort and budget.
+      - generic [ref=f6e84]:
+        - link "01 — RAMAYANA The temple circuit Besakih, Tirta Empul, Lempuyang and the Kecak fire dance at Uluwatu as the sun goes down. 6 temple stops · Kecak at sunset · satvik meal days" [ref=f6e85] [cursor=pointer]:
+          - /url: /en/planner
+          - generic [ref=f6e86]:
+            - generic [ref=f6e87]: 01 — RAMAYANA
+            - heading "The temple circuit" [level=3] [ref=f6e88]
+            - paragraph [ref=f6e89]: Besakih, Tirta Empul, Lempuyang and the Kecak fire dance at Uluwatu as the sun goes down.
+            - generic [ref=f6e90]: 6 temple stops · Kecak at sunset · satvik meal days
+        - link "02 — ADVENTURE Quality rides to sunrise Ayung river, Mount Batur before dawn, Nusa Penida water, and driver-led transfers that do not feel random. Private cars, vans and buses matched to group size" [ref=f6e91] [cursor=pointer]:
+          - /url: /en/planner
+          - generic [ref=f6e92]:
+            - generic [ref=f6e93]: 02 — ADVENTURE
+            - heading "Quality rides to sunrise" [level=3] [ref=f6e94]
+            - paragraph [ref=f6e95]: Ayung river, Mount Batur before dawn, Nusa Penida water, and driver-led transfers that do not feel random.
+            - generic [ref=f6e96]: Private cars, vans and buses matched to group size
+        - link "03 — CULINARY The food and stay trail Pure-veg kitchens, cooking classes, villa kitchens, resorts and budget stays that work for Indian groups. Kitchens and stays checked together" [ref=f6e97] [cursor=pointer]:
+          - /url: /en/planner
+          - generic [ref=f6e98]:
+            - generic [ref=f6e99]: 03 — CULINARY
+            - heading "The food and stay trail" [level=3] [ref=f6e100]
+            - paragraph [ref=f6e101]: Pure-veg kitchens, cooking classes, villa kitchens, resorts and budget stays that work for Indian groups.
+            - generic [ref=f6e102]: Kitchens and stays checked together
+        - link "04 — ARTISTIC Carvers, weavers and painters Mas village wood-carving, Celuk silver, batik studios in Ubud and Sanur — working with the artisans, not watching from a bus window. Hands-on workshops · small groups" [ref=f6e103] [cursor=pointer]:
+          - /url: /en/planner
+          - generic [ref=f6e104]:
+            - generic [ref=f6e105]: 04 — ARTISTIC
+            - heading "Carvers, weavers and painters" [level=3] [ref=f6e106]
+            - paragraph [ref=f6e107]: Mas village wood-carving, Celuk silver, batik studios in Ubud and Sanur — working with the artisans, not watching from a bus window.
+            - generic [ref=f6e108]: Hands-on workshops · small groups
+        - link "+ Add on Coast, rest and luxury cars Nusa Dua, Jimbaran, beach clubs, airport transfers and premium cars for groups that want a smoother trip." [ref=f6e109] [cursor=pointer]:
+          - /url: /en/planner
+          - generic [ref=f6e110]:
+            - generic [ref=f6e111]: + Add on
+            - heading "Coast, rest and luxury cars" [level=3] [ref=f6e112]
+            - paragraph [ref=f6e113]: Nusa Dua, Jimbaran, beach clubs, airport transfers and premium cars for groups that want a smoother trip.
+        - link "+ Add on Wellness Ubud yoga, flower-bath spa, quiet mornings." [ref=f6e114] [cursor=pointer]:
+          - /url: /en/planner
+          - generic [ref=f6e115]:
+            - generic [ref=f6e116]: + Add on
+            - heading "Wellness" [level=3] [ref=f6e117]
+            - paragraph [ref=f6e118]: Ubud yoga, flower-bath spa, quiet mornings.
+    - generic [ref=f6e120]:
+      - generic [ref=f6e121]:
+        - heading "Food protocol is one filter. Stays, rides and budget are checked too." [level=2] [ref=f6e122]
+        - paragraph [ref=f6e123]: Vegetarian, Jain and vegan remain first-class options — disclosed meal by meal — alongside stay comfort, vehicle type, guide language and clear INR pricing.
+      - generic [ref=f6e124]:
+        - generic [ref=f6e125]:
+          - group "Food protocol is one filter. Stays, rides and budget are checked too." [ref=f6e126]:
+            - button "Jain" [pressed] [ref=f6e127] [cursor=pointer]
+            - button "Vegetarian" [ref=f6e128] [cursor=pointer]
+            - button "Vegan" [ref=f6e129] [cursor=pointer]
+          - paragraph [ref=f6e130]:
+            - strong [ref=f6e131]: Jain is the strictest filter.
+            - text: No onion, no garlic, no root vegetable. Kitchens that cannot guarantee a separate prep surface drop to amber, and the Tegallalang warung drops out of the day entirely — replaced, not quietly served.
+          - generic [ref=f6e132]:
+            - generic [ref=f6e133]: Dedicated kitchen, verified
+            - generic [ref=f6e135]: Shared kitchen, separate line
+            - generic [ref=f6e137]: Not served on this protocol
+        - generic [ref=f6e139]:
+          - generic [ref=f6e140]:
+            - heading "Day 3 — Ubud & Tegallalang" [level=4] [ref=f6e141]
+            - generic [ref=f6e142]: JAIN PROTOCOL
+          - generic [ref=f6e143]:
+            - generic [ref=f6e144]: Breakfast
+            - generic [ref=f6e145]:
+              - generic [ref=f6e146]: Villa kitchen — Gujarati thali
+              - emphasis [ref=f6e147]: Prepared by your accompanying cook
+            - generic [ref=f6e148]: Dedicated
+          - generic [ref=f6e151]:
+            - generic [ref=f6e152]: Lunch
+            - generic [ref=f6e153]:
+              - generic [ref=f6e154]: Sattvik By Nature, Ubud
+              - emphasis [ref=f6e155]: Pure-veg kitchen, no onion or garlic on request
+            - generic [ref=f6e156]: Dedicated
+          - generic [ref=f6e159]:
+            - generic [ref=f6e160]: Dinner
+            - generic [ref=f6e161]:
+              - generic [ref=f6e162]: Warung near Tegallalang
+              - emphasis [ref=f6e163]: Shared wok — substituted for a Jain-capable kitchen
+            - generic [ref=f6e164]: Substituted
+          - generic [ref=f6e168]: Two of three meals from a dedicated kitchen. One substitution made automatically.
+    - generic [ref=f6e170]:
+      - generic [ref=f6e171]:
+        - heading "How a provider earns trust." [level=2] [ref=f6e172]
+        - paragraph [ref=f6e173]: "We verify the service travellers actually get: stays, rides, guides, activities and kitchens — not just the sales pitch."
+      - list [ref=f6e177]:
+        - listitem [ref=f6e178]:
+          - generic [ref=f6e179]:
+            - heading "We check in person" [level=4] [ref=f6e180]
+            - paragraph [ref=f6e181]: A member of our team sees the place or vehicle, or rides with the guide, before the listing goes live. No scheduled inspection theatre.
+        - listitem [ref=f6e182]:
+          - generic [ref=f6e183]:
+            - heading "We check the real service" [level=4] [ref=f6e184]
+            - paragraph [ref=f6e185]: Room fit for stays, vehicle condition for rides, language and route knowledge for guides, and kitchen practice where food is part of the trip.
+        - listitem [ref=f6e186]:
+          - generic [ref=f6e187]:
+            - heading "Food protocol when it matters" [level=4] [ref=f6e188]
+            - paragraph [ref=f6e189]: Where meals are included, Jain and veg constraints are confirmed with the cook on shift — no onion, no garlic, no root vegetable when requested — and photographed.
+        - listitem [ref=f6e190]:
+          - generic [ref=f6e191]:
+            - heading "The rating expires" [level=4] [ref=f6e192]
+            - paragraph [ref=f6e193]: Hotels, drivers, menus and prices change. A check that is not renewed drops out of our system rather than quietly ageing.
+    - generic [ref=f6e195]:
+      - generic [ref=f6e196]:
+        - heading "Book services from verified local partners." [level=2] [ref=f6e197]
+        - paragraph [ref=f6e198]: Restaurants, stays, transport, guides, activities and more — listed by providers across Bali and Jakarta, published only after Only2Bali checks them.
+      - generic [ref=f6e199]:
+        - link "Services →" [ref=f6e200] [cursor=pointer]:
+          - /url: /en/services
+        - link "List my business as a provider" [ref=f6e201] [cursor=pointer]:
+          - /url: /en/vendors
+    - generic [ref=f6e203]:
+      - generic [ref=f6e204]:
+        - heading "Latest partner offers selected by admin." [level=2] [ref=f6e205]
+        - paragraph [ref=f6e206]: Starting offers in INR, excluding international flights. Premium rates are shown only for premium partners; every plan can move between budget, comfort and luxury car options.
+      - generic [ref=f6e207]:
+        - article [ref=f6e208]:
+          - generic [ref=f6e209]: Ramayana
+          - generic [ref=f6e211]:
+            - heading "Sattvik Serenity" [level=3] [ref=f6e212]
+            - generic [ref=f6e213]: 6 days · 5 nights · Ubud, Tirta Empul, Uluwatu, Nusa Dua
+            - list [ref=f6e214]:
+              - listitem [ref=f6e215]:
+                - generic [ref=f6e218]: Premium partner option with Jain-protocol kitchen
+              - listitem [ref=f6e219]:
+                - generic [ref=f6e222]: Gujarati and Hindi-speaking guide throughout
+              - listitem [ref=f6e223]:
+                - generic [ref=f6e226]: Temple mornings timed before the crowds
+            - generic [ref=f6e227]:
+              - generic [ref=f6e228]: Jain
+              - generic [ref=f6e229]: Vegetarian
+              - generic [ref=f6e230]: Premium partner
+            - generic [ref=f6e231]:
+              - generic [ref=f6e232]:
+                - text: ₹88,000
+                - generic [ref=f6e233]: starting offer / person
+              - link "View itinerary & offer" [ref=f6e234] [cursor=pointer]:
+                - /url: /en/packages/sattvik-serenity
+        - article [ref=f6e235]:
+          - generic [ref=f6e236]: Mixed
+          - generic [ref=f6e238]:
+            - heading "Bali Veg Explorer" [level=3] [ref=f6e239]
+            - generic [ref=f6e240]: 5 days · 4 nights · Kuta, Ubud, Uluwatu
+            - list [ref=f6e241]:
+              - listitem [ref=f6e242]:
+                - generic [ref=f6e245]: Latest budget partner offer for first-time groups
+              - listitem [ref=f6e246]:
+                - generic [ref=f6e249]: Water sports and Uluwatu Kecak included
+              - listitem [ref=f6e250]:
+                - generic [ref=f6e253]: Built for first-time groups on a tighter budget
+            - generic [ref=f6e254]:
+              - generic [ref=f6e255]: Vegetarian
+              - generic [ref=f6e256]: Jain
+              - generic [ref=f6e257]: Budget option
+            - generic [ref=f6e258]:
+              - generic [ref=f6e259]:
+                - text: ₹39,500
+                - generic [ref=f6e260]: starting offer / person
+              - link "View itinerary & offer" [ref=f6e261] [cursor=pointer]:
+                - /url: /en/packages/bali-veg-explorer
+        - article [ref=f6e262]:
+          - generic [ref=f6e263]: Adventure
+          - generic [ref=f6e265]:
+            - heading "Active Bali" [level=3] [ref=f6e266]
+            - generic [ref=f6e267]: 5 days · 4 nights · Ayung, Mount Batur, Nusa Penida
+            - list [ref=f6e268]:
+              - listitem [ref=f6e269]:
+                - generic [ref=f6e272]: High-protein veg and vegan meal plans for trek days
+              - listitem [ref=f6e273]:
+                - generic [ref=f6e276]: Batur sunrise with a packed protocol breakfast
+              - listitem [ref=f6e277]:
+                - generic [ref=f6e280]: Rafting, ATV and snorkelling in one week
+            - generic [ref=f6e281]:
+              - generic [ref=f6e282]: Vegetarian
+              - generic [ref=f6e283]: Vegan
+              - generic [ref=f6e284]: Comfort offer
+            - generic [ref=f6e285]:
+              - generic [ref=f6e286]:
+                - text: ₹47,500
+                - generic [ref=f6e287]: starting offer / person
+              - link "View itinerary & offer" [ref=f6e288] [cursor=pointer]:
+                - /url: /en/packages/active-bali
+      - paragraph [ref=f6e289]:
+        - link "Packages →" [ref=f6e290] [cursor=pointer]:
+          - /url: /en/packages
+    - generic [ref=f6e292]:
+      - generic [ref=f6e293]:
+        - heading "Your parents shouldn’t have to explain their food in English." [level=2] [ref=f6e294]
+        - paragraph [ref=f6e295]: Our Bali guide network includes Indian-language speakers who understand temple etiquette, fasting days and family travel rhythms — on both sides.
+      - generic [ref=f6e296]:
+        - link "English" [ref=f6e297] [cursor=pointer]:
+          - /url: /en
+        - link "हिन्दीHindi" [ref=f6e298] [cursor=pointer]:
+          - /url: /hi
+        - link "தமிழ்Tamil" [ref=f6e299] [cursor=pointer]:
+          - /url: /ta
+        - link "ગુજરાતીGujarati" [ref=f6e300] [cursor=pointer]:
+          - /url: /gu
+        - link "తెలుగుTelugu" [ref=f6e301] [cursor=pointer]:
+          - /url: /te
+        - link "ಕನ್ನಡKannada" [ref=f6e302] [cursor=pointer]:
+          - /url: /kn
+        - link "मराठीMarathi" [ref=f6e303] [cursor=pointer]:
+          - /url: /mr
+    - generic [ref=f6e306]:
+      - generic [ref=f6e307]:
+        - heading "Tell us your dates. We’ll come back with clear options." [level=2] [ref=f6e308]
+        - paragraph [ref=f6e309]: We match verified providers across Bali and Jakarta — food, stays, cars, guides and activities — then show economical, comfort and premium choices in INR.
+      - generic [ref=f6e310]:
+        - link "Start with my dates →" [ref=f6e311] [cursor=pointer]:
+          - /url: /en/inquiry
+        - link "List my business as a provider" [ref=f6e312] [cursor=pointer]:
+          - /url: /en/vendors
+  - contentinfo [ref=f6e313]:
+    - generic [ref=f6e315]:
+      - generic [ref=f6e316]: Only2Bali
+      - paragraph [ref=f6e322]: Indonesia travel marketplace for Indian groups — Bali, Jakarta and beyond.
+      - paragraph [ref=f6e323]:
+        - text: © 2026 Only2Bali · Photography and palette from the existing site. ·
+        - link "hello@only2bali.com" [ref=f6e324] [cursor=pointer]:
+          - /url: mailto:hello@only2bali.com
+  - alert [ref=f6e325]

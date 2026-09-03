@@ -42,7 +42,24 @@ function localeResponse(req: NextRequest): NextResponse | null {
   const locale = pickLocale(req);
   const url = req.nextUrl.clone();
   url.pathname = `/${locale}${pathname === "/" ? "" : pathname}`;
-  return NextResponse.redirect(url);
+
+  const redirect = NextResponse.redirect(url);
+
+  /**
+   * This redirect is per-visitor: the target comes from their NEXT_LOCALE
+   * cookie and their Accept-Language. It shipped as `public, max-age=0,
+   * must-revalidate` with no Vary header at all, which tells every shared
+   * cache that `/` has one answer for everybody - so a Hindi reader's
+   * redirect could be handed to an English one, and a browser could pin
+   * whichever it saw first and stop asking. A pinned bad entry is a bare
+   * domain that will not open while every other path works.
+   *
+   * Never store it, and say what it varies on for any cache that ignores that.
+   */
+  redirect.headers.set("Cache-Control", "no-store, must-revalidate");
+  redirect.headers.set("Vary", "Accept-Language, Cookie");
+
+  return redirect;
 }
 
 function localeOnlyMiddleware(req: NextRequest) {

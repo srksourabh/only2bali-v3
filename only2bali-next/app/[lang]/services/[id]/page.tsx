@@ -6,6 +6,7 @@ import type { Locale } from "@/lib/i18n/config";
 import { getSessionUser } from "@/lib/auth";
 import { getPublicServiceById, listListingAvailability } from "@/lib/repositories/listings-public";
 import { listPublishedVendorReviews } from "@/lib/repositories/reviews";
+import { listingCardImage } from "@/lib/media/listing-art";
 import ServiceBookForm from "../ServiceBookForm";
 
 export const dynamic = "force-dynamic";
@@ -96,6 +97,17 @@ export default async function ServiceDetailPage({
               </p>
             </div>
           </header>
+
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={listingCardImage({
+              serviceType: service.serviceType,
+              title: service.title,
+              images: service.images,
+            })}
+            alt=""
+            style={{ width: "100%", maxHeight: "320px", objectFit: "cover", marginTop: "1.2rem" }}
+          />
 
           <div className="acard" style={{ marginTop: "1.5rem" }}>
             <div className="price" style={{ marginBottom: "1rem" }}>

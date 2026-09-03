@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { listingMatchesRegion } from "@/lib/marketplace-region";
 import { isPubliclyVisibleListing } from "./listings-public";
 
 describe("isPubliclyVisibleListing", () => {
@@ -30,6 +31,16 @@ describe("isPubliclyVisibleListing", () => {
         vendorVerificationStatus: "pending",
       })
     ).toBe(false);
+  });
+
+  it("matches Jakarta only when the listing is in Jakarta", () => {
+    expect(listingMatchesRegion({ city: "Jakarta", area: "Menteng" }, "jakarta")).toBe(true);
+    expect(listingMatchesRegion({ city: "Bali", area: "Ubud" }, "jakarta")).toBe(false);
+  });
+
+  it("keeps Bali listings out of a Jakarta-only filter", () => {
+    expect(listingMatchesRegion({ city: "Ubud", vendorArea: "Bali" }, "bali")).toBe(true);
+    expect(listingMatchesRegion({ city: "Jakarta", area: "Menteng" }, "bali")).toBe(false);
   });
 
   it("hides paused-active false listings", () => {

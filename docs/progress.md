@@ -9,22 +9,107 @@
 >
 > This tracks the **real project**, not a greenfield build. The product is already live.
 
-## Marketplace portal (2026-08-23)
+## Tester QA batch (2026-09-03)
 
-Verified live at https://only2bali.vercel.app:
+On `fix/mvp-demo-readiness` (commit pending production promote).
 
-- `/api/health` — database connected, clerk true, otpDelivery none, acceptingPayments false
-- `/en/services`, `/en/providers`, `/api/services` — catalogue HTTP 200
-- `/en/login` — password + Clerk UI renders
+- [x] Signup duplicate email no longer 500
+- [x] My Account Send Code shows SMS-unavailable instead of a silent throw
+- [x] Plan Your Trip accepts real briefs (aliases, empty age, long text)
+- [x] Book and Pay accepts fallback `sample-svc-*` ids and materializes them
+- [x] Auto-generate mock itinerary changes with trip details
+- [ ] Owner: `SPRINGEDGE_API_KEY` still required before SMS codes actually send
 
-Still blocked:
+## Tester QA batch (2026-08-24)
 
-- Apply Drizzle 0003–0005 on the VPS (SSH tunnel, then `npm run db:migrate`)
-- Set a real Razorpay webhook secret (≥32 characters, not a URL) on Vercel
-- Then e2e login, booking, and admin moderation against production
+Shipped: commit `4f090f6` on `feat/schema-status-health`, production deploy
+`dpl_6LPp5Dy9iB2aUbFipp6zFKdWCZpD` (https://only2bali.vercel.app).
 
-This session: health reports schema lag; password/Clerk failures on a lagged
-schema map to HTTP 503 `schema_lag`. Vitest 166 passed; `tsc --noEmit` passed.
+Re-verified live 2026-08-24 on https://only2bali.vercel.app (browser + HTTP).
+No remaining code gaps from that tester batch.
+
+- [x] Login regex error on signup and wrong password
+- [x] Google/Clerk already-signed-in loop (Continue / switch account)
+- [x] Dates shown as dd-mm-yyyy
+- [x] View itinerary 404 on home/packages fallback slugs
+- [x] Services/providers destination chips filter in-memory; empty Neon uses fallback listings
+- [x] Trip quality goes to `/food`; nav underline only on the active `li`
+- [x] Shared layout no longer blocks on session DB; catalogue circuit-breaker after outage
+
+Still owner: seed Neon with real marketplace rows; click through Google OAuth
+with a real Google account; paste Razorpay webhook; optional Stripe keys.
+
+## Neon is the database of record (2026-08-24)
+
+Production Next.js uses **Neon only** (Vercel integration `o2b_*` vars,
+project `neon-apricot-marble` / branch `main`). `DATABASE_URL` was switched
+from Hostinger+mTLS to the Neon pooled URL. Runtime ignores leftover PEMs.
+`PGSSL_*` removed from Vercel production.
+
+Live after deploy `dpl_4eLochjLYpxhDYogyVgRQonL3ce5` + schema catch-up:
+`GET /api/health` — `database: connected`, schema **7/7**, `current` true,
+`authReady` true. Neon had no marketplace tables before catch-up; listings and
+the previous e2e vendor/traveller rows stayed on Hostinger and are not here.
+
+## Landing photos + group names (2026-08-24)
+
+- Home, food and services no longer reuse one food plate: cook, class, thali, villa,
+  beach and adventure each have their own photograph.
+- Booking / inquiry for a group (e.g. 8 pax) needs only the lead name. Extra
+  traveller names stay optional until later.
+
+## Marketplace portal (2026-08-24)
+
+Verified live at https://only2bali.vercel.app after CLI production deploy
+`dpl_69EuQELJen6gEim1joz7AyLfM4M4`:
+
+- `/api/health` — database connected, **schema applied 6/6**, `current` true,
+  `authReady` true, `catalogueColumns` true, clerk true
+- First health hit after deploy applied 0003–0005 (`skipped: false`, 34s)
+- `/en/login`, `/en/services`, `/en/vendors` — HTTP 200; services list live
+  listings (Jain cook, villa, thali, transport)
+- otpDelivery still `none`
+- `RAZORPAY_WEBHOOK_SECRET` was the documented placeholder; replaced on
+  Vercel and redeployed. Owner must paste the same value into the Razorpay
+  dashboard webhook for `https://only2bali.vercel.app/api/payments/webhook`
+
+This session closed remaining **code** gaps and the production schema lag:
+
+- Admin approve of a vendor application now creates or promotes a vendor account
+- Providers can edit listings; `/services` filters by type and food protocol
+- Mobile verify API + account UI; provider messaging; OTP hidden for vendor/admin
+- `GET /api/health` catch-up + `POST /api/ops/migrate` (token-gated)
+- Vitest migrate helper 5/5; `tsc --noEmit` passed
+
+Live health after webhook replace: `acceptingPayments` **true**,
+`webhookConfigured` true. Checkout can open.
+
+## Payments: Stripe option + configurable 10% fee (2026-08-24)
+
+- Checkout always offers **Stripe** and **Razorpay**. Missing keys show the
+  option as unavailable; the two-choice layout stays.
+- Platform default fee is **10%**, stored in `platform_setting` (migration 0006)
+  and editable from Admin → Platform fee %. Vendor `commissionRate` still
+  overrides listing/offer bookings.
+- Stripe Checkout Session + `/api/payments/webhook/stripe`. Ledger split only;
+  no Stripe Connect payouts.
+
+Still blocked on production (owner):
+
+- Paste Vercel `RAZORPAY_WEBHOOK_SECRET` into the Razorpay dashboard webhook
+  (URL `https://only2bali.vercel.app/api/payments/webhook`, events
+  `payment.captured`, `payment.authorized`, `payment.failed`) so captured
+  payments confirm if the browser closes
+- Optional: add `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`,
+  `STRIPE_WEBHOOK_SECRET` and point Stripe at
+  `https://only2bali.vercel.app/api/payments/webhook/stripe`
+- Set `RESEND_API_KEY` or `SPRINGEDGE_API_KEY` if you want OTP (password/Clerk work now)
+- [x] Commit and push the working tree (`5514d04` on `feat/schema-status-health`);
+      production is `dpl_CL19V7Hgp2setxjPKi4GLz56vXgM`. `main` still lacks this commit.
+- Re-seed or recreate marketplace listings on Neon (schema is empty of product
+  rows after the Hostinger → Neon cutover)
+
+Verified locally earlier: `npm run test:e2e` **134 passed**.
 
 ## Status overview
 
@@ -208,11 +293,26 @@ Not done - this is what blocks retiring the React app:
 
 ## Next up
 
+- [ ] **Resolve live payments behind Google-only sign-in.** Production takes live
+      Razorpay while OTP cannot deliver and Google-via-Clerk is the only working door.
+      Either move to test keys or close the door — `docs/launch-checklist.md` item 1.
 - [ ] **Revoke the two leaked credentials** (Zoho, SpringEdge). Nothing else on this list
       matters as much.
 - [ ] **Move production to Sourabh's Vercel** — `docs/vercel-handover.md`. This unblocks
       contact details and login in one step.
 - [ ] Choose an email provider and set `RESEND_API_KEY`, so people can actually sign in.
+      The Resend code is written and unused; this is a Vercel variable, not a build.
+- [ ] Set `BLOB_READ_WRITE_TOKEN` and `BLOB_PRIVATE_READ_WRITE_TOKEN`. Without them
+      production stores no vendor photos and no KYC documents at all.
+- [ ] Check the Neon region against the Vercel function region — every database-backed
+      page costs ~2s per round trip in production and 1ms locally.
+- [x] **End-to-end coverage of the money and trust loops** — bids, offers, escrow,
+      payout, refund, KYC documents, reviews, fulfilment, admin. 134 checks to 322.
+      Found three real defects; see `docs/memory.md` 2026-08-25.
+- [x] **Seven food protocols** — satvik, eggetarian, halal and non_veg added, list
+      centralised in `lib/protocols.ts`, migration 0008 additive.
+- [x] **Single gateway at launch** — ADR-007. Razorpay only; Stripe stays in the tree,
+      unconfigured and honestly labelled.
 - [x] **Wire Razorpay** — order create (`POST /api/payments/checkout`), Checkout.js verify
       (`POST /api/payments/verify`), webhook with idempotent `payment_event`
       (`POST /api/payments/webhook`), account Pay button. Still needs

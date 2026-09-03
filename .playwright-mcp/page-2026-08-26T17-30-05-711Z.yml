@@ -1,0 +1,69 @@
+- generic [active] [ref=f33e1]:
+  - banner [ref=f33e2]:
+    - generic [ref=f33e3]:
+      - link "Only2Bali Only2Bali" [ref=f33e4] [cursor=pointer]:
+        - /url: /en
+        - img "Only2Bali" [ref=f33e5]
+        - generic [ref=f33e9]: Only2Bali
+      - navigation "Primary" [ref=f33e11]:
+        - menubar [ref=f33e13]:
+          - menuitem "Home" [ref=f33e14] [cursor=pointer]
+          - menuitem "Destinations" [ref=f33e16] [cursor=pointer]
+          - menuitem "Providers" [ref=f33e18] [cursor=pointer]
+          - menuitem "Services" [ref=f33e20] [cursor=pointer]
+          - menuitem "Packages" [ref=f33e22] [cursor=pointer]
+          - menuitem "Trip quality" [ref=f33e24] [cursor=pointer]
+      - generic [ref=f33e26]:
+        - button "Language" [ref=f33e28] [cursor=pointer]:
+          - generic [ref=f33e32]: English
+        - link "Sign in" [ref=f33e33] [cursor=pointer]:
+          - /url: /en/login
+        - link "Plan your trip" [ref=f33e34] [cursor=pointer]:
+          - /url: /en/planner
+  - main [ref=f33e35]:
+    - generic [ref=f33e37]:
+      - link "← All services" [ref=f33e38] [cursor=pointer]:
+        - /url: /en/services
+      - generic [ref=f33e40]:
+        - generic [ref=f33e41]: transport · Kuta
+        - heading "TEST -- delete me -- webhook verification service" [level=1] [ref=f33e42]
+        - paragraph [ref=f33e43]:
+          - link "TEST -- delete me -- webhook verification" [ref=f33e44] [cursor=pointer]:
+            - /url: /en/providers/test-delete-me-webhook-verification
+      - generic [ref=f33e45]:
+        - generic [ref=f33e46]:
+          - text: ₹1,000
+          - generic [ref=f33e47]: from · per trip · comfort
+        - paragraph [ref=f33e48]: Internal test listing to verify Razorpay webhook. Safe to delete.
+      - generic [ref=f33e49]:
+        - generic [ref=f33e50]:
+          - generic [ref=f33e51]:
+            - text: Service date
+            - textbox "Service date" [ref=f33e52]
+          - generic [ref=f33e53]:
+            - text: Group size
+            - spinbutton "Group size" [ref=f33e54]: "1"
+          - generic [ref=f33e55]:
+            - text: Food protocol
+            - combobox "Food protocol" [ref=f33e56]:
+              - option "Jain"
+              - option "Satvik (no onion or garlic)"
+              - option "Vegan"
+              - option "Vegetarian" [selected]
+              - option "Vegetarian with egg"
+              - option "Halal"
+              - option "No restriction"
+          - generic [ref=f33e57]:
+            - text: Lead traveller full name
+            - textbox "Lead traveller full name" [ref=f33e58]
+        - button "Book and pay" [disabled] [ref=f33e59] [cursor=pointer]
+        - generic [ref=f33e60]: EN · seats held 15 minutes after booking
+  - contentinfo [ref=f33e61]:
+    - generic [ref=f33e63]:
+      - generic [ref=f33e64]: Only2Bali
+      - paragraph [ref=f33e70]: Indonesia travel marketplace for Indian groups — Bali, Jakarta and beyond.
+      - paragraph [ref=f33e71]:
+        - text: © 2026 Only2Bali · Photography and palette from the existing site. ·
+        - link "hello@only2bali.com" [ref=f33e72] [cursor=pointer]:
+          - /url: mailto:hello@only2bali.com
+  - alert [ref=f33e73]

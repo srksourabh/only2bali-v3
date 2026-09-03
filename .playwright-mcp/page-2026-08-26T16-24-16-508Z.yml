@@ -1,0 +1,156 @@
+- generic [active] [ref=f7e1]:
+  - banner [ref=f7e2]:
+    - generic [ref=f7e3]:
+      - link "Only2Bali Only2Bali" [ref=f7e4] [cursor=pointer]:
+        - /url: /en
+        - img "Only2Bali" [ref=f7e5]
+        - generic [ref=f7e9]: Only2Bali
+      - navigation "Primary" [ref=f7e11]:
+        - menubar [ref=f7e13]:
+          - menuitem "Home" [ref=f7e14] [cursor=pointer]
+          - menuitem "Destinations" [ref=f7e16] [cursor=pointer]
+          - menuitem "Providers" [ref=f7e18] [cursor=pointer]
+          - menuitem "Services" [ref=f7e20] [cursor=pointer]
+          - menuitem "Packages" [ref=f7e22] [cursor=pointer]
+          - menuitem "Trip quality" [ref=f7e24] [cursor=pointer]
+      - generic [ref=f7e26]:
+        - button "Language" [ref=f7e28] [cursor=pointer]:
+          - generic [ref=f7e32]: English
+        - link "Sign in" [ref=f7e33] [cursor=pointer]:
+          - /url: /en/login
+        - link "Plan your trip" [ref=f7e34] [cursor=pointer]:
+          - /url: /en/planner
+  - main [ref=f7e84]:
+    - generic [ref=f7e85]:
+      - generic [ref=f7e87]:
+        - text: Provider workspace
+        - heading "Manage services, offers and payout details" [level=1] [ref=f7e88]
+        - paragraph [ref=f7e89]: Traveler payments are collected in INR. Provider payout records track the settlement currency, normally IDR.
+      - paragraph [ref=f7e178]: Saved. Changes that affect travelers are pending review before publishing.
+      - generic [ref=f7e90]:
+        - generic [ref=f7e91]:
+          - heading "Open trip requests" [level=2] [ref=f7e92]
+          - paragraph [ref=f7e93]: Bid with your net amount. Only2Bali sets the traveller price from your commission rate.
+          - list
+        - generic [ref=f7e94]:
+          - heading "Messages" [level=2] [ref=f7e95]
+          - paragraph [ref=f7e96]: Contact details stay masked until a booking is confirmed.
+          - list
+        - generic [ref=f7e97]:
+          - heading "Incoming bookings" [level=2] [ref=f7e98]
+          - paragraph [ref=f7e99]: 0 bookings assigned to your services.
+          - list
+        - generic [ref=f7e100]:
+          - heading "Business profile" [level=2] [ref=f7e101]
+          - generic [ref=f7e102]: Business name
+          - textbox [ref=f7e103]: TEST -- delete me -- webhook verification
+          - generic [ref=f7e104]: Service area
+          - textbox [ref=f7e105]
+          - generic [ref=f7e106]: Address
+          - textbox [ref=f7e107]
+          - generic [ref=f7e108]: City
+          - textbox [ref=f7e109]
+          - generic [ref=f7e110]: WhatsApp
+          - textbox [ref=f7e111]
+          - generic [ref=f7e112]: Description
+          - textbox [ref=f7e113]
+          - button "Save profile" [ref=f7e114] [cursor=pointer]
+        - generic [ref=f7e115]:
+          - heading "Add service" [level=2] [ref=f7e116]
+          - generic [ref=f7e117]: Title
+          - textbox "Luxury car with driver" [ref=f7e118]
+          - generic [ref=f7e119]: Type
+          - combobox [ref=f7e120]:
+            - option "Restaurant"
+            - option "Stay"
+            - option "Transport" [selected]
+            - option "Guide"
+            - option "Cook"
+            - option "Activity"
+            - option "Tour agency"
+          - generic [ref=f7e121]: Area
+          - textbox [ref=f7e122]
+          - generic [ref=f7e123]: INR price in paise
+          - textbox "750000 for Rs 7,500" [ref=f7e124]
+          - generic [ref=f7e125]: Budget tier
+          - combobox [ref=f7e126]:
+            - option "Economical"
+            - option "Comfort" [selected]
+            - option "Premium"
+          - generic [ref=f7e127]: Description
+          - textbox [ref=f7e128]
+          - button "Add service" [ref=f7e129] [cursor=pointer]
+        - generic [ref=f7e130]:
+          - heading "Photos" [level=2] [ref=f7e131]
+          - generic [ref=f7e132]: Upload photo
+          - button "Choose File" [ref=f7e133]
+          - generic [ref=f7e134]: Kind
+          - combobox [ref=f7e135]:
+            - option "Photo" [selected]
+            - option "Cover"
+            - option "Menu"
+            - option "Gallery"
+          - generic [ref=f7e136]: Caption
+          - textbox [ref=f7e137]
+          - generic [ref=f7e138]: Or paste https URL
+          - textbox "https://..." [ref=f7e139]
+          - button "Add from URL" [disabled] [ref=f7e140] [cursor=pointer]
+        - generic [ref=f7e141]:
+          - heading "KYC documents" [level=2] [ref=f7e142]
+          - paragraph [ref=f7e143]: Upload a licence, tax ID, insurance or ID for admin review.
+          - generic [ref=f7e144]: Document type
+          - combobox [ref=f7e145]:
+            - option "Business licence" [selected]
+            - option "Tax ID"
+            - option "Insurance"
+            - option "Photo ID"
+            - option "Kitchen certificate"
+          - generic [ref=f7e146]: Upload file (JPEG, PNG, WebP or PDF)
+          - button "Choose File" [ref=f7e147]
+          - list
+        - generic [ref=f7e148]:
+          - heading "Events and offers" [level=2] [ref=f7e149]
+          - generic [ref=f7e150]: Event title
+          - textbox [ref=f7e151]
+          - generic [ref=f7e152]: Event start
+          - textbox [ref=f7e153]
+          - generic [ref=f7e154]: Area
+          - textbox [ref=f7e155]
+          - button "Add event" [ref=f7e156] [cursor=pointer]
+          - generic [ref=f7e157]: Offer title
+          - textbox [ref=f7e158]
+          - generic [ref=f7e159]: Offer INR price in paise
+          - textbox [ref=f7e160]
+          - button "Add offer" [ref=f7e161] [cursor=pointer]
+        - generic [ref=f7e162]:
+          - heading "Payout details" [level=2] [ref=f7e163]
+          - generic [ref=f7e164]: Account holder
+          - textbox [ref=f7e165]
+          - generic [ref=f7e166]: Bank name
+          - textbox [ref=f7e167]
+          - generic [ref=f7e168]: Settlement currency
+          - combobox [ref=f7e169]:
+            - option "IDR" [selected]
+            - option "INR"
+          - generic [ref=f7e170]: Masked account or UPI
+          - textbox "Only masked details, not full account number" [ref=f7e171]
+          - textbox "UPI ID if applicable" [ref=f7e172]
+          - button "Save payout details" [ref=f7e173] [cursor=pointer]
+        - generic [ref=f7e174]:
+          - heading "Current catalog" [level=2] [ref=f7e175]
+          - paragraph [ref=f7e176]: 1 services, 0 photos, 0 events, 0 offers.
+          - paragraph [ref=f7e177]: "Payout status: not submitted"
+          - list [ref=f7e179]:
+            - listitem [ref=f7e180]:
+              - generic [ref=f7e181]: TEST -- delete me -- webhook verification service
+              - generic [ref=f7e182]: transport · pending_review · 100000
+              - button "Edit" [ref=f7e183]
+  - contentinfo [ref=f7e59]:
+    - generic [ref=f7e61]:
+      - generic [ref=f7e62]: Only2Bali
+      - paragraph [ref=f7e68]: Indonesia travel marketplace for Indian groups — Bali, Jakarta and beyond.
+      - paragraph [ref=f7e69]:
+        - text: © 2026 Only2Bali · Photography and palette from the existing site. ·
+        - link "hello@only2bali.com" [ref=f7e70] [cursor=pointer]:
+          - /url: mailto:hello@only2bali.com
+  - alert [ref=f7e71]: Provider dashboard - Only2Bali

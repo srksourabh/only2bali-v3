@@ -8,6 +8,7 @@ export const ta: Dictionary = {
   },
 
   nav: {
+    home: "முகப்பு",
     circuits: "சுற்றுவழிகள்",
     destinations: "Destinations",
     services: "Services",
@@ -125,7 +126,7 @@ export const ta: Dictionary = {
   guarantee: {
     heading: "Food protocol is one filter. Stays, rides and budget are checked too.",
     sub: "Vegetarian, Jain and vegan remain first-class options — disclosed meal by meal — alongside stay comfort, vehicle type, guide language and clear INR pricing.",
-    protocols: { jain: "ஜைன", veg: "சைவம்", vegan: "வீகன்" },
+    protocols: { jain: "ஜைன", veg: "சைவம்", vegan: "வீகன்", satvik: "சாத்வீகம் (வெங்காயம், பூண்டு இல்லை)", eggetarian: "முட்டையுடன் சைவம்", halal: "ஹலால்", nonVeg: "அசைவம்" },
     legend: {
       green: "தனி சமையலறை, சரிபார்க்கப்பட்டது",
       amber: "பகிர்ந்த சமையலறை, தனி வரிசை",

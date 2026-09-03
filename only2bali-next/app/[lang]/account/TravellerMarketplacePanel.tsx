@@ -51,6 +51,8 @@ export default function TravellerMarketplacePanel({ lang }: { lang: string }) {
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [creating, setCreating] = useState(false);
+  const [mobileVerified, setMobileVerified] = useState<boolean | null>(null);
+  const [mobileForm, setMobileForm] = useState({ mobile: "", code: "", sent: false });
   const [form, setForm] = useState({
     protocol: "vegetarian",
     groupSize: "8",
@@ -60,14 +62,17 @@ export default function TravellerMarketplacePanel({ lang }: { lang: string }) {
   });
 
   const load = async () => {
-    const [reqRes, thrRes] = await Promise.all([
+    const [reqRes, thrRes, sessionRes] = await Promise.all([
       fetch("/api/trip-requests", { cache: "no-store" }),
       fetch("/api/messages", { cache: "no-store" }),
+      fetch("/api/auth/session", { cache: "no-store" }),
     ]);
     const reqJson = await reqRes.json();
     if (reqJson.success) setRequests(reqJson.data.requests ?? []);
     const thrJson = await thrRes.json();
     if (thrJson.success) setThreads(thrJson.data.threads ?? []);
+    const sessionJson = await sessionRes.json();
+    if (sessionJson.success) setMobileVerified(Boolean(sessionJson.data?.user?.mobileVerifiedAt));
   };
 
   useEffect(() => {
@@ -168,6 +173,68 @@ export default function TravellerMarketplacePanel({ lang }: { lang: string }) {
             </li>
           ))}
         </ul>
+        {mobileVerified === false && (
+          <form
+            className="leadform"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setError("");
+              setInfo("");
+              try {
+                if (!mobileForm.sent) {
+                  const res = await fetch("/api/auth/verify-mobile/request", {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({ mobile: mobileForm.mobile }),
+                  });
+                  const json = await res.json();
+                  if (!res.ok || !json.success) throw new Error(json.error ?? "Could not send a code.");
+                  setMobileForm({ ...mobileForm, sent: true });
+                  setInfo("Enter the six-digit code sent to that number.");
+                  return;
+                }
+                const res = await fetch("/api/auth/verify-mobile/confirm", {
+                  method: "POST",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify({ mobile: mobileForm.mobile, code: mobileForm.code }),
+                });
+                const json = await res.json();
+                if (!res.ok || !json.success) throw new Error(json.error ?? "Could not verify that number.");
+                setMobileVerified(true);
+                setInfo("Mobile verified. New trip requests can go to the provider board.");
+              } catch (err) {
+                setError(err instanceof Error ? err.message : "Could not send a code.");
+              }
+            }}
+          >
+            <h3>Verify a mobile number</h3>
+            <p className="empty">Providers only see published requests after a mobile is verified.</p>
+            <label>
+              Mobile with country code
+              <input
+                value={mobileForm.mobile}
+                onChange={(e) => setMobileForm({ ...mobileForm, mobile: e.target.value })}
+                placeholder="+9198XXXXXXXX"
+                required
+              />
+            </label>
+            {mobileForm.sent && (
+              <label>
+                Six-digit code
+                <input
+                  value={mobileForm.code}
+                  onChange={(e) => setMobileForm({ ...mobileForm, code: e.target.value })}
+                  inputMode="numeric"
+                  maxLength={6}
+                  required
+                />
+              </label>
+            )}
+            <button className="btn btn-ghost btn-sm" type="submit">
+              {mobileForm.sent ? "Confirm number" : "Send code"}
+            </button>
+          </form>
+        )}
         <form className="leadform" onSubmit={(e) => createRequest(e).catch((err) => setError(err.message))}>
           <h3>Post a trip request</h3>
           <label>

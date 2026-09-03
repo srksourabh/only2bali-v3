@@ -1,5 +1,6 @@
-import { and, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { uniqueConstraintName } from "@/lib/db/unique-violation";
 import { account, otpCode, session, auditLog, traveller, vendor, oauthAccount } from "@/lib/db/schema";
 import {
   generateOtp, hashOtp, safeEqual, generateSessionToken, hashSessionToken, hashPassword, verifyPassword,
@@ -23,7 +24,7 @@ export type VerifyResult =
 
 export type PasswordAuthResult =
   | { ok: true; accountId: string; token: string; expiresAt: Date; isNewAccount: boolean }
-  | { ok: false; reason: "invalid" | "role_mismatch" | "username_taken" };
+  | { ok: false; reason: "invalid" | "role_mismatch" | "username_taken" | "email_taken" };
 
 interface Identifier {
   email?: string;
@@ -206,17 +207,36 @@ export async function signUpWithPassword(
     .limit(1);
   if (existing.length) return { ok: false, reason: "username_taken" };
 
-  const [created] = await db
-    .insert(account)
-    .values({
-      username: input.username,
-      passwordHash: hashPassword(input.password),
-      email: input.email || null,
-      role: input.role,
-      emailVerifiedAt: null,
-      lastLoginAt: new Date(),
-    })
-    .returning();
+  if (input.email) {
+    const taken = await db
+      .select({ id: account.id })
+      .from(account)
+      .where(eq(account.email, input.email))
+      .limit(1);
+    if (taken.length) return { ok: false, reason: "email_taken" };
+  }
+
+  let created: { id: string };
+  try {
+    const [row] = await db
+      .insert(account)
+      .values({
+        username: input.username,
+        passwordHash: hashPassword(input.password),
+        email: input.email || null,
+        role: input.role,
+        emailVerifiedAt: null,
+        lastLoginAt: new Date(),
+      })
+      .returning({ id: account.id });
+    if (!row) throw new Error("Account insert returned no row.");
+    created = row;
+  } catch (err) {
+    const constraint = uniqueConstraintName(err);
+    if (constraint === "account_email_unique") return { ok: false, reason: "email_taken" };
+    if (constraint === "account_username_unique") return { ok: false, reason: "username_taken" };
+    throw err;
+  }
 
   if (input.role === "vendor") {
     await createVendorIfMissing(created.id, input.businessName!);
@@ -244,7 +264,7 @@ export async function signInWithPassword(
   const [row] = await db
     .select()
     .from(account)
-    .where(eq(account.username, input.username))
+    .where(or(eq(account.username, input.username), eq(account.email, input.username)))
     .limit(1);
 
   if (!row || row.status !== "active" || !verifyPassword(input.password, row.passwordHash)) {
@@ -407,6 +427,7 @@ export interface SessionUser {
   role: "traveller" | "vendor" | "admin";
   email: string | null;
   mobile: string | null;
+  mobileVerifiedAt: Date | null;
 }
 
 /** Resolves a raw cookie value to a live account, or null. */
@@ -419,6 +440,7 @@ export async function resolveSession(token: string | undefined): Promise<Session
       role: account.role,
       email: account.email,
       mobile: account.mobile,
+      mobileVerifiedAt: account.mobileVerifiedAt,
       status: account.status,
     })
     .from(session)
@@ -433,7 +455,85 @@ export async function resolveSession(token: string | undefined): Promise<Session
     role: row.role,
     email: row.email,
     mobile: row.mobile,
+    mobileVerifiedAt: row.mobileVerifiedAt,
   };
+}
+
+export type MobileVerifyFailure = "no_code" | "expired" | "locked" | "invalid" | "mobile_taken";
+
+export async function requestMobileVerification(
+  accountId: string,
+  mobile: string,
+  meta: { ip?: string; userAgent?: string } = {}
+): Promise<{ issued: true }> {
+  const key = `mobile:${mobile}`;
+  const code = generateOtp();
+
+  await db
+    .update(otpCode)
+    .set({ consumedAt: new Date() })
+    .where(and(eq(otpCode.identifier, key), eq(otpCode.purpose, "publish_request"), isNull(otpCode.consumedAt)));
+
+  await db.insert(otpCode).values({
+    accountId,
+    identifier: key,
+    codeHash: hashOtp(code, key),
+    purpose: "publish_request",
+    maxAttempts: OTP_MAX_ATTEMPTS,
+    expiresAt: new Date(Date.now() + OTP_TTL_MINUTES * 60_000),
+    ip: meta.ip,
+    userAgent: meta.userAgent,
+  });
+
+  await deliverOtp({ mobile }, code);
+  return { issued: true };
+}
+
+export async function confirmMobileVerification(
+  accountId: string,
+  mobile: string,
+  code: string
+): Promise<{ ok: true } | { ok: false; reason: MobileVerifyFailure }> {
+  const key = `mobile:${mobile}`;
+  const [row] = await db
+    .select()
+    .from(otpCode)
+    .where(
+      and(
+        eq(otpCode.identifier, key),
+        eq(otpCode.accountId, accountId),
+        eq(otpCode.purpose, "publish_request"),
+        isNull(otpCode.consumedAt)
+      )
+    )
+    .orderBy(sql`${otpCode.createdAt} desc`)
+    .limit(1);
+
+  if (!row) return { ok: false, reason: "no_code" };
+  if (row.expiresAt.getTime() < Date.now()) return { ok: false, reason: "expired" };
+  if (row.attempts >= row.maxAttempts) return { ok: false, reason: "locked" };
+
+  if (!safeEqual(row.codeHash, hashOtp(code, key))) {
+    await db
+      .update(otpCode)
+      .set({ attempts: row.attempts + 1 })
+      .where(eq(otpCode.id, row.id));
+    return { ok: false, reason: row.attempts + 1 >= row.maxAttempts ? "locked" : "invalid" };
+  }
+
+  const [taken] = await db
+    .select({ id: account.id })
+    .from(account)
+    .where(and(eq(account.mobile, mobile), ne(account.id, accountId)))
+    .limit(1);
+  if (taken) return { ok: false, reason: "mobile_taken" };
+
+  await db.update(otpCode).set({ consumedAt: new Date() }).where(eq(otpCode.id, row.id));
+  await db
+    .update(account)
+    .set({ mobile, mobileVerifiedAt: new Date(), updatedAt: new Date() })
+    .where(eq(account.id, accountId));
+  return { ok: true };
 }
 
 export async function destroySession(token: string | undefined): Promise<void> {

@@ -2,18 +2,21 @@ import { NextResponse } from "next/server";
 import { passwordSignInSchema } from "@/lib/validators/auth";
 import { signInWithPassword } from "@/lib/auth/service";
 import { SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth";
-import { apiError, readJson, validationError } from "@/lib/api";
+import { apiError, readJson } from "@/lib/api";
 import { clientKey } from "@/lib/rate-limit";
 import { rateLimitShared } from "@/lib/rate-limit-db";
 
 export const dynamic = "force-dynamic";
 
 const PER_IP = { limit: 30, windowMs: 15 * 60_000 };
+const WRONG = "Username or password is incorrect.";
 
 export async function POST(req: Request) {
   try {
     const parsed = passwordSignInSchema.safeParse(await readJson(req));
-    if (!parsed.success) return validationError(parsed.error);
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: WRONG }, { status: 401 });
+    }
 
     const ip = clientKey(req);
     const limit = await rateLimitShared(`password-signin:ip:${ip}`, PER_IP.limit, PER_IP.windowMs);
@@ -32,7 +35,7 @@ export async function POST(req: Request) {
       const message =
         result.reason === "role_mismatch"
           ? "This account belongs to a different login type."
-          : "Username or password is incorrect.";
+          : WRONG;
       return NextResponse.json({ success: false, error: message, reason: result.reason }, { status: 401 });
     }
 

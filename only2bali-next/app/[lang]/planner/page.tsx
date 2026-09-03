@@ -330,10 +330,11 @@ function PlannerWizardComponent() {
     setLoadingMsgIdx(0);
     setError(null);
 
+    const ageNum = parseInt(age, 10);
     const payload = {
       plain_request: plainRequest,
       name,
-      age: parseInt(age),
+      age: Number.isFinite(ageNum) ? String(ageNum) : undefined,
       crew_type: crewType,
       number_of_people: numberOfPeople,
       times_visited_bali: timesVisitedBali,
@@ -366,7 +367,7 @@ function PlannerWizardComponent() {
         setActiveDayTab(1);
         setStep(6);
       } else {
-        setError(data.error || "Failed to generate itinerary. Please try again.");
+        setError(data.fields?.[0]?.message ?? data.error ?? "Failed to generate itinerary. Please try again.");
       }
     } catch (e: any) {
       console.error(e);
@@ -428,7 +429,7 @@ function PlannerWizardComponent() {
         setStep(6);
         setPublishedPreview(true);
       } else {
-        setError(data.error || "Failed to generate itinerary. Please try again.");
+        setError(data.fields?.[0]?.message ?? data.error ?? "Failed to generate itinerary. Please try again.");
       }
     } catch (e: any) {
       console.error(e);
@@ -575,11 +576,11 @@ function PlannerWizardComponent() {
                     <div className="form-group-row">
                       <div className="form-field">
                         <label htmlFor="from-date">Departure Date (From)</label>
-                        <input id="from-date" type="date" min={todayStr} value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+                        <input id="from-date" type="date" lang="en-IN" min={todayStr} value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
                       </div>
                       <div className="form-field">
                         <label htmlFor="to-date">Return Date (To)</label>
-                        <input id="to-date" type="date" min={fromDate || todayStr} value={toDate} onChange={(e) => setToDate(e.target.value)} />
+                        <input id="to-date" type="date" lang="en-IN" min={fromDate || todayStr} value={toDate} onChange={(e) => setToDate(e.target.value)} />
                       </div>
                     </div>
 

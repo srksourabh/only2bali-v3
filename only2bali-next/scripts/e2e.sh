@@ -121,10 +121,15 @@ ERR="$LOG_DIR/server.err.log"
 : > "$OUT"
 : > "$ERR"
 
-# Force the deliberately incomplete webhook placeholder so this local audit can
-# prove checkout fails closed without ever creating a live Razorpay order.
+# Test-only Razorpay key pair so /api/payments/verify can HMAC-check a fixture
+# order. The webhook placeholder stays so checkout still fails closed and never
+# opens a live Razorpay order.
+export RAZORPAY_KEY_ID="rzp_test_e2eonly2bali"
+export RAZORPAY_KEY_SECRET="e2e-only2bali-razorpay-key-secret"
 DATABASE_URL="$URL" \
 RAZORPAY_WEBHOOK_SECRET="replace-with-razorpay-dashboard-webhook-secret" \
+RAZORPAY_KEY_ID="$RAZORPAY_KEY_ID" \
+RAZORPAY_KEY_SECRET="$RAZORPAY_KEY_SECRET" \
 npx next dev --port "$APP_PORT" >"$OUT" 2>"$ERR" &
 SERVER_PID=$!
 
@@ -168,6 +173,7 @@ set +e
 DATABASE_URL="$URL" \
 E2E_BASE_URL="http://127.0.0.1:${APP_PORT}" \
 E2E_SERVER_LOG="$OUT" \
+RAZORPAY_KEY_SECRET="$RAZORPAY_KEY_SECRET" \
 npx tsx scripts/e2e.ts
 STATUS=$?
 set -e

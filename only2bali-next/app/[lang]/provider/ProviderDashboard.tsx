@@ -3,12 +3,22 @@
 import { useEffect, useState } from "react";
 import ReviewForm from "../account/ReviewForm";
 import ProviderBoardPanel from "./ProviderBoardPanel";
+import ProviderMessagesPanel from "./ProviderMessagesPanel";
 
 type ApiState = "idle" | "saving" | "saved" | "error";
 
 interface Catalog {
   provider: { businessName: string; baseArea: string | null; description: string | null };
-  listings: Array<{ id: string; title: string; serviceType: string; priceAmount: number; status: string }>;
+  listings: Array<{
+    id: string;
+    title: string;
+    serviceType: string;
+    priceAmount: number;
+    status: string;
+    area?: string | null;
+    description?: string | null;
+    tier?: string;
+  }>;
   media: Array<{ id: string; fileUrl: string; kind: string; approved: boolean }>;
   events: Array<{ id: string; title: string; startsAt: string; status: string }>;
   promotions: Array<{ id: string; title: string; status: string }>;
@@ -65,6 +75,7 @@ export default function ProviderDashboard() {
   const [error, setError] = useState("");
   const [profile, setProfile] = useState({ businessName: "", baseArea: "", description: "", addressLine1: "", city: "", whatsapp: "" });
   const [listing, setListing] = useState({ title: "", serviceType: "transport", area: "", priceAmount: "", tier: "comfort", description: "" });
+  const [editingListingId, setEditingListingId] = useState<string | null>(null);
   const [media, setMedia] = useState({ fileUrl: "", kind: "photo", caption: "" });
   const [docKind, setDocKind] = useState("business_licence");
   const [event, setEvent] = useState({ title: "", startsAt: "", area: "", priceAmount: "", description: "" });
@@ -132,6 +143,7 @@ export default function ProviderDashboard() {
 
         <div className="accountgrid">
           <ProviderBoardPanel />
+          <ProviderMessagesPanel />
           <section className="acard">
             <h2>Incoming bookings</h2>
             <p className="empty">{bookings.length} bookings assigned to your services.</p>
@@ -210,7 +222,7 @@ export default function ProviderDashboard() {
           </section>
 
           <section className="acard">
-            <h2>Add service</h2>
+            <h2>{editingListingId ? "Edit service" : "Add service"}</h2>
             <label>Title</label>
             <input value={listing.title} onChange={(e) => setListing({ ...listing, title: e.target.value })} placeholder="Luxury car with driver" />
             <label>Type</label>
@@ -236,18 +248,36 @@ export default function ProviderDashboard() {
             <label>Description</label>
             <textarea rows={3} value={listing.description} onChange={(e) => setListing({ ...listing, description: e.target.value })} />
             <button className="btn btn-solid btn-sm" disabled={state === "saving"} onClick={() => run(async () => {
-              await postJson("/api/provider/listings", "POST", {
+              const payload = {
                 ...listing,
                 priceAmount: Number(listing.priceAmount),
                 capacityMin: 1,
                 capacityMax: 30,
                 priceCurrency: "INR",
                 priceUnit: "per_trip",
-              });
+              };
+              if (editingListingId) {
+                await postJson(`/api/provider/listings/${editingListingId}`, "PATCH", payload);
+              } else {
+                await postJson("/api/provider/listings", "POST", payload);
+              }
+              setEditingListingId(null);
               setListing({ title: "", serviceType: "transport", area: "", priceAmount: "", tier: "comfort", description: "" });
             })}>
-              Add service
+              {editingListingId ? "Save service changes" : "Add service"}
             </button>
+            {editingListingId && (
+              <button
+                className="btn btn-ghost btn-sm"
+                type="button"
+                onClick={() => {
+                  setEditingListingId(null);
+                  setListing({ title: "", serviceType: "transport", area: "", priceAmount: "", tier: "comfort", description: "" });
+                }}
+              >
+                Cancel edit
+              </button>
+            )}
           </section>
 
           <section className="acard">
@@ -390,9 +420,28 @@ export default function ProviderDashboard() {
             <h2>Current catalog</h2>
             <p className="empty">{catalog?.listings.length ?? 0} services, {catalog?.media.length ?? 0} photos, {catalog?.events.length ?? 0} events, {catalog?.promotions.length ?? 0} offers.</p>
             <p className="empty">Payout status: {catalog?.payoutAccount?.status ?? "not submitted"}</p>
-            <ul className="why">
-              {catalog?.listings.slice(0, 5).map((item) => (
-                <li key={item.id}><span>{item.title} - {item.status}</span></li>
+            <ul className="admin-list">
+              {catalog?.listings.map((item) => (
+                <li key={item.id}>
+                  <b>{item.title}</b>
+                  <span>{item.serviceType.replaceAll("_", " ")} · {item.status} · {item.priceAmount}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingListingId(item.id);
+                      setListing({
+                        title: item.title,
+                        serviceType: item.serviceType,
+                        area: item.area ?? "",
+                        priceAmount: String(item.priceAmount),
+                        tier: item.tier ?? "comfort",
+                        description: item.description ?? "",
+                      });
+                    }}
+                  >
+                    Edit
+                  </button>
+                </li>
               ))}
             </ul>
           </section>

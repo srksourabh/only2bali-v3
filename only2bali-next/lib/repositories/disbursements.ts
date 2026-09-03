@@ -9,6 +9,8 @@
  */
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { resilientFetch } from "@/lib/external-fetch";
+import { razorpayConfig } from "@/lib/payments/config";
 import {
   booking,
   payment,
@@ -210,11 +212,45 @@ export async function adminPatchDisbursement(
   return { ok: true as const, disbursement: updated };
 }
 
+/** Checkout.js e2e uses HMAC-signed `pay_e2e_*` ids that never exist at Razorpay. */
+export function isSimulatedRazorpayPaymentId(providerPaymentId: string): boolean {
+  return providerPaymentId.startsWith("pay_e2e_");
+}
+
 /**
  * Refund-first-from-platform: mark payment + booking refunded; cancel unpaid
  * disbursements; if already paid, leave a clawback ledger event (partner must settle).
  */
+async function createRazorpayRefund(paymentId: string, providerPaymentId: string, amount: number, alreadyRefunded: number) {
+  if (isSimulatedRazorpayPaymentId(providerPaymentId)) {
+    return `rfnd_e2e_${paymentId}_${alreadyRefunded}_${amount}`;
+  }
+  const config = razorpayConfig();
+  if (!config.keyId || !config.keySecret) throw new Error("Razorpay refund credentials are incomplete.");
+  const idempotencyKey = `o2b-refund-${paymentId}-${alreadyRefunded}-${amount}`;
+  const response = await resilientFetch("razorpay-refund", `https://api.razorpay.com/v1/payments/${encodeURIComponent(providerPaymentId)}/refund`, {
+    method: "POST",
+    headers: {
+      authorization: `Basic ${Buffer.from(`${config.keyId}:${config.keySecret}`).toString("base64")}`,
+      "content-type": "application/json",
+      "X-Razorpay-Idempotency-Key": idempotencyKey,
+    },
+    body: JSON.stringify({ amount, receipt: idempotencyKey.slice(0, 40), notes: { platform_payment_id: paymentId } }),
+  });
+  const body = await response.json().catch(() => null) as { id?: string; error?: { description?: string } } | null;
+  if (!response.ok || !body?.id) throw new Error(body?.error?.description ?? "Razorpay did not accept the refund.");
+  return body.id;
+}
+
 export async function refundBookingFromPlatform(adminId: string, paymentId: string, amount?: number) {
+  const [candidate] = await db.select().from(payment).where(eq(payment.id, paymentId)).limit(1);
+  if (!candidate) return { ok: false as const, reason: "payment_not_found" };
+  if (candidate.status !== "captured" && candidate.status !== "partially_refunded") return { ok: false as const, reason: "not_refundable" };
+  const requestedAmount = amount ?? candidate.amount - candidate.refundedAmount;
+  if (requestedAmount <= 0 || candidate.refundedAmount + requestedAmount > candidate.amount) return { ok: false as const, reason: "invalid_amount" };
+  if (candidate.provider !== "razorpay" || !candidate.providerPaymentId) return { ok: false as const, reason: "gateway_refund_unavailable" };
+  const providerRefundId = await createRazorpayRefund(paymentId, candidate.providerPaymentId, requestedAmount, candidate.refundedAmount);
+
   return db.transaction(async (tx) => {
     const [pay] = await tx.select().from(payment).where(eq(payment.id, paymentId)).limit(1).for("update");
     if (!pay) return { ok: false as const, reason: "payment_not_found" };
@@ -222,7 +258,7 @@ export async function refundBookingFromPlatform(adminId: string, paymentId: stri
       return { ok: false as const, reason: "not_refundable" };
     }
 
-    const refundAmount = amount ?? pay.amount - pay.refundedAmount;
+    const refundAmount = requestedAmount;
     if (refundAmount <= 0 || pay.refundedAmount + refundAmount > pay.amount) {
       return { ok: false as const, reason: "invalid_amount" };
     }
@@ -235,6 +271,7 @@ export async function refundBookingFromPlatform(adminId: string, paymentId: stri
       .update(payment)
       .set({
         refundedAmount: newRefunded,
+        providerRefundId,
         status: fully ? "refunded" : "partially_refunded",
         refundedAt: now,
         updatedAt: now,
@@ -289,11 +326,11 @@ export async function refundBookingFromPlatform(adminId: string, paymentId: stri
       paymentId: pay.id,
       type: "payment.refunded",
       signatureVerified: true,
-      payload: { amount: refundAmount, adminId, platformFirst: true },
+      payload: { amount: refundAmount, adminId, providerRefundId, platformFirst: true },
       processedAt: now,
     });
 
-    return { ok: true as const, refundedAmount: newRefunded, fully };
+    return { ok: true as const, refundedAmount: newRefunded, providerRefundId, fully };
   });
 }
 

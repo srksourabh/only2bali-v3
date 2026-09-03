@@ -3,6 +3,7 @@ import {
   canReleaseEscrow,
   DISBURSEMENT_PURPOSE_CODE,
   escrowStatusAfterCapture,
+  isSimulatedRazorpayPaymentId,
 } from "./disbursements";
 import { isComplianceActive, passesComplianceHardFilter } from "./compliance-match";
 
@@ -18,6 +19,17 @@ describe("escrow policy", () => {
 
   it("uses a travel purpose code on the ledger", () => {
     expect(DISBURSEMENT_PURPOSE_CODE).toMatch(/^S\d+/);
+  });
+});
+
+describe("simulated Razorpay payment ids", () => {
+  it("recognises e2e checkout ids that never hit the gateway", () => {
+    expect(isSimulatedRazorpayPaymentId("pay_e2e_abc123")).toBe(true);
+    expect(isSimulatedRazorpayPaymentId("pay_e2e_offer_abc123")).toBe(true);
+  });
+
+  it("leaves live Razorpay payment ids on the gateway path", () => {
+    expect(isSimulatedRazorpayPaymentId("pay_NGrsM1TYPBbXQz")).toBe(false);
   });
 });
 

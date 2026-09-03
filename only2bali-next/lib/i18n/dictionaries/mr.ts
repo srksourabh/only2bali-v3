@@ -8,6 +8,7 @@ export const mr: Dictionary = {
   },
 
   nav: {
+    home: "मुख्यपृष्ठ",
     circuits: "सर्किट",
     destinations: "Destinations",
     services: "Services",
@@ -125,7 +126,7 @@ export const mr: Dictionary = {
   guarantee: {
     heading: "Food protocol is one filter. Stays, rides and budget are checked too.",
     sub: "Vegetarian, Jain and vegan remain first-class options — disclosed meal by meal — alongside stay comfort, vehicle type, guide language and clear INR pricing.",
-    protocols: { jain: "जैन", veg: "शाकाहारी", vegan: "व्हीगन" },
+    protocols: { jain: "जैन", veg: "शाकाहारी", vegan: "व्हीगन", satvik: "सात्त्विक (कांदा-लसूण नाही)", eggetarian: "अंड्यासह शाकाहारी", halal: "हलाल", nonVeg: "मांसाहारी" },
     legend: {
       green: "स्वतंत्र स्वयंपाकघर, प्रमाणित",
       amber: "सामायिक स्वयंपाकघर, वेगळी रांग",

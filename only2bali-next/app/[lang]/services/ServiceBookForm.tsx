@@ -1,8 +1,11 @@
 "use client";
+import { protocolOptions } from "@/lib/protocol-options";
+import type { Protocol } from "@/lib/protocols";
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import BookingPayButton from "@/app/[lang]/account/BookingPayButton";
+import { formatDateDdMmYyyy } from "@/lib/dates";
 
 type PayCopy = {
   payNow: string;
@@ -53,7 +56,7 @@ export default function ServiceBookForm({
   const router = useRouter();
   const [serviceDate, setServiceDate] = useState(defaultDate ?? "");
   const [pax, setPax] = useState(Math.max(1, capacityMin));
-  const [protocol, setProtocol] = useState<"jain" | "vegetarian" | "vegan">("vegetarian");
+  const [protocol, setProtocol] = useState<Protocol>("vegetarian");
   const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -75,9 +78,7 @@ export default function ServiceBookForm({
     setBusy(true);
     setError("");
     try {
-      const travellers = Array.from({ length: pax }, (_, i) => ({
-        fullName: i === 0 ? fullName.trim() : `${fullName.trim()} guest ${i + 1}`,
-      }));
+      const travellers = [{ fullName: fullName.trim() }];
       const res = await fetch("/api/bookings", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -90,7 +91,9 @@ export default function ServiceBookForm({
         }),
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok || !json?.success) throw new Error(json?.error ?? bookCopy.errGeneric);
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.fields?.[0]?.message ?? json?.error ?? bookCopy.errGeneric);
+      }
       setCreated({
         bookingId: json.data.bookingId,
         reference: json.data.reference,
@@ -133,12 +136,12 @@ export default function ServiceBookForm({
               <option value="">—</option>
               {dateOptions.map((d) => (
                 <option key={d} value={d}>
-                  {d}
+                  {formatDateDdMmYyyy(d)}
                 </option>
               ))}
             </select>
           ) : (
-            <input type="date" value={serviceDate} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setServiceDate(e.target.value)} />
+            <input type="date" lang="en-IN" value={serviceDate} min={new Date().toISOString().slice(0, 10)} onChange={(e) => setServiceDate(e.target.value)} />
           )}
         </label>
         <label>
@@ -154,9 +157,11 @@ export default function ServiceBookForm({
         <label>
           {bookCopy.protocol}
           <select value={protocol} onChange={(e) => setProtocol(e.target.value as typeof protocol)}>
-            <option value="vegetarian">{bookCopy.protocols.veg}</option>
-            <option value="jain">{bookCopy.protocols.jain}</option>
-            <option value="vegan">{bookCopy.protocols.vegan}</option>
+            {protocolOptions(bookCopy.protocols).map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
           </select>
         </label>
         <label>

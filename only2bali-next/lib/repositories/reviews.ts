@@ -28,20 +28,28 @@ export async function listPublishedVendorReviews(vendorId: string, limit = 20) {
       .orderBy(desc(review.createdAt))
       .limit(limit);
   } catch (err) {
-    if (!isSchemaLagError(err)) throw err;
-    const rows = await db
-      .select({
-        id: review.id,
-        rating: review.rating,
-        comment: review.comment,
-        foodComplianceKept: review.foodComplianceKept,
-        createdAt: review.createdAt,
-      })
-      .from(review)
-      .where(and(eq(review.vendorId, vendorId), eq(review.published, true)))
-      .orderBy(desc(review.createdAt))
-      .limit(limit);
-    return rows.map((row) => ({ ...row, direction: "traveller_to_vendor" as const }));
+    if (isSchemaLagError(err)) {
+      try {
+        const rows = await db
+          .select({
+            id: review.id,
+            rating: review.rating,
+            comment: review.comment,
+            foodComplianceKept: review.foodComplianceKept,
+            createdAt: review.createdAt,
+          })
+          .from(review)
+          .where(and(eq(review.vendorId, vendorId), eq(review.published, true)))
+          .orderBy(desc(review.createdAt))
+          .limit(limit);
+        return rows.map((row) => ({ ...row, direction: "traveller_to_vendor" as const }));
+      } catch (retryErr) {
+        console.warn("[reviews] list unavailable after schema retry", retryErr);
+        return [];
+      }
+    }
+    console.warn("[reviews] list unavailable", err);
+    return [];
   }
 }
 
@@ -79,6 +87,19 @@ export async function createReview(accountId: string, role: string, input: Creat
     throw Object.assign(new Error("Reviews open only after the trip is confirmed or completed."), {
       status: 400,
     });
+  }
+
+  // One review per booking per direction is a unique index. Without this check
+  // a second submission - a double-tapped button is enough - reaches Postgres
+  // and comes back as an unhandled constraint violation, which the API layer
+  // can only render as a 500. Answer the question that was actually asked.
+  const [existing] = await db
+    .select({ id: review.id })
+    .from(review)
+    .where(and(eq(review.bookingId, input.bookingId), eq(review.direction, input.direction)))
+    .limit(1);
+  if (existing) {
+    throw Object.assign(new Error("You have already reviewed this booking."), { status: 409 });
   }
 
   if (input.direction === "traveller_to_vendor") {

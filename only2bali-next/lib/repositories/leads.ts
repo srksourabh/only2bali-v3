@@ -1,6 +1,8 @@
+import { desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { lead, vendorApplication } from "@/lib/db/schema";
 import type { LeadInput, VendorApplicationInput } from "@/lib/validators/leads";
+import type { AdminLeadStatusInput } from "@/lib/validators/admin";
 
 /**
  * Enquiries and provider applications, written before anything else happens.
@@ -75,4 +77,14 @@ export async function createVendorApplication(
     .returning({ id: vendorApplication.id });
 
   return row;
+}
+
+/** Admin's view of raw enquiries — nothing here is filtered by ownership. */
+export async function listRecentLeads(limit = 80) {
+  return db.select().from(lead).orderBy(desc(lead.createdAt)).limit(limit);
+}
+
+export async function adminSetLeadStatus(id: string, input: AdminLeadStatusInput) {
+  const [row] = await db.update(lead).set({ status: input.status }).where(eq(lead.id, id)).returning();
+  return row ?? null;
 }

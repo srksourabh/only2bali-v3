@@ -1,3 +1,4 @@
+import { getObject, publicUrl, putObject, s3Config, s3Configured } from "./s3";
 /**
  * Provider file storage.
  *
@@ -33,7 +34,10 @@ const ALLOWED = new Map<string, string>([
   ["image/webp", "webp"],
   ["application/pdf", "pdf"],
 ]);
-const EXT_CONTENT_TYPE = new Map(Object.entries(ALLOWED).map(([type, ext]) => [ext, type]));
+// ALLOWED is a Map, and Object.entries() on a Map returns nothing at all, so
+// this lookup was silently empty and every stored document came back as
+// application/octet-stream.
+const EXT_CONTENT_TYPE = new Map([...ALLOWED].map(([type, ext]) => [ext, type]));
 const HANDLE_TTL_MS = 15 * 60_000;
 /** Documents live outside `public/` so the dev server can never serve them statically. */
 const LOCAL_PRIVATE_ROOT = ".uploads";
@@ -43,7 +47,7 @@ export type StoredUpload = {
   pathname: string;
   contentType: string;
   size: number;
-  backend: "vercel_blob" | "local";
+  backend: "vercel_blob" | "s3" | "local";
 };
 
 export type PrivateStoredUpload = {
@@ -64,12 +68,21 @@ function blobToken(folder: UploadFolder): string | undefined {
 
 export function uploadsConfigured(folder: UploadFolder = "media"): boolean {
   if (blobToken(folder)) return true;
+  if (s3Configured(folder)) return true;
   // Local filesystem fallback — never in production.
   return process.env.NODE_ENV !== "production";
 }
 
-export function uploadBackend(folder: UploadFolder): "vercel_blob" | "local" | "none" {
+/**
+ * Blob first, then any S3-compatible store, then local.
+ *
+ * Blob keeps precedence so an existing deployment behaves exactly as it did;
+ * S3 is what makes a free tier - Cloudflare R2, Backblaze B2 - an option at
+ * all, rather than the storage decision being made by whoever wrote this file.
+ */
+export function uploadBackend(folder: UploadFolder): "vercel_blob" | "s3" | "local" | "none" {
   if (blobToken(folder)) return "vercel_blob";
+  if (s3Configured(folder)) return "s3";
   return process.env.NODE_ENV !== "production" ? "local" : "none";
 }
 
@@ -95,7 +108,7 @@ function handleSecret(): string {
 type DocumentHandlePayload = {
   p: string;
   v: string;
-  b: "vercel_blob" | "local";
+  b: "vercel_blob" | "s3" | "local";
   c: string;
   exp: number;
 };
@@ -109,7 +122,7 @@ type DocumentHandlePayload = {
 export function mintDocumentHandle(input: {
   pathname: string;
   vendorId: string;
-  backend: "vercel_blob" | "local";
+  backend: "vercel_blob" | "s3" | "local";
   contentType: string;
 }): string {
   const payload: DocumentHandlePayload = {
@@ -198,11 +211,45 @@ export async function storeUpload(
     };
   }
 
+  // Any S3-compatible store: Cloudflare R2, Backblaze B2, MinIO.
+  const s3 = s3Config(opts.folder);
+  if (s3) {
+    const stored = await putObject(s3, pathname, bytes, file.type);
+    if (!stored) {
+      throw new UploadSetupError("The storage bucket rejected the upload. Check the S3 credentials and bucket name.");
+    }
+
+    if (opts.folder === "documents") {
+      return {
+        ref: pathname,
+        handle: mintDocumentHandle({
+          pathname,
+          vendorId: opts.vendorId,
+          backend: "s3",
+          contentType: file.type,
+        }),
+        contentType: file.type,
+        size: file.size,
+        access: "private",
+      };
+    }
+
+    const url = publicUrl(s3, pathname);
+    if (!url) {
+      // A media bucket with no public base is a bucket nobody can read from.
+      // Better to refuse than to hand back a URL that answers 403 forever.
+      throw new UploadSetupError(
+        "Media storage has no public URL. Set S3_PUBLIC_BASE_URL to the bucket's public domain."
+      );
+    }
+    return { url, pathname, contentType: file.type, size: file.size, backend: "s3" };
+  }
+
   if (process.env.NODE_ENV === "production") {
     throw new UploadSetupError(
       opts.folder === "documents"
-        ? "Private document uploads are not configured. Set BLOB_PRIVATE_READ_WRITE_TOKEN."
-        : "Media uploads are not configured. Set BLOB_READ_WRITE_TOKEN."
+        ? "Private document uploads are not configured. Set BLOB_PRIVATE_READ_WRITE_TOKEN, or S3_* for any S3-compatible store."
+        : "Media uploads are not configured. Set BLOB_READ_WRITE_TOKEN, or S3_* for any S3-compatible store."
     );
   }
 
@@ -246,6 +293,23 @@ const LEGACY_PUBLIC_UPLOADS = "public/uploads";
 export async function readDocumentBytes(fileUrl: string): Promise<{ bytes: Buffer; contentType: string } | null> {
   if (/^providers\/[a-zA-Z0-9._-]+\/documents\/[a-z0-9-]+\.(jpg|png|webp|pdf)$/.test(fileUrl)) {
     const ext = fileUrl.split(".").pop()!;
+    // Any S3-compatible store, checked before the local fallback so a
+    // configured bucket is never silently bypassed.
+    const s3 = s3Config("documents");
+    if (s3) {
+      const object = await getObject(s3, fileUrl);
+      if (object) {
+        return {
+          bytes: object.bytes,
+          contentType:
+            object.contentType !== "application/octet-stream"
+              ? object.contentType
+              : EXT_CONTENT_TYPE.get(fileUrl.split(".").pop()!) ?? object.contentType,
+        };
+      }
+      return null;
+    }
+
     const token = process.env.BLOB_PRIVATE_READ_WRITE_TOKEN;
     if (token) {
       const blob = await get(fileUrl, { access: "private", token });
@@ -257,9 +321,12 @@ export async function readDocumentBytes(fileUrl: string): Promise<{ bytes: Buffe
     }
     if (process.env.NODE_ENV === "production") return null;
     try {
-      const rel = fileUrl.replace(/^providers\//, "");
+      // The write side stores at `.uploads/providers/<vendor>/documents/<file>`,
+      // so the reference is already the path under the private root. Stripping
+      // the `providers/` segment here looked symmetrical and meant every
+      // locally stored KYC document was written once and never readable again.
       return {
-        bytes: await readFile(path.join(process.cwd(), LOCAL_PRIVATE_ROOT, rel)),
+        bytes: await readFile(path.join(process.cwd(), LOCAL_PRIVATE_ROOT, fileUrl)),
         contentType: EXT_CONTENT_TYPE.get(ext) ?? "application/octet-stream",
       };
     } catch {

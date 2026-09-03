@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
+    "smoke": "node scripts/smoke-test.mjs",
     "test:e2e": "node scripts/run-e2e.mjs",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
@@ -18,6 +19,7 @@
     "db:seed:demo": "tsx --env-file-if-exists=.env.local lib/db/seed-marketplace.ts",
     "db:seed:samples": "tsx --env-file-if-exists=.env.local lib/db/seed-sample-marketplace.ts",
     "db:verify": "tsx --env-file-if-exists=.env.local scripts/verify-db.ts",
+    "verify:launch": "tsx scripts/verify-launch.ts",
     "admin:create": "tsx --env-file-if-exists=.env.local scripts/create-admin.ts",
     "dev:local": "bash scripts/dev-up.sh",
     "dev:down": "bash scripts/dev-down.sh"
@@ -26,11 +28,14 @@
     "@clerk/nextjs": "^7.7.0",
     "@google/generative-ai": "^0.24.1",
     "@vercel/blob": "^2.8.0",
+    "aws4fetch": "^1.0.20",
     "drizzle-orm": "^0.45.2",
     "next": "^15.5.21",
+    "nodemailer": "^9.0.5",
     "postgres": "^3.4.9",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "stripe": "^18.5.0",
     "zod": "^4.4.3"
   },
   "overrides": {
@@ -42,8 +47,12 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@types/nodemailer": "^8.0.1",
     "@types/react": "^19.0.0",
+    "autoprefixer": "^10.5.4",
     "drizzle-kit": "^0.31.10",
+    "postcss": "8.5.26",
+    "tailwindcss": "^3.4.17",
     "tsx": "^4.23.1",
     "typescript": "^5.6.0",
     "vitest": "^3.0.0"

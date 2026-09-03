@@ -26,7 +26,7 @@ own-language guides and managed logistics.
 | Directory | What it is | Status |
 |---|---|---|
 | `only2bali-next/` | **The product.** Next.js 15, 7 languages, marketplace, Postgres and Clerk/OTP auth. | Active — build here |
-| `infra/` | Postgres on the VPS: compose, mTLS certs, backups, bootstrap. | Active |
+| `infra/` | Legacy VPS compose/certs. Not production. Production DB is Neon. | Inactive |
 | `docs/` | Architecture, security, planning, ADRs. | Active |
 
 The Django backend, Create React App frontend and static prototype were removed
@@ -40,11 +40,11 @@ archive. Never restore them into the production build.
 cd only2bali-next && npm run dev:local        # prints the OTP to the terminal
 cd only2bali-next && npm run dev:down         # remove the local database
 
-npm test          # Vitest, 139 tests as of 2026-08-23
-npm run test:e2e  # boots Postgres + the app, drives it over HTTP
+npm test          # Vitest, 268 tests as of 2026-08-25
+npm run test:e2e  # boots Postgres + the app, drives it over HTTP (322 checks)
 npm run typecheck
 npm run build
-npm run db:verify # 38 checks against whatever DATABASE_URL points at
+npm run db:verify # 43 checks against whatever DATABASE_URL points at
 npm run db:seed
 ```
 
@@ -54,9 +54,9 @@ container.
 
 ## Architecture as it stands
 
-- **App** on Vercel. **Postgres** self-hosted on a Hostinger VPS, reached over
-  **mutual TLS** — a leaked `DATABASE_URL` alone cannot connect, because
-  `pg_hba.conf` sets `clientcert=verify-full`.
+- **App** on Vercel. **Postgres** is Neon (Vercel integration,
+  `o2b_DATABASE_URL` / `DATABASE_URL`, `sslmode=require`). Hostinger VPS
+  mTLS and Azure PostgreSQL are not used by this app.
 - **Auth** is passwordless: six-digit OTP, HMAC-hashed, attempt-capped, single
   use; opaque session tokens stored as hashes in httpOnly cookies.
 - **i18n**: every route lives under `/[lang]`. That layout *is* the root layout,
@@ -77,6 +77,12 @@ container.
   limiter is the fallback for when the database is unreachable, not the primary.
 - **Never use `tier` as a price boundary.** Pricing is open-ended min/max with no
   floor and no ceiling; `tier` is a display label only.
+- **Food protocols live in `lib/protocols.ts`, nowhere else.** The list was
+  written out by hand in sixteen files, which is why it stayed at three for so
+  long. `PROTOCOLS` is in storage order because Postgres can only append to an
+  enum; `PROTOCOL_DISPLAY_ORDER` is what a traveller sees. Adding one means
+  appending to both, adding a label to all seven dictionaries, and an
+  `ALTER TYPE … ADD VALUE` migration — never a type rewrite.
 
 ## Rules
 
@@ -95,8 +101,9 @@ Real, verified. Do not be surprised by them, and do not silently "fix" the
 load-bearing ones.
 
 - The Vercel Root Directory must stay `only2bali-next`.
-- Production currently reports `database: unreachable`; database-backed pages
-  are not release-ready until `/api/health` returns 200 and `connected`.
+- Production reports `database: connected` with the schema current at 8/8
+  (verified 2026-08-25). This line said `unreachable` for a long time after it
+  stopped being true; check `/api/health` before repeating either claim.
 - The old Azure workflows were removed because their applications no longer
   exist in this repository.
 - `postgres:17-alpine` runs as **uid 70**, not 999. Getting this wrong makes
@@ -114,10 +121,20 @@ Neither change revokes anything: **both remain in git history and have not been
 revoked at the provider.** Until they are, treat both as compromised. See
 `docs/security-fixes-status.md`.
 
-Clerk is configured in production. Passwordless OTP still cannot deliver codes
-until an email or SMS provider is configured; `/api/health` reports
-`"otpDelivery": ["none"]`.
+Clerk is configured in production, and `/en/login` offers "Continue with
+Google". Passwordless OTP still cannot deliver codes until an email or SMS
+provider is configured; `/api/health` reports `"otpDelivery": ["none"]` and the
+login form's submit button is correctly disabled as a result.
 
-Contact details are unset. The Vercel project is now on Sourabh's account and
-connected to GitHub, but production cannot store enquiries while its database
-connection is down. See `docs/consolidation-audit-2026-08-23.md`.
+**That leaves Google as the only working way in — and production is on live
+Razorpay keys with `acceptingPayments: true`.** A real traveller can therefore
+sign in and be charged real money while uploads and contact details are still
+unset. Resolve that before launch: either verify the path end to end, or move
+Vercel to Razorpay test keys until the rest is ready.
+
+Contact details are unset and production uploads report
+`{media: "none", documents: "none"}`, so vendor photos and KYC documents cannot
+be stored. The Vercel project is on Sourabh's account and connected to GitHub.
+The database is reachable — enquiries do store. See
+`docs/launch-checklist.md` for what remains, and
+`docs/consolidation-audit-2026-08-23.md` for how the estate got here.

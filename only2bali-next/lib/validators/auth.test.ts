@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { requestOtpSchema, verifyOtpSchema, toIdentifier } from "./auth";
+import {
+  requestOtpSchema,
+  verifyOtpSchema,
+  toIdentifier,
+  verifyMobileRequestSchema,
+  verifyMobileConfirmSchema,
+  passwordSignInSchema,
+  passwordSignUpSchema,
+  normalizeUsernameInput,
+} from "./auth";
 
 describe("requestOtpSchema", () => {
   it("accepts an email on its own", () => {
@@ -51,9 +60,98 @@ describe("verifyOtpSchema", () => {
   );
 });
 
+describe("verifyMobileRequestSchema", () => {
+  it("accepts a formatted mobile and strips it", () => {
+    const parsed = verifyMobileRequestSchema.safeParse({ mobile: "+91 98765-43210" });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.mobile).toBe("+919876543210");
+  });
+
+  it("prefixes a 10-digit Indian mobile with +91", () => {
+    const parsed = verifyMobileRequestSchema.safeParse({ mobile: "9876543210" });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.mobile).toBe("+919876543210");
+  });
+
+  it("rejects an email-only payload", () => {
+    expect(verifyMobileRequestSchema.safeParse({ email: "a@b.com" }).success).toBe(false);
+  });
+});
+
+describe("verifyMobileConfirmSchema", () => {
+  it("requires a six-digit code with the mobile", () => {
+    expect(
+      verifyMobileConfirmSchema.safeParse({ mobile: "+919876543210", code: "012345" }).success
+    ).toBe(true);
+    expect(verifyMobileConfirmSchema.safeParse({ mobile: "+919876543210", code: "12" }).success).toBe(
+      false
+    );
+  });
+});
+
 describe("toIdentifier", () => {
   it("namespaces by channel so email and mobile cannot collide", () => {
     expect(toIdentifier({ email: "a@b.com" })).toBe("email:a@b.com");
     expect(toIdentifier({ mobile: "+919876543210" })).toBe("mobile:+919876543210");
+  });
+});
+
+describe("normalizeUsernameInput", () => {
+  it("turns a display name into a stored username", () => {
+    expect(normalizeUsernameInput("Test User").username).toBe("test_user");
+  });
+
+  it("derives a username from an email", () => {
+    const result = normalizeUsernameInput("Traveller@Example.COM");
+    expect(result.username).toBe("traveller");
+    expect(result.email).toBe("traveller@example.com");
+  });
+});
+
+describe("passwordSignInSchema", () => {
+  it("accepts an email as the sign-in identifier", () => {
+    const parsed = passwordSignInSchema.safeParse({
+      username: "Traveller@Example.COM",
+      password: "wrong-pass",
+      role: "traveller",
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.username).toBe("traveller@example.com");
+  });
+
+  it("does not raise the signup character rule on a wrong password attempt", () => {
+    const parsed = passwordSignInSchema.safeParse({
+      username: "not a valid*user",
+      password: "nope",
+      role: "traveller",
+    });
+    expect(parsed.success).toBe(true);
+  });
+});
+
+describe("passwordSignUpSchema", () => {
+  it("accepts a traveler signup with a display name and blank optional fields", () => {
+    const parsed = passwordSignUpSchema.safeParse({
+      username: "Test User",
+      password: "tencharsxx",
+      role: "traveller",
+      email: "",
+      businessName: "",
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.username).toBe("test_user");
+  });
+
+  it("accepts an email in the username field", () => {
+    const parsed = passwordSignUpSchema.safeParse({
+      username: "new.traveller@example.com",
+      password: "tencharsxx",
+      role: "traveller",
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.username).toBe("new.traveller");
+      expect(parsed.data.email).toBe("new.traveller@example.com");
+    }
   });
 });

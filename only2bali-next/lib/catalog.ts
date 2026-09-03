@@ -1,4 +1,6 @@
-export type Protocol = "jain" | "vegetarian" | "vegan";
+import type { Protocol } from "@/lib/protocols";
+
+export type { Protocol };
 export type Tier = "economical" | "comfort" | "premium";
 
 export interface Pkg {

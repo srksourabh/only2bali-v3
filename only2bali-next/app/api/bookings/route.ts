@@ -118,7 +118,7 @@ export async function POST(req: Request) {
           );
         case "traveller_count_mismatch":
           return NextResponse.json(
-            { success: false, error: "Give the name of every traveller in the group." },
+            { success: false, error: "Too many names for this group size." },
             { status: 400 }
           );
       }

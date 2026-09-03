@@ -25,6 +25,11 @@ import { sql } from "drizzle-orm";
 import { db } from "../lib/db";
 import { SESSION_COOKIE } from "../lib/auth";
 import { hashSessionToken } from "../lib/auth/crypto";
+import { razorpayPaymentSignature } from "../lib/payments/razorpay";
+import { PROTOCOLS } from "../lib/protocols";
+
+/** Matches the test-only key exported by scripts/e2e.sh. Not a live secret. */
+const E2E_RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET ?? "e2e-only2bali-razorpay-key-secret";
 
 const BASE = (process.env.E2E_BASE_URL ?? "").replace(/\/$/, "");
 const SERVER_LOG = process.env.E2E_SERVER_LOG ?? "";
@@ -69,12 +74,29 @@ const VENDOR_BUSINESS = `E2E Jain Kitchen ${run}`;
 const MARKETPLACE_LISTING = `E2E Jain Dining ${run}`;
 const ADMIN_EMAIL = `e2e-admin-${run}@only2bali.test`;
 const ADMIN_USERNAME = `admin-${run}`;
+const APPLICANT_EMAIL = `e2e-applicant-${run}@only2bali.test`;
+const APPLICANT_BUSINESS = `E2E Applicant Kitchen ${run}`;
+/** Run-unique so a half-cleaned earlier run cannot collide on the unique index. */
+const MOBILE = `+9198${String(Date.now()).slice(-8)}`;
+/** What the provider asks to be paid. The traveller's price is derived from it. */
+const BID_NET_AMOUNT = 6_000_000;
 
 let sessionCookie = "";
 let vendorCookie = "";
 let adminCookie = "";
 let marketplaceListingId = "";
 let marketplaceBookingId = "";
+let applicantApplicationId = "";
+let boardRequestId = "";
+let acceptedOfferId = "";
+let rivalOfferId = "";
+let bidThreadId = "";
+let offerBookingId = "";
+let offerPaymentId = "";
+let disbursementId = "";
+let documentRef = "";
+let documentHandle = "";
+let documentId = "";
 /** Set once a booking has taken seats, so cleanup can give them back. */
 let bookedDepartureId = "";
 
@@ -214,12 +236,30 @@ async function main() {
       [307, 308].includes(res.status) && /\/(en|hi|ta|gu|te|kn|mr)$/.test(location),
       `HTTP ${res.status} → ${location || "(none)"}`
     );
+
+    /**
+     * The target depends on the visitor's cookie and Accept-Language, so a
+     * shared cache must never reuse it. It shipped `public` with no Vary,
+     * which let a browser pin one answer and stop asking - a bare domain that
+     * would not open while every other path worked.
+     */
+    const cache = res.headers.get("cache-control") ?? "";
+    check(
+      "the locale redirect is never stored by a shared cache",
+      /no-store/.test(cache) && !/public/.test(cache),
+      cache || "(no cache-control)"
+    );
+    check(
+      "and it says what it varies on",
+      /accept-language/i.test(res.headers.get("vary") ?? ""),
+      res.headers.get("vary") || "(no vary)"
+    );
   }
   {
     const res = await call("/en");
     const html = await res.text();
     check("the English homepage renders", res.status === 200, `HTTP ${res.status}`);
-    check("it declares itself English", /<html[^>]*lang="en"/.test(html));
+    check("it declares itself English", /<html[^>]*lang="en(-[A-Za-z]+)?"/.test(html));
 
     const [pkg] = (await db.execute(sql`
       select name from package where status = 'published' order by name limit 1
@@ -370,6 +410,22 @@ async function main() {
       body: { businessName: "No capabilities", businessType: "x", baseArea: "y", capabilities: [], whatsapp: "+6281234567890" },
     });
     check("an application with no dietary capability is refused", res.status === 400, `HTTP ${res.status}`);
+  }
+  {
+    const res = await call("/api/vendor-applications", {
+      body: {
+        businessName: APPLICANT_BUSINESS,
+        businessType: "Jain-capable kitchen",
+        baseArea: "Ubud",
+        capabilities: ["Jain", "Vegetarian"],
+        languages: "English, Hindi",
+        whatsapp: "+6281234567891",
+        email: APPLICANT_EMAIL,
+      },
+    });
+    const body = await json(res);
+    applicantApplicationId = body?.data?.id ?? body?.data?.application?.id ?? "";
+    check("an application with an email is accepted", res.status === 201 && Boolean(applicantApplicationId), `HTTP ${res.status}`);
   }
 
   // ---------- the account page is guarded ----------
@@ -642,6 +698,20 @@ async function main() {
     );
   }
   {
+    const res = await call(`/api/provider/listings/${marketplaceListingId}`, {
+      method: "PATCH",
+      cookie: vendorCookie,
+      body: {
+        title: MARKETPLACE_LISTING,
+        description: "Updated Jain dining listing after the vendor edited the price.",
+        priceAmount: marketplacePrice,
+      },
+    });
+    const body = await json(res);
+    check("the vendor can edit their listing", res.status === 200 && body?.data?.listing?.id === marketplaceListingId, `HTTP ${res.status}`);
+    check("an edited listing returns to review", body?.data?.listing?.status === "pending_review", body?.data?.listing?.status);
+  }
+  {
     const res = await call("/api/provider/media", {
       cookie: vendorCookie,
       body: {
@@ -677,6 +747,23 @@ async function main() {
     const res = await call("/en/admin", { cookie: adminCookie });
     const html = await res.text();
     check("the admin control opens for an admin", res.status === 200 && /Admin control/i.test(html), `HTTP ${res.status}`);
+  }
+  {
+    const res = await call(`/api/admin/applications/${applicantApplicationId}`, {
+      method: "PATCH",
+      cookie: adminCookie,
+      body: { status: "verified" },
+    });
+    check("admin can approve a vendor application", res.status === 200, `HTTP ${res.status}`);
+
+    const [row] = (await db.execute(sql`
+      select a.role, v.verification_status
+      from account a
+      join vendor v on v.account_id = a.id
+      where a.email = ${APPLICANT_EMAIL}
+    `)) as unknown as [{ role: string; verification_status: string } | undefined];
+    check("approving an application creates a vendor account", row?.role === "vendor", row?.role);
+    check("the new vendor is verified immediately", row?.verification_status === "verified", row?.verification_status);
   }
   {
     const res = await call(`/api/admin/vendors/${vendorId}`, {
@@ -722,6 +809,29 @@ async function main() {
     const html = await res.text();
     check("the marketplace detail page renders", res.status === 200 && html.includes(MARKETPLACE_LISTING), `HTTP ${res.status}`);
     check("a signed-out visitor is prompted to sign in before booking", /Sign in/i.test(html));
+  }
+  {
+    const res = await call("/en/services?type=restaurant&region=bali");
+    const html = await res.text();
+    check("the services index renders filtered listings", res.status === 200 && html.includes(MARKETPLACE_LISTING), `HTTP ${res.status}`);
+  }
+  {
+    const res = await call("/api/services?type=restaurant&region=bali");
+    const body = await json(res);
+    const titles = (body?.data?.services ?? []).map((s: { title?: string }) => s.title);
+    check("the services API applies the type filter", res.status === 200 && titles.includes(MARKETPLACE_LISTING), titles.join(","));
+  }
+  {
+    const res = await call("/api/payments/webhook", {
+      method: "POST",
+      body: { event: "payment.captured" },
+    });
+    const body = await json(res);
+    check(
+      "an unsigned webhook is refused while payments stay fail-closed",
+      [400, 503].includes(res.status),
+      `HTTP ${res.status} reason=${body?.reason ?? body?.error}`
+    );
   }
   {
     const res = await call("/api/bookings", {
@@ -793,6 +903,1150 @@ async function main() {
     `)) as unknown as [{ n: number }];
     check("the paused checkout creates no gateway payment row", Number(rows.n) === 0, `${rows.n} rows`);
   }
+  {
+    const orderId = `order_e2e_${run}`;
+    const paymentId = `pay_e2e_${run}`;
+    await db.execute(sql`
+      insert into payment (
+        booking_id, provider, provider_order_id, amount, currency, purpose, status, idempotency_key, initiated_by
+      )
+      select
+        b.id, 'razorpay', ${orderId}, b.gross_amount, b.currency, 'full', 'created',
+        ${`e2e-verify-${run}`}, a.id
+      from booking b
+      join traveller t on t.id = b.traveller_id
+      join account a on a.id = t.account_id
+      where b.id = ${marketplaceBookingId}
+    `);
+    const signature = razorpayPaymentSignature(orderId, paymentId, E2E_RAZORPAY_KEY_SECRET);
+    const res = await call("/api/payments/verify", {
+      cookie: sessionCookie,
+      body: {
+        bookingId: marketplaceBookingId,
+        razorpay_order_id: orderId,
+        razorpay_payment_id: paymentId,
+        razorpay_signature: signature,
+      },
+    });
+    const body = await json(res);
+    check("a signed Razorpay verify confirms the listing booking", res.status === 200 && body?.data?.status === "captured", `HTTP ${res.status} status=${body?.data?.status}`);
+
+    const [row] = (await db.execute(sql`
+      select b.status as booking_status, p.status as payment_status
+      from booking b
+      join payment p on p.booking_id = b.id
+      where b.id = ${marketplaceBookingId}
+    `)) as unknown as [{ booking_status: string; payment_status: string } | undefined];
+    check("the booking is confirmed after verify", row?.booking_status === "confirmed", row?.booking_status);
+    check("the payment row is captured", row?.payment_status === "captured", row?.payment_status);
+
+    const bad = await call("/api/payments/verify", {
+      cookie: sessionCookie,
+      body: {
+        bookingId: marketplaceBookingId,
+        razorpay_order_id: orderId,
+        razorpay_payment_id: paymentId,
+        razorpay_signature: "0".repeat(64),
+      },
+    });
+    check("a tampered verify signature is refused", bad.status === 400, `HTTP ${bad.status}`);
+  }
+
+  // ---------- food protocols ----------
+  //
+  // The list grew from three to seven. What matters is that a protocol the
+  // form offers is a protocol the API stores - a mismatch here is somebody
+  // booking a trip under a diet the platform never recorded.
+  console.log("\nFood protocols");
+  {
+    const res = await call("/api/trip-requests", { cookie: sessionCookie, body: { protocol: "not_a_protocol", groupSize: 2 } });
+    check("an invented protocol is refused", res.status === 400, `HTTP ${res.status}`);
+
+    for (const protocol of PROTOCOLS) {
+      const created = await call("/api/trip-requests", {
+        cookie: sessionCookie,
+        body: { protocol, groupSize: 2, notes: `E2E protocol ${protocol} ${run}`, publishToProviders: false },
+      });
+      const body = await json(created);
+      const id = body?.data?.request?.id ?? "";
+      if (!check(`a traveller can request a ${protocol} trip`, created.status === 201 && Boolean(id), `HTTP ${created.status}`)) continue;
+
+      const [row] = (await db.execute(sql`select protocol from trip_request where id = ${id}`)) as unknown as [
+        { protocol: string } | undefined,
+      ];
+      check(`and it is stored as ${protocol}, not coerced`, row?.protocol === protocol, row?.protocol);
+    }
+  }
+  {
+    // The public filter has to accept the same words, or a protocol is
+    // offered on the form and silently ignored on the directory.
+    for (const protocol of PROTOCOLS) {
+      const res = await call(`/api/services?protocol=${protocol}`);
+      check(`the services filter accepts ${protocol}`, res.status === 200, `HTTP ${res.status}`);
+    }
+  }
+  {
+    const res = await call("/en");
+    const html = await res.text();
+    check(
+      "no raw enum value is rendered at a traveller",
+      !html.includes("non_veg"),
+      "the homepage would have shown non_veg"
+    );
+  }
+
+  // ---------- the demand loop: publish, bid, compare, accept ----------
+  //
+  // The traveller's first request stayed private because the account had only
+  // an email. Publishing to providers needs a verified mobile, so that round
+  // trip is driven here rather than arranged in SQL — an unverified number
+  // silently publishing a request would be the bug worth catching.
+  console.log("\nRequest board, bids and offers");
+  {
+    const res = await call("/api/auth/verify-mobile/request", {
+      cookie: sessionCookie,
+      body: { mobile: MOBILE },
+    });
+    check("a signed-in traveller can ask to verify a mobile", res.status === 200, `HTTP ${res.status}`);
+
+    const anon = await call("/api/auth/verify-mobile/request", { body: { mobile: MOBILE } });
+    check("an anonymous caller cannot", anon.status === 401, `HTTP ${anon.status}`);
+  }
+  {
+    const code = await otpFromLog(MOBILE);
+    if (!check("the mobile code reaches its delivery channel", Boolean(code), code ? "read from the server log" : "not found")) {
+      console.log("\n  Cannot continue the request board without the mobile code.\n");
+    } else {
+      const wrong = await call("/api/auth/verify-mobile/confirm", {
+        cookie: sessionCookie,
+        body: { mobile: MOBILE, code: code === "000000" ? "111111" : "000000" },
+      });
+      check("a wrong mobile code is refused", wrong.status === 400, `HTTP ${wrong.status}`);
+
+      const res = await call("/api/auth/verify-mobile/confirm", {
+        cookie: sessionCookie,
+        body: { mobile: MOBILE, code },
+      });
+      const body = await json(res);
+      check(
+        "the correct mobile code verifies the number",
+        res.status === 200 && body?.data?.verified === true,
+        `HTTP ${res.status}`
+      );
+
+      const [row] = (await db.execute(sql`
+        select mobile, mobile_verified_at from account where email = ${EMAIL}
+      `)) as unknown as [{ mobile: string | null; mobile_verified_at: string | null } | undefined];
+      check("the verification is recorded on the account", Boolean(row?.mobile_verified_at), row?.mobile ?? "no mobile");
+    }
+  }
+  {
+    const res = await call("/api/trip-requests", {
+      cookie: sessionCookie,
+      body: {
+        protocol: "jain",
+        groupSize: 8,
+        nights: 5,
+        departureCity: "Ahmedabad",
+        kitchenRequired: true,
+        budgetMinAmount: 6_000_000,
+        budgetMaxAmount: 9_000_000,
+        budgetCurrency: "INR",
+        budgetBasis: "total",
+        notes: `E2E board request ${run}`,
+        publishToProviders: true,
+      },
+    });
+    const body = await json(res);
+    boardRequestId = body?.data?.request?.id ?? "";
+    check(
+      "a mobile-verified traveller can publish a request",
+      res.status === 201 && Boolean(boardRequestId),
+      `HTTP ${res.status}`
+    );
+    check("and it really is published to providers", body?.data?.publishedToProviders === true);
+
+    const [row] = (await db.execute(sql`
+      select visibility, published_at, bids_close_at from trip_request where id = ${boardRequestId}
+    `)) as unknown as [{ visibility: string; published_at: string | null; bids_close_at: string | null } | undefined];
+    check("the board request is open to verified providers", row?.visibility === "open_to_verified", row?.visibility);
+    check("bidding has a closing date", Boolean(row?.bids_close_at));
+  }
+  {
+    const anon = await call(`/api/trip-requests/${boardRequestId}/bids`, {
+      body: { title: "Anonymous bid", vendorNetAmount: 100_000 },
+    });
+    check("an anonymous caller cannot bid", anon.status === 401, `HTTP ${anon.status}`);
+
+    const asTraveller = await call(`/api/trip-requests/${boardRequestId}/bids`, {
+      cookie: sessionCookie,
+      body: { title: "Traveller bid", vendorNetAmount: 100_000 },
+    });
+    check("a traveller cannot bid on their own request", asTraveller.status === 403, `HTTP ${asTraveller.status}`);
+
+    const invalid = await call(`/api/trip-requests/${boardRequestId}/bids`, {
+      cookie: vendorCookie,
+      body: { title: "", vendorNetAmount: -1 },
+    });
+    check("a malformed bid is refused", invalid.status === 400, `HTTP ${invalid.status}`);
+
+    const missing = await call("/api/trip-requests/00000000-0000-0000-0000-000000000000/bids", {
+      cookie: vendorCookie,
+      body: { title: `E2E bid ${run}`, vendorNetAmount: 100_000 },
+    });
+    check("a bid on an unknown request is a not-found", missing.status === 404, `HTTP ${missing.status}`);
+  }
+  {
+    const res = await call(`/api/trip-requests/${boardRequestId}/bids`, {
+      cookie: vendorCookie,
+      body: {
+        title: `E2E Jain Bali 5N ${run}`,
+        summary: "Kitchen on site, Jain cook, own-language guide.",
+        vendorNetAmount: BID_NET_AMOUNT,
+        currency: "INR",
+        pricePerPerson: Math.floor(BID_NET_AMOUNT / 8),
+        lineItems: [
+          { label: "Stay", amount: 4_000_000 },
+          { label: "Meals", amount: 2_000_000 },
+        ],
+      },
+    });
+    const body = await json(res);
+    acceptedOfferId = body?.data?.bid?.id ?? "";
+    bidThreadId = body?.data?.threadId ?? "";
+    check("a verified provider can bid", res.status === 201 && Boolean(acceptedOfferId), `HTTP ${res.status}`);
+    check("bidding opens a message thread", Boolean(bidThreadId));
+
+    // The provider quotes what it wants to be paid and the traveller's price is
+    // grossed up from it. Taking the commission out of the provider's number
+    // instead would quietly underpay every provider, and the arithmetic is
+    // close enough either way to survive a casual read.
+    //
+    // The rate comes from the vendor row rather than the platform default,
+    // because a negotiated per-provider rate is exactly the case where the two
+    // diverge — and the one a hard-coded default would hide.
+    const [vendorRow] = (await db.execute(sql`
+      select commission_rate from vendor where id = ${vendorId}
+    `)) as unknown as [{ commission_rate: string | null } | undefined];
+    const rate = Number(vendorRow?.commission_rate ?? 0.1);
+    const expectedTotal = Math.ceil(BID_NET_AMOUNT / (1 - rate));
+    const [row] = (await db.execute(sql`
+      select total_amount, vendor_net_amount, commission_rate, status, origin
+      from offer where id = ${acceptedOfferId}
+    `)) as unknown as [
+      | {
+          total_amount: number;
+          vendor_net_amount: number;
+          commission_rate: string;
+          status: string;
+          origin: string;
+        }
+      | undefined,
+    ];
+    check(
+      "the traveller price is grossed up from the provider's net, not cut from it",
+      Number(row?.total_amount) === expectedTotal && Number(row?.vendor_net_amount) === BID_NET_AMOUNT,
+      `${row?.total_amount} vs ${expectedTotal}`
+    );
+    check(
+      "the offer is priced at this provider's own commission rate, not the platform default",
+      Number(row?.commission_rate) === rate,
+      `offer=${row?.commission_rate} vendor=${vendorRow?.commission_rate}`
+    );
+    check(
+      "the bid arrives as a sent vendor offer",
+      row?.status === "sent" && row?.origin === "vendor_bid",
+      `${row?.status}/${row?.origin}`
+    );
+  }
+  {
+    // A second bid, so accepting the first has something to close.
+    const res = await call(`/api/trip-requests/${boardRequestId}/bids`, {
+      cookie: vendorCookie,
+      body: { title: `E2E Runner-up ${run}`, vendorNetAmount: BID_NET_AMOUNT + 500_000, currency: "INR" },
+    });
+    const body = await json(res);
+    rivalOfferId = body?.data?.bid?.id ?? "";
+    check("a second bid is accepted onto the same request", res.status === 201 && Boolean(rivalOfferId), `HTTP ${res.status}`);
+  }
+  {
+    const anon = await call(`/api/trip-requests/${boardRequestId}/offers`);
+    check("offers are not readable anonymously", anon.status === 401, `HTTP ${anon.status}`);
+
+    const res = await call(`/api/trip-requests/${boardRequestId}/offers`, { cookie: sessionCookie });
+    const body = await json(res);
+    const offers: Array<{ id: string }> = body?.data?.offers ?? [];
+    check(
+      "the traveller can compare the offers",
+      res.status === 200 && offers.length === 2,
+      `HTTP ${res.status} count=${offers.length}`
+    );
+    check(
+      "both bids are on the table",
+      offers.some((o) => o.id === acceptedOfferId) && offers.some((o) => o.id === rivalOfferId)
+    );
+
+    const vendorView = await call(`/api/trip-requests/${boardRequestId}/offers`, { cookie: vendorCookie });
+    const vendorBody = await json(vendorView);
+    const mine: Array<{ vendorId: string | null }> = vendorBody?.data?.offers ?? [];
+    check(
+      "a provider sees only its own offers on a request",
+      vendorView.status === 200 && mine.length > 0 && mine.every((o) => o.vendorId === vendorId),
+      `HTTP ${vendorView.status} count=${mine.length}`
+    );
+  }
+  {
+    const res = await call("/api/messages", {
+      cookie: vendorCookie,
+      body: {
+        threadId: bidThreadId,
+        body: `Happy to help. Reach me on ${MOBILE} or vendor-${run}@example.com`,
+      },
+    });
+    check("a provider can message the traveller about the bid", res.status === 201 || res.status === 200, `HTTP ${res.status}`);
+
+    const read = await call(`/api/messages?threadId=${bidThreadId}`, { cookie: sessionCookie });
+    const body = await json(read);
+    check("the traveller can read the thread", read.status === 200, `HTTP ${read.status}`);
+    check(
+      "contact details stay masked before a booking exists",
+      body?.data?.unmasked === false,
+      `unmasked=${body?.data?.unmasked}`
+    );
+    const first = body?.data?.messages?.[0];
+    check("the raw phone number is not served while masked", !String(first?.body ?? "").includes(MOBILE));
+    check("the attempt to swap contacts off-platform is flagged", first?.contactAttemptDetected === true);
+  }
+  {
+    const asVendor = await call(`/api/offers/${acceptedOfferId}`, { cookie: vendorCookie, body: {} });
+    check("a provider cannot accept its own offer", asVendor.status === 403, `HTTP ${asVendor.status}`);
+
+    const missing = await call("/api/offers/00000000-0000-0000-0000-000000000000", {
+      cookie: sessionCookie,
+      body: {},
+    });
+    check("accepting an unknown offer is a not-found", missing.status === 404, `HTTP ${missing.status}`);
+
+    const res = await call(`/api/offers/${acceptedOfferId}`, { cookie: sessionCookie, body: {} });
+    const body = await json(res);
+    offerBookingId = body?.data?.booking?.id ?? "";
+    check("the traveller can accept an offer", res.status === 200 && Boolean(offerBookingId), `HTTP ${res.status}`);
+    check("accepting returns a booking reference", Boolean(body?.data?.booking?.reference), body?.data?.booking?.reference);
+
+    const [row] = (await db.execute(sql`
+      select b.status, b.gross_amount, b.commission_amount, b.net_amount, b.pax,
+             tr.status as request_status, tr.close_reason
+      from booking b join trip_request tr on tr.id = b.trip_request_id
+      where b.id = ${offerBookingId}
+    `)) as unknown as [
+      | {
+          status: string;
+          gross_amount: number;
+          commission_amount: number;
+          net_amount: number;
+          pax: number;
+          request_status: string;
+          close_reason: string | null;
+        }
+      | undefined,
+    ];
+    check("the booking waits for payment", row?.status === "pending_payment", row?.status);
+    check("it carries the group size from the request", Number(row?.pax) === 8, `pax=${row?.pax}`);
+    check("the provider keeps exactly the net it quoted", Number(row?.net_amount) === BID_NET_AMOUNT, `${row?.net_amount}`);
+    check(
+      "commission and net add back up to the gross",
+      Number(row?.commission_amount) + Number(row?.net_amount) === Number(row?.gross_amount),
+      `${row?.commission_amount} + ${row?.net_amount} = ${row?.gross_amount}`
+    );
+    check(
+      "the request closes as booked",
+      row?.request_status === "booked" && row?.close_reason === "offer_accepted",
+      `${row?.request_status}/${row?.close_reason}`
+    );
+
+    const [rival] = (await db.execute(sql`
+      select status, decline_reason from offer where id = ${rivalOfferId}
+    `)) as unknown as [{ status: string; decline_reason: string | null } | undefined];
+    check("the losing offer is closed automatically", rival?.status === "declined", rival?.status);
+    check("and it says why", rival?.decline_reason === "Another offer accepted", rival?.decline_reason ?? "no reason");
+
+    const again = await call(`/api/offers/${acceptedOfferId}`, { cookie: sessionCookie, body: {} });
+    check("an accepted offer cannot be accepted twice", again.status === 409, `HTTP ${again.status}`);
+
+    const declineClosed = await call(`/api/offers/${rivalOfferId}?action=decline`, {
+      cookie: sessionCookie,
+      body: { reason: "already chosen" },
+    });
+    check("a closed offer cannot then be declined", declineClosed.status === 409, `HTTP ${declineClosed.status}`);
+  }
+
+  // ---------- KYC documents ----------
+  //
+  // The one place private bytes leave the server. A licence or a passport scan
+  // reachable by anyone who can guess a UUID is the failure worth proving does
+  // not happen, so every read of it is tried from the wrong side first.
+  console.log("\nDocuments and KYC");
+  {
+    const form = new FormData();
+    form.set("file", new File([new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34])], "licence.pdf", { type: "application/pdf" }));
+    form.set("folder", "documents");
+
+    const res = await fetch(`${BASE}/api/provider/uploads`, {
+      method: "POST",
+      headers: { cookie: vendorCookie, "x-forwarded-for": IP_MAIN, "user-agent": "only2bali-e2e" },
+      body: form,
+      redirect: "manual",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    const body = await json(res);
+    documentRef = body?.data?.upload?.ref ?? "";
+    documentHandle = body?.data?.upload?.handle ?? "";
+    check("a provider can upload a private document", res.status === 201 && Boolean(documentRef), `HTTP ${res.status}`);
+    check("the upload returns a signed handle, never a storage location", Boolean(documentHandle) && !documentRef.startsWith("http"), documentRef);
+
+    const anonForm = new FormData();
+    anonForm.set("file", new File([new Uint8Array([1, 2, 3])], "x.pdf", { type: "application/pdf" }));
+    const anon = await fetch(`${BASE}/api/provider/uploads`, {
+      method: "POST",
+      headers: { "x-forwarded-for": IP_MAIN, "user-agent": "only2bali-e2e" },
+      body: anonForm,
+      redirect: "manual",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    check("an anonymous caller cannot upload", anon.status === 401, `HTTP ${anon.status}`);
+  }
+  {
+    const tampered = await call("/api/provider/documents", {
+      cookie: vendorCookie,
+      body: { kind: "business_licence", ref: documentRef, handle: `${documentHandle}tampered` },
+    });
+    check("a document with a tampered handle is refused", tampered.status === 400, `HTTP ${tampered.status}`);
+
+    const mismatched = await call("/api/provider/documents", {
+      cookie: vendorCookie,
+      body: { kind: "business_licence", ref: "providers/someone-else/documents/forged.pdf", handle: documentHandle },
+    });
+    check("a handle cannot be pointed at another provider's path", mismatched.status === 400, `HTTP ${mismatched.status}`);
+
+    const res = await call("/api/provider/documents", {
+      cookie: vendorCookie,
+      body: { kind: "business_licence", ref: documentRef, handle: documentHandle },
+    });
+    const body = await json(res);
+    documentId = body?.data?.document?.id ?? "";
+    check("a provider can attach the uploaded document", res.status === 201 && Boolean(documentId), `HTTP ${res.status}`);
+    check("a new document waits for review", body?.data?.document?.status === "pending", body?.data?.document?.status);
+
+    const list = await call("/api/provider/documents", { cookie: vendorCookie });
+    const listBody = await json(list);
+    const docs: Array<{ id: string; fileUrl?: string }> = listBody?.data?.documents ?? [];
+    check("the provider can list its documents", list.status === 200 && docs.some((d) => d.id === documentId), `HTTP ${list.status}`);
+  }
+  {
+    const anon = await call(`/api/documents/${documentId}/file`);
+    check("document bytes are not served anonymously", anon.status === 401, `HTTP ${anon.status}`);
+
+    const asTraveller = await call(`/api/documents/${documentId}/file`, { cookie: sessionCookie });
+    check("another signed-in account cannot read a provider's document", asTraveller.status === 403, `HTTP ${asTraveller.status}`);
+
+    const asOwner = await call(`/api/documents/${documentId}/file`, { cookie: vendorCookie });
+    check("the owning provider can read it back", asOwner.status === 200, `HTTP ${asOwner.status}`);
+    check("and it is sent as an attachment, not rendered", (asOwner.headers.get("content-disposition") ?? "").startsWith("attachment"), asOwner.headers.get("content-disposition") ?? "none");
+    check("with sniffing turned off", asOwner.headers.get("x-content-type-options") === "nosniff");
+    check("and never cached", asOwner.headers.get("cache-control") === "no-store");
+
+    const asAdmin = await call(`/api/documents/${documentId}/file`, { cookie: adminCookie });
+    check("an admin can read it for review", asAdmin.status === 200, `HTTP ${asAdmin.status}`);
+
+    const missing = await call("/api/documents/00000000-0000-0000-0000-000000000000/file", { cookie: adminCookie });
+    check("an unknown document is a not-found", missing.status === 404, `HTTP ${missing.status}`);
+  }
+  {
+    const asVendor = await call(`/api/admin/documents/${documentId}`, {
+      cookie: vendorCookie,
+      method: "PATCH",
+      body: { status: "approved" },
+    });
+    check("a provider cannot approve its own document", asVendor.status === 403, `HTTP ${asVendor.status}`);
+
+    const res = await call(`/api/admin/documents/${documentId}`, {
+      cookie: adminCookie,
+      method: "PATCH",
+      body: { status: "approved" },
+    });
+    const body = await json(res);
+    check("an admin can approve the document", res.status === 200 && body?.data?.document?.status === "approved", `HTTP ${res.status} status=${body?.data?.document?.status}`);
+
+    const again = await call(`/api/admin/documents/${documentId}`, {
+      cookie: adminCookie,
+      method: "PATCH",
+      body: { status: "rejected" },
+    });
+    check("an already-reviewed document is not re-reviewed", again.status === 404, `HTTP ${again.status}`);
+  }
+
+  // ---------- provider fulfilment ----------
+  console.log("\nProvider fulfilment");
+  {
+    const anon = await call("/api/provider/board");
+    check("the provider board is not readable anonymously", anon.status === 401, `HTTP ${anon.status}`);
+
+    const asTraveller = await call("/api/provider/board", { cookie: sessionCookie });
+    check("a traveller cannot open the provider board", asTraveller.status === 403, `HTTP ${asTraveller.status}`);
+
+    const res = await call("/api/provider/board", { cookie: vendorCookie });
+    check("a provider can open its board", res.status === 200, `HTTP ${res.status}`);
+  }
+  {
+    const res = await call("/api/provider/bookings", { cookie: vendorCookie });
+    const body = await json(res);
+    const rows: Array<{ bookingId: string }> = body?.data?.bookings ?? [];
+    check("a provider can list the bookings it must deliver", res.status === 200, `HTTP ${res.status}`);
+    check(
+      "the marketplace booking is on that list",
+      rows.some((b) => b.bookingId === marketplaceBookingId),
+      `${rows.length} rows`
+    );
+
+    const asTraveller = await call("/api/provider/bookings", { cookie: sessionCookie });
+    check("a traveller cannot list provider bookings", asTraveller.status === 403, `HTTP ${asTraveller.status}`);
+  }
+  {
+    const badStatus = await call(`/api/provider/bookings/${marketplaceBookingId}`, {
+      cookie: vendorCookie,
+      method: "PATCH",
+      body: { status: "cancelled" },
+    });
+    check("a provider cannot invent a booking status", badStatus.status === 400, `HTTP ${badStatus.status}`);
+
+    const notMine = await call(`/api/provider/bookings/${offerBookingId}`, {
+      cookie: vendorCookie,
+      method: "PATCH",
+      body: { status: "in_progress" },
+    });
+    check(
+      "a provider cannot move a booking that is not yet theirs to move",
+      notMine.status === 409 || notMine.status === 404,
+      `HTTP ${notMine.status}`
+    );
+
+    const res = await call(`/api/provider/bookings/${marketplaceBookingId}`, {
+      cookie: vendorCookie,
+      method: "PATCH",
+      body: { status: "in_progress" },
+    });
+    check("a provider can start the trip", res.status === 200, `HTTP ${res.status}`);
+
+    const done = await call(`/api/provider/bookings/${marketplaceBookingId}`, {
+      cookie: vendorCookie,
+      method: "PATCH",
+      body: { status: "completed" },
+    });
+    check("and complete it", done.status === 200, `HTTP ${done.status}`);
+
+    const backwards = await call(`/api/provider/bookings/${marketplaceBookingId}`, {
+      cookie: vendorCookie,
+      method: "PATCH",
+      body: { status: "in_progress" },
+    });
+    check("a completed booking cannot be restarted", backwards.status === 409, `HTTP ${backwards.status}`);
+  }
+  {
+    const res = await call("/api/provider/profile", {
+      cookie: vendorCookie,
+      method: "PUT",
+      body: { businessName: VENDOR_BUSINESS, baseArea: "Ubud", city: "Ubud", country: "Indonesia" },
+    });
+    check("a provider can edit its profile", res.status === 200, `HTTP ${res.status}`);
+
+    const read = await call("/api/provider/profile", { cookie: vendorCookie });
+    check("and read it back", read.status === 200, `HTTP ${read.status}`);
+
+    const asTraveller = await call("/api/provider/profile", { cookie: sessionCookie });
+    check("a traveller has no provider profile to read", asTraveller.status === 403, `HTTP ${asTraveller.status}`);
+  }
+  {
+    const res = await call("/api/provider/promotions", { cookie: vendorCookie });
+    check("a provider can read its promotions", res.status === 200, `HTTP ${res.status}`);
+
+    const events = await call("/api/provider/events", { cookie: vendorCookie });
+    check("a provider can read its events", events.status === 200, `HTTP ${events.status}`);
+
+    const anon = await call("/api/provider/promotions");
+    check("promotions are not readable anonymously", anon.status === 401, `HTTP ${anon.status}`);
+  }
+
+  // ---------- reviews ----------
+  //
+  // Both directions, on a booking that has actually happened. The rating a
+  // traveller leaves is what the directory sorts on, so it has to roll up.
+  console.log("\nReviews");
+  {
+    const anon = await call("/api/reviews", {
+      body: { bookingId: marketplaceBookingId, direction: "traveller_to_vendor", rating: 5 },
+    });
+    check("an anonymous visitor cannot leave a review", anon.status === 401, `HTTP ${anon.status}`);
+
+    const outOfRange = await call("/api/reviews", {
+      cookie: sessionCookie,
+      body: { bookingId: marketplaceBookingId, direction: "traveller_to_vendor", rating: 9 },
+    });
+    check("a rating outside one to five is refused", outOfRange.status === 400, `HTTP ${outOfRange.status}`);
+
+    const unpaid = await call("/api/reviews", {
+      cookie: sessionCookie,
+      body: { bookingId: offerBookingId, direction: "traveller_to_vendor", rating: 5 },
+    });
+    check("a trip that has not happened yet cannot be reviewed", unpaid.status === 400, `HTTP ${unpaid.status}`);
+
+    const wrongWay = await call("/api/reviews", {
+      cookie: sessionCookie,
+      body: { bookingId: marketplaceBookingId, direction: "vendor_to_traveller", rating: 5 },
+    });
+    check("a traveller cannot review as the provider", wrongWay.status === 403, `HTTP ${wrongWay.status}`);
+  }
+  {
+    const res = await call("/api/reviews", {
+      cookie: sessionCookie,
+      body: {
+        bookingId: marketplaceBookingId,
+        direction: "traveller_to_vendor",
+        rating: 5,
+        comment: `Kitchen kept the protocol all week. ${run}`,
+        foodComplianceKept: true,
+      },
+    });
+    check("a traveller can review the provider", res.status === 201, `HTTP ${res.status}`);
+
+    const twice = await call("/api/reviews", {
+      cookie: sessionCookie,
+      body: { bookingId: marketplaceBookingId, direction: "traveller_to_vendor", rating: 1 },
+    });
+    check("the same booking cannot be reviewed twice in one direction", twice.status === 409, `HTTP ${twice.status}`);
+
+    const back = await call("/api/reviews", {
+      cookie: vendorCookie,
+      body: { bookingId: marketplaceBookingId, direction: "vendor_to_traveller", rating: 4, comment: `Easy group. ${run}` },
+    });
+    check("the provider can review the traveller back", back.status === 201, `HTTP ${back.status}`);
+  }
+  {
+    const [row] = (await db.execute(sql`
+      select rating_avg, rating_count from vendor where id = ${vendorId}
+    `)) as unknown as [{ rating_avg: string | null; rating_count: number } | undefined];
+    check("the traveller's rating rolls up onto the provider", Number(row?.rating_count) === 1, `count=${row?.rating_count}`);
+    check("and the average is the rating given", Number(row?.rating_avg) === 5, `avg=${row?.rating_avg}`);
+
+    const res = await call(`/api/reviews?vendorId=${vendorId}`);
+    const body = await json(res);
+    const reviews: Array<{ rating: number; direction?: string }> = body?.data?.reviews ?? [];
+    check("published reviews are readable without signing in", res.status === 200, `HTTP ${res.status}`);
+    check("the traveller's review is public", reviews.some((r) => r.rating === 5), `${reviews.length} reviews`);
+    check(
+      "the provider's review of the traveller is not on the public listing",
+      reviews.every((r) => r.direction !== "vendor_to_traveller")
+    );
+
+    const noVendor = await call("/api/reviews");
+    check("asking for reviews without a provider is refused", noVendor.status === 400, `HTTP ${noVendor.status}`);
+  }
+
+  // ---------- admin desk ----------
+  console.log("\nAdmin desk");
+  {
+    const anon = await call("/api/admin/overview");
+    check("the admin overview is not readable anonymously", anon.status === 401, `HTTP ${anon.status}`);
+
+    const asVendor = await call("/api/admin/overview", { cookie: vendorCookie });
+    check("a provider cannot read the admin overview", asVendor.status === 403, `HTTP ${asVendor.status}`);
+
+    const res = await call("/api/admin/overview", { cookie: adminCookie });
+    check("an admin can read the overview", res.status === 200, `HTTP ${res.status}`);
+  }
+  {
+    const res = await call("/api/admin/settings", { cookie: adminCookie });
+    const body = await json(res);
+    check("an admin can read platform settings", res.status === 200, `HTTP ${res.status}`);
+
+    const asTraveller = await call("/api/admin/settings", { cookie: sessionCookie });
+    check("a traveller cannot", asTraveller.status === 403, `HTTP ${asTraveller.status}`);
+
+    const silly = await call("/api/admin/settings", {
+      cookie: adminCookie,
+      method: "PATCH",
+      body: { platformFeeRate: 0.99 },
+    });
+    check("the platform fee cannot be set past its ceiling", silly.status === 400, `HTTP ${silly.status}`);
+
+    // Restore whatever it was, so the rest of the run prices as it did.
+    const current = body?.data?.platformFeeRate ?? body?.data?.settings?.platformFeeRate;
+    if (typeof current === "number") {
+      const restore = await call("/api/admin/settings", {
+        cookie: adminCookie,
+        method: "PATCH",
+        body: { platformFeeRate: current },
+      });
+      check("a valid platform fee is accepted", restore.status === 200, `HTTP ${restore.status}`);
+    }
+  }
+
+  // ---------- availability, planner and gateway choice ----------
+  console.log("\nAvailability, planner and gateways");
+  {
+    const res = await call(`/api/services/${marketplaceListingId}/availability`);
+    check("availability for a public listing is readable", res.status === 200, `HTTP ${res.status}`);
+
+    const missing = await call("/api/services/00000000-0000-0000-0000-000000000000/availability");
+    check("availability for an unknown listing is a not-found", missing.status === 404, `HTTP ${missing.status}`);
+  }
+  {
+    const res = await call("/api/planner", {
+      body: {
+        protocol: "jain",
+        groupSize: 6,
+        nights: 5,
+        interests: ["temples", "beaches"],
+        departureCity: "Mumbai",
+      },
+    });
+    check("the planner answers even with no AI key configured", res.status === 200, `HTTP ${res.status}`);
+
+    // Every field is optional or defaulted on purpose - the planner takes free
+    // text - so the boundary worth proving is the one below the schema.
+    const broken = await fetch(`${BASE}/api/planner`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-forwarded-for": IP_MAIN, "user-agent": "only2bali-e2e" },
+      body: "{not json",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    check("a planner request that is not JSON is refused", broken.status === 400, `HTTP ${broken.status}`);
+  }
+  {
+    const res = await call("/api/payments/options");
+    const body = await json(res);
+    const gateways: Array<{ id: string; available: boolean; reason: string | null }> = [
+      body?.data?.razorpay,
+      body?.data?.stripe,
+    ].filter(Boolean);
+    check("the gateway list is readable", res.status === 200, `HTTP ${res.status}`);
+    check("both gateways are named", gateways.length === 2, `${gateways.length} gateways`);
+    check(
+      "an unconfigured gateway is offered as unavailable with a reason, rather than hidden",
+      gateways.every((g) => g.available || Boolean(g.reason)),
+      gateways.map((g) => `${g.id}:${g.available ? "on" : g.reason}`).join(" ")
+    );
+    check(
+      "no secret leaks into the public gateway list",
+      !JSON.stringify(body ?? {}).includes(E2E_RAZORPAY_KEY_SECRET)
+    );
+  }
+
+  // ---------- the other ways in ----------
+  //
+  // Production's only working sign-in is Google, and it had no coverage at all.
+  // Neither Google nor Clerk is configured here, so what is proven is that both
+  // refuse cleanly instead of half-signing somebody in.
+  console.log("\nSign-in alternatives");
+  {
+    const res = await call("/api/auth/password/signin", {
+      body: { username: VENDOR_USERNAME, password: VENDOR_PASSWORD, role: "vendor" },
+    });
+    const cookie = cookieFrom(res);
+    check("a provider can sign in with its password", res.status === 200 && Boolean(cookie), `HTTP ${res.status}`);
+
+    const session = await call("/api/auth/session", { cookie });
+    const body = await json(session);
+    check("that session resolves to the provider", body?.data?.user?.role === "vendor", body?.data?.user?.role);
+
+    const wrong = await call("/api/auth/password/signin", {
+      body: { username: VENDOR_USERNAME, password: `${VENDOR_PASSWORD}-wrong`, role: "vendor" },
+    });
+    check("a wrong password is refused", wrong.status === 401, `HTTP ${wrong.status}`);
+
+    const unknown = await call("/api/auth/password/signin", {
+      body: { username: `nobody-${run}`, password: VENDOR_PASSWORD, role: "vendor" },
+    });
+    check("an unknown username is refused the same way", unknown.status === 401, `HTTP ${unknown.status}`);
+
+    // Sign the extra session out again so it cannot outlive the run.
+    await call("/api/auth/logout", { cookie, method: "POST" });
+  }
+  {
+    const res = await call("/api/auth/google/start?role=traveller");
+    check(
+      "Google sign-in refuses cleanly when it is not configured",
+      res.status === 503 || res.status === 307,
+      `HTTP ${res.status}`
+    );
+
+    const badRole = await call("/api/auth/google/start?role=admin");
+    check(
+      "Google sign-in never offers an admin role",
+      badRole.status === 400 || badRole.status === 503,
+      `HTTP ${badRole.status}`
+    );
+
+    const bridge = await call("/api/auth/clerk/bridge", { body: { role: "traveller" } });
+    check(
+      "the Clerk bridge refuses without a Clerk session",
+      bridge.status === 401 || bridge.status === 503,
+      `HTTP ${bridge.status}`
+    );
+
+    const bridgeAdmin = await call("/api/auth/clerk/bridge", { body: { role: "admin" } });
+    check(
+      "the Clerk bridge never mints an admin",
+      bridgeAdmin.status === 400 || bridgeAdmin.status === 401 || bridgeAdmin.status === 403 || bridgeAdmin.status === 503,
+      `HTTP ${bridgeAdmin.status}`
+    );
+  }
+
+  // ---------- the rest of the public site ----------
+  console.log("\nRemaining public pages");
+  {
+    const pages: Array<[string, string]> = [
+      ["/en/planner", "the planner page"],
+      ["/en/inquiry", "the enquiry page"],
+      ["/en/destinations", "the destinations index"],
+      ["/en/vendors", "the become-a-provider page"],
+      ["/en/about", "the about page"],
+      ["/en/faq", "the FAQ"],
+      ["/en/privacy", "the privacy policy"],
+      ["/en/terms", "the terms"],
+    ];
+    for (const [path, name] of pages) {
+      const res = await call(path);
+      check(`${name} renders`, res.status === 200, `HTTP ${res.status}`);
+    }
+  }
+  {
+    const [region] = (await db.execute(sql`
+      select slug from region where slug is not null order by slug limit 1
+    `).catch(() => [[]] as unknown)) as unknown as [{ slug: string } | undefined];
+    if (region?.slug) {
+      const res = await call(`/en/destinations/${region.slug}`);
+      check("a destination page renders", res.status === 200, `HTTP ${res.status}`);
+    }
+
+    const [slug] = (await db.execute(sql`
+      select slug from vendor where verification_status = 'verified' and slug is not null limit 1
+    `)) as unknown as [{ slug: string } | undefined];
+    if (slug?.slug) {
+      const res = await call(`/en/providers/${slug.slug}`);
+      check("a verified provider's public profile renders", res.status === 200, `HTTP ${res.status}`);
+    }
+
+    const missing = await call("/en/providers/no-such-provider-anywhere");
+    check("an unknown provider profile is a not-found", missing.status === 404, `HTTP ${missing.status}`);
+  }
+
+  // ---------- the money tail: escrow, payout queue, refund ----------
+  //
+  // Everything after capture. The provider is paid out of an escrow hold that
+  // only an admin can release, and a refund has to beat the payout: money that
+  // has already left cannot be pulled back by this platform, so the refund
+  // must record a clawback rather than quietly rewrite the payout.
+  console.log("\nEscrow, payout and refund");
+  {
+    const asTraveller = await call("/api/provider/payout-account", {
+      cookie: sessionCookie,
+      method: "PUT",
+      body: { accountHolderName: "Not A Provider" },
+    });
+    check("a traveller cannot set a payout account", asTraveller.status === 403, `HTTP ${asTraveller.status}`);
+
+    const invalid = await call("/api/provider/payout-account", {
+      cookie: vendorCookie,
+      method: "PUT",
+      body: { bankName: "No holder name" },
+    });
+    check("a payout account without a holder name is refused", invalid.status === 400, `HTTP ${invalid.status}`);
+
+    const res = await call("/api/provider/payout-account", {
+      cookie: vendorCookie,
+      method: "PUT",
+      body: {
+        accountHolderName: `E2E Payout ${run}`,
+        bankName: "Bank Central Asia",
+        bankCountry: "Indonesia",
+        currency: "IDR",
+        maskedAccount: "****4321",
+      },
+    });
+    check("a provider can set its payout account", res.status === 200, `HTTP ${res.status}`);
+
+    const read = await call("/api/provider/payout-account", { cookie: vendorCookie });
+    const body = await json(read);
+    check(
+      "and read it back",
+      read.status === 200 && body?.data?.payoutAccount?.accountHolderName === `E2E Payout ${run}`,
+      `HTTP ${read.status}`
+    );
+  }
+  {
+    // Capture the accepted offer. The payout account was set first on purpose:
+    // the escrow row is written during capture and links to whatever payout
+    // account exists at that moment.
+    const orderId = `order_e2e_offer_${run}`;
+    const paymentId = `pay_e2e_offer_${run}`;
+    await db.execute(sql`
+      insert into payment (
+        booking_id, provider, provider_order_id, amount, currency, purpose, status, idempotency_key, initiated_by
+      )
+      select
+        b.id, 'razorpay', ${orderId}, b.gross_amount, b.currency, 'full', 'created',
+        ${`e2e-offer-verify-${run}`}, a.id
+      from booking b
+      join traveller t on t.id = b.traveller_id
+      join account a on a.id = t.account_id
+      where b.id = ${offerBookingId}
+    `);
+    const signature = razorpayPaymentSignature(orderId, paymentId, E2E_RAZORPAY_KEY_SECRET);
+    const res = await call("/api/payments/verify", {
+      cookie: sessionCookie,
+      body: {
+        bookingId: offerBookingId,
+        razorpay_order_id: orderId,
+        razorpay_payment_id: paymentId,
+        razorpay_signature: signature,
+      },
+    });
+    const body = await json(res);
+    check(
+      "a signed verify captures the offer booking",
+      res.status === 200 && body?.data?.status === "captured",
+      `HTTP ${res.status} status=${body?.data?.status}`
+    );
+
+    const [row] = (await db.execute(sql`
+      select d.id, d.status, d.hold_reason, d.net_amount, d.commission_amount, d.gross_amount,
+             d.payout_account_id, d.vendor_currency, d.payment_id
+      from payment_disbursement d
+      where d.booking_id = ${offerBookingId}
+    `)) as unknown as [
+      | {
+          id: string;
+          status: string;
+          hold_reason: string | null;
+          net_amount: number;
+          commission_amount: number;
+          gross_amount: number;
+          payout_account_id: string | null;
+          vendor_currency: string;
+          payment_id: string;
+        }
+      | undefined,
+    ];
+    disbursementId = row?.id ?? "";
+    offerPaymentId = row?.payment_id ?? "";
+    check("capture opens an escrow hold for the provider", Boolean(disbursementId) && row?.status === "held", row?.status);
+    check("the hold says what it is waiting for", Boolean(row?.hold_reason), row?.hold_reason ?? "none");
+    check("the escrow row links to the payout account set beforehand", Boolean(row?.payout_account_id));
+    check("the provider is owed in its own currency", row?.vendor_currency === "IDR", row?.vendor_currency);
+    check(
+      "escrow splits the same way the booking does",
+      Number(row?.commission_amount) + Number(row?.net_amount) === Number(row?.gross_amount),
+      `${row?.commission_amount} + ${row?.net_amount} = ${row?.gross_amount}`
+    );
+
+    const thread = await call(`/api/messages?threadId=${bidThreadId}`, { cookie: sessionCookie });
+    const threadBody = await json(thread);
+    check(
+      "a confirmed booking unmasks the thread",
+      threadBody?.data?.unmasked === true,
+      `unmasked=${threadBody?.data?.unmasked}`
+    );
+  }
+  {
+    const anon = await call("/api/admin/disbursements");
+    check("the payout queue is not readable anonymously", anon.status === 401, `HTTP ${anon.status}`);
+
+    const asVendor = await call("/api/admin/disbursements", { cookie: vendorCookie });
+    check("a provider cannot read the payout queue", asVendor.status === 403, `HTTP ${asVendor.status}`);
+
+    const asTraveller = await call("/api/admin/disbursements", { cookie: sessionCookie });
+    check("nor can a traveller", asTraveller.status === 403, `HTTP ${asTraveller.status}`);
+
+    const res = await call("/api/admin/disbursements", { cookie: adminCookie });
+    const body = await json(res);
+    const rows: Array<{ id: string; status: string; businessName: string | null }> = body?.data?.disbursements ?? [];
+    check("an admin can read the payout queue", res.status === 200, `HTTP ${res.status}`);
+    const mine = rows.find((d) => d.id === disbursementId);
+    check("the new hold is on the queue", Boolean(mine), mine ? `${mine.businessName} ${mine.status}` : "not listed");
+  }
+  {
+    const asVendor = await call(`/api/admin/disbursements/${disbursementId}`, {
+      cookie: vendorCookie,
+      method: "PATCH",
+      body: { action: "approve" },
+    });
+    check("a provider cannot approve its own payout", asVendor.status === 403, `HTTP ${asVendor.status}`);
+
+    const badAction = await call(`/api/admin/disbursements/${disbursementId}`, {
+      cookie: adminCookie,
+      method: "PATCH",
+      body: { action: "send_it" },
+    });
+    check("an unknown payout action is refused", badAction.status === 400, `HTTP ${badAction.status}`);
+
+    const missing = await call("/api/admin/disbursements/00000000-0000-0000-0000-000000000000", {
+      cookie: adminCookie,
+      method: "PATCH",
+      body: { action: "approve" },
+    });
+    check("patching an unknown payout is a not-found", missing.status === 404, `HTTP ${missing.status}`);
+
+    const tooEarly = await call(`/api/admin/disbursements/${disbursementId}`, {
+      cookie: adminCookie,
+      method: "PATCH",
+      body: { action: "mark_paid" },
+    });
+    check("money cannot be marked paid straight out of escrow", tooEarly.status === 409, `HTTP ${tooEarly.status}`);
+  }
+  {
+    const res = await call(`/api/admin/disbursements/${disbursementId}`, {
+      cookie: adminCookie,
+      method: "PATCH",
+      body: { action: "release_hold" },
+    });
+    const body = await json(res);
+    check(
+      "an admin can release the escrow hold",
+      res.status === 200 && body?.data?.disbursement?.status === "pending",
+      `HTTP ${res.status} status=${body?.data?.disbursement?.status}`
+    );
+    check("releasing clears the hold reason", body?.data?.disbursement?.holdReason === null);
+
+    const again = await call(`/api/admin/disbursements/${disbursementId}`, {
+      cookie: adminCookie,
+      method: "PATCH",
+      body: { action: "release_hold" },
+    });
+    check("a hold cannot be released twice", again.status === 409, `HTTP ${again.status}`);
+  }
+  {
+    const res = await call(`/api/admin/disbursements/${disbursementId}`, {
+      cookie: adminCookie,
+      method: "PATCH",
+      body: { action: "approve" },
+    });
+    const body = await json(res);
+    check(
+      "an admin can approve the payout",
+      res.status === 200 && body?.data?.disbursement?.status === "approved",
+      `HTTP ${res.status} status=${body?.data?.disbursement?.status}`
+    );
+
+    const [row] = (await db.execute(sql`
+      select d.approved_at, a.email
+      from payment_disbursement d left join account a on a.id = d.approved_by
+      where d.id = ${disbursementId}
+    `)) as unknown as [{ approved_at: string | null; email: string | null } | undefined];
+    check("the approval names the admin who made it", row?.email === ADMIN_EMAIL, row?.email ?? "unattributed");
+    check("and when", Boolean(row?.approved_at));
+
+    const [event] = (await db.execute(sql`
+      select count(*)::int as n from payment_event
+      where payment_id = ${offerPaymentId} and type = 'disbursement.approved'
+    `)) as unknown as [{ n: number }];
+    check("approving is written to the payment ledger", Number(event.n) === 1, `${event.n} rows`);
+  }
+  {
+    const res = await call(`/api/admin/disbursements/${disbursementId}`, {
+      cookie: adminCookie,
+      method: "PATCH",
+      body: { action: "mark_paid" },
+    });
+    const body = await json(res);
+    check(
+      "an admin can mark the payout paid",
+      res.status === 200 && body?.data?.disbursement?.status === "paid",
+      `HTTP ${res.status} status=${body?.data?.disbursement?.status}`
+    );
+    check(
+      "a paid payout carries a payout reference",
+      Boolean(body?.data?.disbursement?.providerPayoutId),
+      body?.data?.disbursement?.providerPayoutId
+    );
+
+    const [event] = (await db.execute(sql`
+      select count(*)::int as n from payment_event
+      where payment_id = ${offerPaymentId} and type = 'disbursement.paid'
+    `)) as unknown as [{ n: number }];
+    check("paying is written to the payment ledger", Number(event.n) === 1, `${event.n} rows`);
+  }
+  {
+    // Refund after the provider has already been paid.
+    const asVendor = await call(`/api/admin/payments/${offerPaymentId}/refund`, { cookie: vendorCookie, body: {} });
+    check("a provider cannot refund a traveller", asVendor.status === 403, `HTTP ${asVendor.status}`);
+
+    const overRefund = await call(`/api/admin/payments/${offerPaymentId}/refund`, {
+      cookie: adminCookie,
+      body: { amount: 999_999_999 },
+    });
+    check("a refund larger than the payment is refused", overRefund.status === 409, `HTTP ${overRefund.status}`);
+
+    const res = await call(`/api/admin/payments/${offerPaymentId}/refund`, { cookie: adminCookie, body: {} });
+    const body = await json(res);
+    check("an admin can refund the traveller in full", res.status === 200 && body?.data?.fully === true, `HTTP ${res.status}`);
+
+    const [row] = (await db.execute(sql`
+      select p.status as payment_status, p.refunded_amount, p.amount,
+             b.status as booking_status, d.status as disbursement_status
+      from payment p
+      join booking b on b.id = p.booking_id
+      left join payment_disbursement d on d.payment_id = p.id
+      where p.id = ${offerPaymentId}
+    `)) as unknown as [
+      | {
+          payment_status: string;
+          refunded_amount: number;
+          amount: number;
+          booking_status: string;
+          disbursement_status: string | null;
+        }
+      | undefined,
+    ];
+    check(
+      "the payment is fully refunded",
+      row?.payment_status === "refunded" && Number(row?.refunded_amount) === Number(row?.amount),
+      `${row?.refunded_amount}/${row?.amount}`
+    );
+    check("the booking is refunded with it", row?.booking_status === "refunded", row?.booking_status);
+    check("a payout already made is not silently rewritten", row?.disbursement_status === "paid", row?.disbursement_status ?? "none");
+
+    const [event] = (await db.execute(sql`
+      select count(*)::int as n from payment_event
+      where payment_id = ${offerPaymentId} and type = 'disbursement.clawback_required'
+    `)) as unknown as [{ n: number }];
+    check("the clawback owed by the provider is recorded", Number(event.n) === 1, `${event.n} rows`);
+
+    const twice = await call(`/api/admin/payments/${offerPaymentId}/refund`, { cookie: adminCookie, body: {} });
+    check("a fully refunded payment cannot be refunded again", twice.status === 409, `HTTP ${twice.status}`);
+  }
+  {
+    // The other order: refund while the money is still in escrow. Here the
+    // platform can stop the payout, and must.
+    const [before] = (await db.execute(sql`
+      select id, status, payment_id from payment_disbursement where booking_id = ${marketplaceBookingId}
+    `)) as unknown as [{ id: string; status: string; payment_id: string } | undefined];
+    check(
+      "the listing booking is still holding the provider's money",
+      before?.status === "held",
+      before?.status ?? "no escrow row"
+    );
+
+    if (before?.payment_id) {
+      const res = await call(`/api/admin/payments/${before.payment_id}/refund`, { cookie: adminCookie, body: {} });
+      check("an admin can refund before the payout leaves", res.status === 200, `HTTP ${res.status}`);
+
+      const [after] = (await db.execute(sql`
+        select status, failure_code from payment_disbursement where id = ${before.id}
+      `)) as unknown as [{ status: string; failure_code: string | null } | undefined];
+      check("the pending payout is cancelled rather than paid", after?.status === "failed", after?.status);
+      check("and it records why", after?.failure_code === "refund_before_payout", after?.failure_code ?? "no code");
+    }
+  }
 
   // ---------- booking, seat inventory and the price boundary ----------
   //
@@ -840,9 +2094,14 @@ async function main() {
     {
       const res = await call("/api/bookings", {
         cookie: sessionCookie,
-        body: { departureId: dep!.id, pax: 3, protocol: "jain", travellers: [{ fullName: "Only One Name" }] },
+        body: {
+          departureId: dep!.id,
+          pax: 2,
+          protocol: "jain",
+          travellers: [{ fullName: "One" }, { fullName: "Two" }, { fullName: "Three" }],
+        },
       });
-      check("a group size that disagrees with the traveller list is refused",
+      check("more names than the group size is refused",
         res.status === 400, `HTTP ${res.status}`);
     }
 
@@ -978,6 +2237,28 @@ async function cleanup() {
    * the correct rule for real data and a trap for a test that ignores it.
    */
   await db.execute(sql`
+    delete from payment_disbursement where booking_id in (
+      select b.id from booking b
+      join traveller t on t.id = b.traveller_id
+      join account a on a.id = t.account_id
+      where a.email = ${EMAIL})
+  `);
+  await db.execute(sql`
+    delete from payment_event where payment_id in (
+      select p.id from payment p
+      join booking b on b.id = p.booking_id
+      join traveller t on t.id = b.traveller_id
+      join account a on a.id = t.account_id
+      where a.email = ${EMAIL})
+  `);
+  await db.execute(sql`
+    delete from payment where booking_id in (
+      select b.id from booking b
+      join traveller t on t.id = b.traveller_id
+      join account a on a.id = t.account_id
+      where a.email = ${EMAIL})
+  `);
+  await db.execute(sql`
     delete from booking where traveller_id in (
       select t.id from traveller t
       join account a on a.id = t.account_id
@@ -1007,20 +2288,22 @@ async function cleanup() {
     `);
   }
 
-  await db.execute(sql`delete from account where email in (${EMAIL}, ${VENDOR_EMAIL}, ${ADMIN_EMAIL})`);
-  await db.execute(sql`delete from otp_code where identifier in (${`email:${EMAIL}`}, ${`email:${FLOOD_EMAIL}`})`);
+  await db.execute(sql`delete from account where email in (${EMAIL}, ${VENDOR_EMAIL}, ${ADMIN_EMAIL}, ${APPLICANT_EMAIL})`);
+  await db.execute(sql`delete from otp_code where identifier in (${`email:${EMAIL}`}, ${`email:${FLOOD_EMAIL}`}, ${`mobile:${MOBILE}`})`);
   await db.execute(sql`delete from lead where name = ${`E2E ${run}`}`);
-  await db.execute(sql`delete from vendor_application where business_name = ${`E2E Kitchen ${run}`}`);
+  await db.execute(sql`delete from vendor_application where business_name in (${`E2E Kitchen ${run}`}, ${APPLICANT_BUSINESS})`);
   await db.execute(sql`delete from rate_limit where key like ${`%${IP_MAIN}`} or key like ${`%${IP_FLOOD}`}`);
   await db.execute(sql`delete from rate_limit where key = ${`otp:id:email:${FLOOD_EMAIL}`} or key = ${`otp:id:email:${EMAIL}`}`);
 
   const [left] = (await db.execute(sql`
     select
-      (select count(*) from account where email in (${EMAIL}, ${FLOOD_EMAIL}, ${VENDOR_EMAIL}, ${ADMIN_EMAIL}))
+      (select count(*) from account where email in (${EMAIL}, ${FLOOD_EMAIL}, ${VENDOR_EMAIL}, ${ADMIN_EMAIL}, ${APPLICANT_EMAIL}))
     + (select count(*) from lead where name = ${`E2E ${run}`})
-    + (select count(*) from vendor_application where business_name = ${`E2E Kitchen ${run}`})
+    + (select count(*) from vendor_application where business_name in (${`E2E Kitchen ${run}`}, ${APPLICANT_BUSINESS}))
     + (select count(*) from service_listing where title = ${MARKETPLACE_LISTING})
-    + (select count(*) from booking_traveller where full_name like ${`E2E %${run}%`}) as n
+    + (select count(*) from booking_traveller where full_name like ${`E2E %${run}%`})
+    + (select count(*) from offer where title like ${`E2E %${run}%`})
+    + (select count(*) from otp_code where identifier = ${`mobile:${MOBILE}`}) as n
   `)) as unknown as [{ n: number }];
   check("the test leaves nothing behind", Number(left.n) === 0, `${left.n} rows remain`);
 }

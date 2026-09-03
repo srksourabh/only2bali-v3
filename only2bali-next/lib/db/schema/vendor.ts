@@ -38,6 +38,7 @@ export const vendor = pgTable(
     verificationStatus: verificationStatus("verification_status").notNull().default("draft"),
     verifiedAt: timestamp("verified_at", { withTimezone: true }),
     verifiedBy: uuid("verified_by").references(() => account.id, { onDelete: "set null" }),
+    assignedTo: uuid("assigned_to").references(() => account.id, { onDelete: "set null" }),
     rejectionReason: text("rejection_reason"),
     commissionRate: numeric("commission_rate", { precision: 5, scale: 4 }).notNull().default("0.15"),
     ratingAvg: numeric("rating_avg", { precision: 3, scale: 2 }),
@@ -50,6 +51,7 @@ export const vendor = pgTable(
   (t) => [
     index("vendor_status_type_idx").on(t.verificationStatus, t.vendorType),
     index("vendor_area_idx").on(t.baseArea),
+    index("vendor_assigned_to_idx").on(t.assignedTo),
   ]
 );
 

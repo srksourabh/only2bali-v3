@@ -49,7 +49,7 @@ const inr = (rupees: number) => rupees * 100;
 const at = (offsetDays: number) => new Date(Date.now() + offsetDays * 86_400_000);
 const day = (offsetDays: number) => at(offsetDays).toISOString().slice(0, 10);
 
-type Protocol = "jain" | "vegetarian" | "vegan";
+import type { Protocol } from "@/lib/protocols";
 type VendorType = "restaurant" | "transport" | "tour_agency";
 type CircuitKey = "ramayana" | "adventure" | "culinary" | "artistic";
 
@@ -157,7 +157,7 @@ const PROVIDERS: SampleProvider[] = [
         capacityMax: 55,
         priceRupees: 1450,
         priceUnit: "per_person",
-        images: ["/Asset/culinary.png", "/Asset/D-card-img2.png"],
+        images: ["/Asset/culinary.png", "/Asset/food-class.png"],
         circuits: ["culinary", "ramayana"],
         inclusions: ["Welcome drink", "Fixed thali", "Dessert", "Filtered water"],
         exclusions: ["Private transport", "Birthday cake", "Late-night service after 10 PM"],
@@ -193,6 +193,7 @@ const PROVIDERS: SampleProvider[] = [
     ],
     media: [
       { kind: "cover", fileUrl: "/Asset/culinary.png", altText: "Vegetarian Bali meal", caption: "Jain and vegetarian thali setup" },
+      { kind: "photo", fileUrl: "/Asset/food-kitchen.png", altText: "Villa kitchen cook station", caption: "Private kitchen for group cooks" },
       { kind: "menu", fileUrl: "/demo/sample-shuddh-menu.pdf", altText: "Jain menu", caption: "Sample Jain group menu" },
       { kind: "gallery", fileUrl: "/Asset/D-card-img2.png", altText: "Group restaurant seating", caption: "Reserved group section" },
     ],

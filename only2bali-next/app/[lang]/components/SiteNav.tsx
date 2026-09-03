@@ -1,15 +1,14 @@
 import Link from "next/link";
 import type { Dictionary } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n/config";
-import { getSessionUser } from "@/lib/auth";
 import Mark from "./Mark";
 import LanguageSwitcher from "./LanguageSwitcher";
+import SiteNotchNav from "./SiteNotchNav";
+import NavAuth from "./NavAuth";
 
-export default async function SiteNav({ lang, dict }: { lang: Locale; dict: Dictionary }) {
-  const user = await getSessionUser();
-
+export default function SiteNav({ lang, dict }: { lang: Locale; dict: Dictionary }) {
   return (
-    <nav className="o2b-nav" aria-label="Main">
+    <header className="o2b-nav">
       <div className="o2b-wrap o2b-navrow">
         <Link className="lockup" href={`/${lang}`}>
           <Mark size={30} title="Only2Bali" />
@@ -18,32 +17,31 @@ export default async function SiteNav({ lang, dict }: { lang: Locale; dict: Dict
           </span>
         </Link>
 
-        <div className="navlinks">
-          <Link href={`/${lang}/destinations`}>{dict.nav.destinations}</Link>
-          <Link href={`/${lang}/providers`}>{dict.nav.providers}</Link>
-          <Link href={`/${lang}/services`}>{dict.nav.services}</Link>
-          <Link href={`/${lang}/packages`}>{dict.nav.packages}</Link>
-          <Link href={`/${lang}#guarantee`}>{dict.nav.guarantee}</Link>
-        </div>
+        <SiteNotchNav
+          lang={lang}
+          labels={{
+            home: dict.nav.home,
+            destinations: dict.nav.destinations,
+            providers: dict.nav.providers,
+            services: dict.nav.services,
+            packages: dict.nav.packages,
+            guarantee: dict.nav.guarantee,
+          }}
+        />
 
         <div className="navactions">
           <LanguageSwitcher lang={lang} label={dict.nav.language} />
-
-          {user ? (
-            <Link className="btn btn-ghost btn-sm" href={`/${lang}/account`}>
-              {dict.auth.account}
-            </Link>
-          ) : (
-            <Link className="navsignin" href={`/${lang}/login`}>
-              {dict.auth.signIn}
-            </Link>
-          )}
-
+          <NavAuth
+            lang={lang}
+            signInLabel={dict.auth.signIn}
+            accountLabel={dict.auth.account}
+            signOutLabel={dict.auth.signOut}
+          />
           <Link className="btn btn-primary" href={`/${lang}/planner`}>
             {dict.nav.plan}
           </Link>
         </div>
       </div>
-    </nav>
+    </header>
   );
 }

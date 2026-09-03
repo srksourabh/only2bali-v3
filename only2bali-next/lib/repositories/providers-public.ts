@@ -3,6 +3,11 @@ import { db } from "@/lib/db";
 import { isSchemaLagError } from "@/lib/db/schema-lag";
 import { serviceListing, vendor, vendorHighlight, vendorMedia } from "@/lib/db/schema";
 import { listPublishedVendorReviews } from "@/lib/repositories/reviews";
+import { isCatalogueCircuitOpen, tripCatalogueCircuit } from "@/lib/db/catalogue-circuit";
+import {
+  getFallbackProviderBySlug,
+  listFallbackProviders,
+} from "@/lib/repositories/marketplace-fallback";
 
 export type PublicProviderFilters = {
   region?: "bali" | "jakarta" | "all";
@@ -12,8 +17,12 @@ export type PublicProviderFilters = {
 type QueryMode = "full" | "legacy";
 
 /** Pure gate used by tests and by the repository. */
-export function isPubliclyVisibleProvider(verificationStatus: string): boolean {
-  return verificationStatus === "verified";
+export function isPubliclyVisibleProvider(
+  verificationStatus: string,
+  businessName = ""
+): boolean {
+  const normalizedName = typeof businessName === "string" ? businessName.trim() : "";
+  return verificationStatus === "verified" && !/^TEST\s*--/i.test(normalizedName);
 }
 
 function providerRegionClause(region: PublicProviderFilters["region"], mode: QueryMode) {
@@ -57,7 +66,10 @@ const providerCoreSelect = {
 };
 
 async function queryProviders(filters: PublicProviderFilters, mode: QueryMode) {
-  const clauses = [eq(vendor.verificationStatus, "verified")];
+  const clauses = [
+    eq(vendor.verificationStatus, "verified"),
+    sql`coalesce(${vendor.businessName}, '') not ilike 'TEST --%'`,
+  ];
   const region = providerRegionClause(filters.region, mode);
   if (region) clauses.push(region);
 
@@ -93,14 +105,17 @@ export async function listPublicProviders(filters: PublicProviderFilters = {}) {
   }
 }
 
-/** Browse pages must render when production schema is behind. */
+/** Browse pages must render when production schema is behind or empty. */
 export async function listPublicProvidersForPage(filters: PublicProviderFilters = {}) {
+  if (isCatalogueCircuitOpen()) return listFallbackProviders(filters);
   try {
-    return await listPublicProviders(filters);
+    const rows = await listPublicProviders(filters);
+    if (rows.length > 0) return rows;
   } catch (err) {
     console.warn("[providers] directory unavailable", err);
-    return [];
+    tripCatalogueCircuit();
   }
+  return listFallbackProviders(filters);
 }
 
 const providerProfileCoreSelect = {
@@ -222,7 +237,7 @@ export async function getPublicProviderBySlug(slug: string) {
     row = await queryProviderRow(slug, "legacy");
   }
 
-  if (!row || !isPubliclyVisibleProvider(row.verificationStatus)) return null;
+  if (!row || !isPubliclyVisibleProvider(row.verificationStatus, row.businessName)) return null;
 
   let listings;
   try {
@@ -251,10 +266,14 @@ export async function getPublicProviderBySlug(slug: string) {
 }
 
 export async function getPublicProviderBySlugForPage(slug: string) {
-  try {
-    return await getPublicProviderBySlug(slug);
-  } catch (err) {
-    console.warn("[provider] profile unavailable", err);
-    return null;
+  if (!isCatalogueCircuitOpen()) {
+    try {
+      const row = await getPublicProviderBySlug(slug);
+      if (row) return row;
+    } catch (err) {
+      console.warn("[provider] profile unavailable", err);
+      tripCatalogueCircuit();
+    }
   }
+  return getFallbackProviderBySlug(slug);
 }

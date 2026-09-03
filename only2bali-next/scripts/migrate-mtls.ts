@@ -8,6 +8,9 @@
  *   npx tsx scripts/migrate-mtls.ts --production --check
  *   npx tsx scripts/migrate-mtls.ts --production
  *
+ * When `vercel env pull` decrypts DATABASE_URL to empty, use
+ * `POST /api/ops/migrate` on the deployed app instead (MIGRATE_TOKEN).
+ *
  * Prints applied/expected only. Never prints connection strings.
  */
 import { existsSync, readFileSync } from "node:fs";

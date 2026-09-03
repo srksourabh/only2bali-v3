@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getDictionary } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n/config";
+import { listingCardImage, providerCoverImage } from "@/lib/media/listing-art";
 import { getPublicProviderBySlugForPage } from "@/lib/repositories/providers-public";
 
 export const revalidate = 120;
@@ -64,14 +65,16 @@ export default async function ProviderProfilePage({
             </div>
           </header>
 
-          {provider.coverImage && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={provider.coverImage}
-              alt=""
-              style={{ width: "100%", maxHeight: "280px", objectFit: "cover", marginTop: "1rem" }}
-            />
-          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={providerCoverImage({
+              vendorType: provider.vendorType,
+              coverImage: provider.coverImage,
+              businessName: provider.businessName,
+            })}
+            alt=""
+            style={{ width: "100%", maxHeight: "280px", objectFit: "cover", marginTop: "1rem" }}
+          />
 
           {provider.description && (
             <p style={{ marginTop: "1.2rem" }}>{provider.description}</p>
@@ -108,14 +111,16 @@ export default async function ProviderProfilePage({
             <div className="pkgs" style={{ marginTop: "1rem" }}>
               {provider.listings.map((s) => (
                 <article className="pkg" key={s.id}>
-                  {s.images?.[0] && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={s.images[0]}
-                      alt=""
-                      style={{ width: "100%", height: "140px", objectFit: "cover" }}
-                    />
-                  )}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={listingCardImage({
+                      serviceType: s.serviceType,
+                      title: s.title,
+                      images: s.images,
+                    })}
+                    alt=""
+                    style={{ width: "100%", height: "140px", objectFit: "cover" }}
+                  />
                   <div className="pkg-body">
                     <span className="pkg-tag" style={{ position: "static", marginBottom: ".4rem" }}>
                       {s.serviceType.replaceAll("_", " ")}

@@ -1,7 +1,8 @@
+import { PROTOCOLS } from "@/lib/protocols";
 import { z } from "zod";
 
 export const tripRequestCreateSchema = z.object({
-  protocol: z.enum(["jain", "vegetarian", "vegan"]),
+  protocol: z.enum(PROTOCOLS),
   tier: z.enum(["economical", "comfort", "premium"]).optional(),
   groupSize: z.number().int().min(1).max(500),
   crewType: z.string().trim().max(80).optional(),

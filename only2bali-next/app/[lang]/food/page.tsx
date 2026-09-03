@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import type { Locale } from "@/lib/i18n/config";
@@ -33,6 +34,21 @@ export default async function Food({ params }: { params: Promise<{ lang: string 
           <span className="tag">Our Dietary Protocols</span>
           <h2>We audit the kitchens so you can enjoy the holiday</h2>
           <p className="sub">Whether you observe Jain protocol, strict vegetarianism (no egg), or require plant-based vegan meals, we ensure strict compliance at every partner warung, restaurant, and hotel.</p>
+
+          <div className="grid g3" style={{ marginBottom: "1.5rem" }}>
+            {[
+              { src: "/Asset/culinary.png", label: "Jain and vegetarian thali" },
+              { src: "/Asset/food-kitchen.png", label: "Villa kitchen, own cook" },
+              { src: "/Asset/food-class.png", label: "Vegetarian cooking class" },
+            ].map((shot) => (
+              <div key={shot.src} className="card" style={{ padding: 0, overflow: "hidden" }}>
+                <div style={{ position: "relative", height: 180 }}>
+                  <Image src={shot.src} alt={shot.label} fill sizes="(max-width: 960px) 100vw, 33vw" style={{ objectFit: "cover" }} />
+                </div>
+                <p style={{ padding: "0.75rem 1rem 1rem", margin: 0, fontSize: ".88rem" }}>{shot.label}</p>
+              </div>
+            ))}
+          </div>
 
           <div className="grid g3">
             <div className="card">

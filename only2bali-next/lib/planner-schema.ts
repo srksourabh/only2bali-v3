@@ -1,7 +1,8 @@
+import { PROTOCOLS } from "@/lib/protocols";
 import { z } from "zod";
 
 /** Hard cap on the request body. Rejected before any parsing or model call. */
-export const MAX_BODY_BYTES = 8 * 1024;
+export const MAX_BODY_BYTES = 16 * 1024;
 
 /** How long the model gets before we abandon it and serve the curated itinerary. */
 export const MODEL_TIMEOUT_MS = 20_000;
@@ -9,10 +10,51 @@ export const MODEL_TIMEOUT_MS = 20_000;
 /** Trip length we are willing to generate. Bounds the prompt and the response. */
 export const MAX_DAYS = 30;
 
-const shortText = z.string().trim().max(200);
+const shortText = z.string().trim().max(240);
 
-export const plannerInputSchema = z.object({
-  plain_request: z.string().trim().max(4000).default(""),
+function blankToUndef(value: unknown): unknown {
+  if (value === null) return undefined;
+  if (typeof value === "number" && Number.isNaN(value)) return undefined;
+  if (typeof value === "string" && value.trim() === "") return undefined;
+  return value;
+}
+
+function aliasFood(value: unknown): unknown {
+  const cleaned = blankToUndef(value);
+  if (typeof cleaned !== "string") return cleaned;
+  const key = cleaned.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  const aliases: Record<string, string> = {
+    veg: "vegetarian",
+    vegetarian: "vegetarian",
+    jain: "jain",
+    vegan: "vegan",
+    satvik: "satvik",
+    sattvic: "satvik",
+    eggetarian: "eggetarian",
+    egg: "eggetarian",
+    halal: "halal",
+    non_veg: "non_veg",
+    nonveg: "non_veg",
+  };
+  return aliases[key] ?? key;
+}
+
+export const plannerInputSchema = z.preprocess((raw) => {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const obj: Record<string, unknown> = { ...(raw as Record<string, unknown>) };
+  for (const key of Object.keys(obj)) {
+    obj[key] = blankToUndef(obj[key]);
+  }
+  obj.food = aliasFood(obj.food);
+  if (typeof obj.number_of_people === "number" && obj.number_of_people < 1) {
+    delete obj.number_of_people;
+  }
+  if (typeof obj.plain_request === "string" && obj.plain_request.length > 8000) {
+    obj.plain_request = obj.plain_request.slice(0, 8000);
+  }
+  return obj;
+}, z.object({
+  plain_request: z.string().trim().max(8000).default(""),
   name: shortText.default("Traveler"),
   age: z.union([z.string().trim().max(10), z.number()]).optional(),
   crew_type: shortText.default("friends_get_together"),
@@ -23,7 +65,7 @@ export const plannerInputSchema = z.object({
   international_airport: shortText.default(""),
   flight_class: shortText.default("Economy"),
   budget: z.enum(["economical", "comfort", "premium"]).default("comfort"),
-  food: z.enum(["jain", "vegetarian", "vegan"]).default("vegetarian"),
+  food: z.enum(PROTOCOLS).catch("vegetarian").default("vegetarian"),
   diet_choices: z.array(shortText).max(20).default([]),
   kitchen: z.coerce.boolean().default(false),
   cook: z.coerce.boolean().default(false),
@@ -32,7 +74,7 @@ export const plannerInputSchema = z.object({
   rent_period: shortText.default("1-2 Days"),
   include_driver: shortText.default("Yes"),
   preferred_languages: z.array(shortText).max(10).default(["English"]),
-});
+}));
 
 export type PlannerInput = z.infer<typeof plannerInputSchema>;
 

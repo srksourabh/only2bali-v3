@@ -22,7 +22,11 @@ export async function POST(req: Request) {
     const parsed = tripRequestCreateSchema.safeParse(await readJson(req, 24_576));
     if (!parsed.success) return validationError(parsed.error);
 
-    const result = await createTravellerRequest(user.accountId, Boolean(user.mobile), parsed.data);
+    const result = await createTravellerRequest(
+      user.accountId,
+      Boolean(user.mobileVerifiedAt),
+      parsed.data
+    );
     return NextResponse.json({ success: true, data: result }, { status: 201 });
   } catch (err) {
     return apiError(err, "Could not create trip request.");

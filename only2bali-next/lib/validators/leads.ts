@@ -16,7 +16,9 @@ const phone = z
   .max(24)
   .regex(/^[+\d][\d\s-]{7,}$/, "Enter a valid phone number, for example +91 98xxxxxxx.");
 
-export const PROTOCOLS = ["jain", "vegetarian", "vegan"] as const;
+import { PROTOCOLS } from "@/lib/protocols";
+
+export { PROTOCOLS };
 
 export const leadSchema = z.object({
   name: z.string().trim().min(1, "Tell us your name.").max(120),

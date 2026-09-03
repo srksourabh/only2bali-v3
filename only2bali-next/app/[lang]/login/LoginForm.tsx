@@ -21,10 +21,12 @@ export default function LoginForm({
   dict,
   lang,
   next,
+  otpOffered = true,
 }: {
   dict: Dictionary;
   lang: Locale;
   next: string;
+  otpOffered?: boolean;
 }) {
   const t = dict.auth;
   const router = useRouter();
@@ -84,7 +86,11 @@ export default function LoginForm({
         router.refresh();
         return;
       }
-      setError(body?.fields?.[0]?.message ?? body?.error ?? t.errGeneric);
+      if (mode === "signin") {
+        setError(body?.error ?? "Username or password is incorrect.");
+      } else {
+        setError(body?.fields?.[0]?.message ?? body?.error ?? t.errGeneric);
+      }
     } catch {
       setError(t.errNetwork);
     } finally {
@@ -168,6 +174,7 @@ export default function LoginForm({
             onClick={() => {
               setRole(r);
               setMode("signin");
+              setStep("password");
               setError(null);
             }}
           >
@@ -223,11 +230,11 @@ export default function LoginForm({
 
           {role !== "admin" && clerkEnabled && (
             <p className="empty" style={{ fontSize: ".85rem" }}>
-              Or use password / OTP below.
+              {otpOffered ? "Or use password / OTP below." : "Or use password below."}
             </p>
           )}
 
-          <label htmlFor="username">Username</label>
+          <label htmlFor="username">Username or email</label>
           <input
             id="username"
             value={username}
@@ -244,9 +251,13 @@ export default function LoginForm({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete={mode === "signup" ? "new-password" : "current-password"}
+            minLength={mode === "signup" ? 10 : undefined}
             required
             aria-invalid={Boolean(error)}
           />
+          {mode === "signup" && role !== "admin" && (
+            <p className="fineprint">Password must be at least 10 characters.</p>
+          )}
 
           {mode === "signup" && role !== "admin" && (
             <>
@@ -272,7 +283,7 @@ export default function LoginForm({
             {busy ? "Checking..." : mode === "signup" ? "Create account" : "Sign in"}
           </button>
 
-          {role !== "admin" && (
+          {otpOffered && role === "traveller" && (
             <div className="authalt">
               <button type="button" onClick={() => setStep("identifier")}>
                 Use OTP instead

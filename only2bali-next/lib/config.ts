@@ -14,8 +14,18 @@
  * public by nature — they appear on the page — so `NEXT_PUBLIC_` is right here,
  * and would be wrong for anything secret.
  */
+/**
+ * Sentinels for "somebody pasted the example and moved on".
+ *
+ * These must be addresses and numbers nobody could genuinely want. The email
+ * sentinel used to be `hello@only2bali.com`, which is the single most likely
+ * real address for this business - and production had it set. The result was a
+ * site that looked configured, reported `contact.email: false`, and showed no
+ * contact link, with nothing anywhere explaining why. A sentinel has to be
+ * unusable to be safe; example.com is reserved by RFC 2606 for exactly this.
+ */
 const PLACEHOLDER_WHATSAPP = "6281200000000";
-const PLACEHOLDER_EMAIL = "hello@only2bali.com";
+const PLACEHOLDER_EMAIL = "you@example.com";
 
 /** Digits only, no leading `+`, which is what wa.me expects. */
 const rawWhatsapp = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "").replace(/\D/g, "");

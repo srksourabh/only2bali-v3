@@ -1,0 +1,213 @@
+- generic [ref=f16e1]:
+  - banner [ref=f16e2]:
+    - generic [ref=f16e3]:
+      - link "Only2Bali Only2Bali" [ref=f16e4] [cursor=pointer]:
+        - /url: /en
+        - img "Only2Bali" [ref=f16e5]
+        - generic [ref=f16e9]: Only2Bali
+      - navigation "Primary" [ref=f16e11]:
+        - menubar [ref=f16e13]:
+          - menuitem "Home" [ref=f16e14] [cursor=pointer]
+          - menuitem "Destinations" [ref=f16e16] [cursor=pointer]
+          - menuitem "Providers" [ref=f16e18] [cursor=pointer]
+          - menuitem "Services" [ref=f16e20] [cursor=pointer]
+          - menuitem "Packages" [ref=f16e22] [cursor=pointer]
+          - menuitem "Trip quality" [ref=f16e24] [cursor=pointer]
+      - generic [ref=f16e26]:
+        - button "Language" [ref=f16e28] [cursor=pointer]:
+          - generic [ref=f16e32]: English
+        - link "My account" [ref=f16e74] [cursor=pointer]:
+          - /url: /en/account
+        - link "Plan your trip" [ref=f16e34] [cursor=pointer]:
+          - /url: /en/planner
+  - main [ref=f16e35]:
+    - generic [ref=f16e37]:
+      - link "← All services" [ref=f16e38] [cursor=pointer]:
+        - /url: /en/services
+      - generic [ref=f16e40]:
+        - generic [ref=f16e41]: transport · Kuta
+        - heading "TEST -- delete me -- webhook verification service" [level=1] [ref=f16e42]
+        - paragraph [ref=f16e43]:
+          - link "TEST -- delete me -- webhook verification" [ref=f16e44] [cursor=pointer]:
+            - /url: /en/providers/test-delete-me-webhook-verification
+      - generic [ref=f16e45]:
+        - generic [ref=f16e46]:
+          - text: ₹1,000
+          - generic [ref=f16e47]: from · per trip · comfort
+        - paragraph [ref=f16e48]: Internal test listing to verify Razorpay webhook. Safe to delete.
+      - generic [ref=f16e49]:
+        - paragraph [ref=f16e75]: Held — reference O2B-BDUM-VNFP
+        - generic [ref=f16e76]:
+          - paragraph [ref=f16e77]: Pay ₹1,000
+          - group "Payment methods" [ref=f16e78]:
+            - generic [ref=f16e79]:
+              - button "Stripe · ₹1,000" [disabled] [ref=f16e80] [cursor=pointer]
+              - paragraph [ref=f16e81]: Stripe secret key is not configured.
+            - button "Razorpay · ₹1,000" [ref=f16e89] [cursor=pointer]
+          - alert [ref=f16e90]: International cards are not supported. Please contact our support team for help
+  - contentinfo [ref=f16e61]:
+    - generic [ref=f16e63]:
+      - generic [ref=f16e64]: Only2Bali
+      - paragraph [ref=f16e70]: Indonesia travel marketplace for Indian groups — Bali, Jakarta and beyond.
+      - paragraph [ref=f16e71]:
+        - text: © 2026 Only2Bali · Photography and palette from the existing site. ·
+        - link "hello@only2bali.com" [ref=f16e72] [cursor=pointer]:
+          - /url: mailto:hello@only2bali.com
+  - alert [ref=f16e73]
+  - generic [ref=f16e85]:
+    - generic [ref=f16e86]: Test Mode
+    - iframe [active] [ref=f16e88]:
+      - generic [ref=f17e2]:
+        - generic [ref=f17e3]:
+          - generic [ref=f17e4]:
+            - generic [ref=f17e7]:
+              - generic [ref=f17e8]: O
+              - generic "Only2Bali" [ref=f17e10]
+            - generic [ref=f17e12]:
+              - generic [ref=f17e13]:
+                - generic [ref=f17e17]:
+                  - generic [ref=f17e18]: Price Summary
+                  - heading "₹ 0 1 2 3 4 5 6 7 8 9 0 , 0 1 2 3 4 5 6 7 8 9 0 0 1 2 3 4 5 6 7 8 9 0 0 1 2 3 4 5 6 7 8 9 0" [level=3] [ref=f17e22]:
+                    - generic [ref=f17e23]: ₹
+                    - generic [ref=f17e24]:
+                      - generic [ref=f17e25]: "0"
+                      - generic [ref=f17e26]: "1"
+                      - generic [ref=f17e27]: "2"
+                      - generic [ref=f17e28]: "3"
+                      - generic [ref=f17e29]: "4"
+                      - generic [ref=f17e30]: "5"
+                      - generic [ref=f17e31]: "6"
+                      - generic [ref=f17e32]: "7"
+                      - generic [ref=f17e33]: "8"
+                      - generic [ref=f17e34]: "9"
+                      - generic [ref=f17e35]: "0"
+                    - generic [ref=f17e36]: ","
+                    - generic [ref=f17e37]:
+                      - generic [ref=f17e38]: "0"
+                      - generic [ref=f17e39]: "1"
+                      - generic [ref=f17e40]: "2"
+                      - generic [ref=f17e41]: "3"
+                      - generic [ref=f17e42]: "4"
+                      - generic [ref=f17e43]: "5"
+                      - generic [ref=f17e44]: "6"
+                      - generic [ref=f17e45]: "7"
+                      - generic [ref=f17e46]: "8"
+                      - generic [ref=f17e47]: "9"
+                      - generic [ref=f17e48]: "0"
+                    - generic [ref=f17e49]:
+                      - generic [ref=f17e50]: "0"
+                      - generic [ref=f17e51]: "1"
+                      - generic [ref=f17e52]: "2"
+                      - generic [ref=f17e53]: "3"
+                      - generic [ref=f17e54]: "4"
+                      - generic [ref=f17e55]: "5"
+                      - generic [ref=f17e56]: "6"
+                      - generic [ref=f17e57]: "7"
+                      - generic [ref=f17e58]: "8"
+                      - generic [ref=f17e59]: "9"
+                      - generic [ref=f17e60]: "0"
+                    - generic [ref=f17e61]:
+                      - generic [ref=f17e62]: "0"
+                      - generic [ref=f17e63]: "1"
+                      - generic [ref=f17e64]: "2"
+                      - generic [ref=f17e65]: "3"
+                      - generic [ref=f17e66]: "4"
+                      - generic [ref=f17e67]: "5"
+                      - generic [ref=f17e68]: "6"
+                      - generic [ref=f17e69]: "7"
+                      - generic [ref=f17e70]: "8"
+                      - generic [ref=f17e71]: "9"
+                      - generic [ref=f17e72]: "0"
+                - button "Using as +91 91234 56780" [ref=f17e221] [cursor=pointer]
+              - generic [ref=f17e73]:
+                - generic [ref=f17e74]: Secured by
+                - generic "RazorPay" [ref=f17e75]
+          - generic [ref=f17e79]:
+            - generic [ref=f17e80]:
+              - generic [ref=f17e81]: Payment Options
+              - generic [ref=f17e82]:
+                - button "Show more options" [ref=f17e83] [cursor=pointer]
+                - button "Close Checkout" [ref=f17e87] [cursor=pointer]
+            - separator [ref=f17e91]
+            - generic [ref=f17e96]:
+              - generic [ref=f17e98]:
+                - generic [ref=f17e230] [cursor=pointer]:
+                  - radio "Cards VISA MC RUPAY MAES"
+                  - generic [ref=f17e232]:
+                    - generic [ref=f17e233]: Cards
+                    - generic [ref=f17e237]:
+                      - img "VISA" [ref=f17e239]
+                      - img "MC" [ref=f17e241]
+                      - img "RUPAY" [ref=f17e243]
+                      - img "MAES" [ref=f17e245]
+                - generic [ref=f17e246] [cursor=pointer]:
+                  - radio "Netbanking BARB_R CNRB PUNB_R UTBI"
+                  - generic [ref=f17e248]:
+                    - generic [ref=f17e249]: Netbanking
+                    - generic [ref=f17e253]:
+                      - img "BARB_R" [ref=f17e255]
+                      - img "CNRB" [ref=f17e257]
+                      - img "PUNB_R" [ref=f17e259]
+                      - img "UTBI" [ref=f17e261]
+                - generic [ref=f17e262] [cursor=pointer]:
+                  - radio "Wallet mobikwik airtelmoney olamoney"
+                  - generic [ref=f17e264]:
+                    - generic [ref=f17e265]: Wallet
+                    - generic [ref=f17e269]:
+                      - img "mobikwik" [ref=f17e271]
+                      - img "airtelmoney" [ref=f17e273]
+                      - img "olamoney" [ref=f17e275]
+                - generic [ref=f17e276] [cursor=pointer]:
+                  - radio "Pay Later lazypay icic hdfc epaylater"
+                  - generic [ref=f17e278]:
+                    - generic [ref=f17e279]: Pay Later
+                    - generic [ref=f17e283]:
+                      - img "lazypay" [ref=f17e285]
+                      - img "icic" [ref=f17e287]
+                      - img "hdfc" [ref=f17e289]
+                      - img "epaylater" [ref=f17e291]
+              - generic [ref=f17e548]:
+                - heading "Add a new card" [level=3] [ref=f17e549]
+                - generic [ref=f17e550]:
+                  - generic [ref=f17e551]:
+                    - textbox "Card Number" [ref=f17e554]: 5267 3181 8797 5449
+                    - generic [ref=f17e556]:
+                      - textbox "MM / YY" [ref=f17e558]: 12 / 29
+                      - textbox "CVV" [ref=f17e560]: "123"
+                    - textbox "Enter name on card" [ref=f17e562]: O2B Webhook Test
+                  - generic [ref=f17e566] [cursor=pointer]:
+                    - checkbox "Save this card as per RBI guidelines" [ref=f17e571]
+                    - generic [ref=f17e568]: Save this card as per RBI guidelines
+                  - button "Continue" [ref=f17e570] [cursor=pointer]
+        - generic:
+          - generic [ref=f17e672]:
+            - generic [ref=f17e673]:
+              - paragraph
+              - paragraph
+              - heading "Processing your payment" [level=3] [ref=f17e674]
+              - paragraph [ref=f17e676]: This will only take a few seconds.
+            - button "Cancel" [ref=f17e707] [cursor=pointer]
+          - generic [ref=f17e609]:
+            - generic [ref=f17e610]:
+              - paragraph [ref=f17e612]: Timeout in 2:11 mins
+              - generic [ref=f17e614]:
+                - generic [ref=f17e615]:
+                  - generic "UTIB" [ref=f17e617]
+                  - generic "MasterCard" [ref=f17e631]
+                - generic [ref=f17e635]:
+                  - generic [ref=f17e636]: Axis Bank
+                  - generic [ref=f17e637]: 5267 3181 8797 5449
+            - generic [ref=f17e646]:
+              - generic [ref=f17e647]: Enter OTP to complete payment
+              - generic [ref=f17e648]: Enter OTP sent to the number linked to your card ending with 5449
+              - textbox [ref=f17e650]:
+                - /placeholder: Enter OTP
+                - text: "1221"
+              - generic [ref=f17e651]:
+                - button [ref=f17e652] [cursor=pointer]
+                - button "Resend OTP" [ref=f17e666] [cursor=pointer]
+              - generic [ref=f17e657]:
+                - button "Submitting OTP" [ref=f17e708] [cursor=pointer]
+                - generic [ref=f17e660]:
+                  - generic [ref=f17e661]: Secured by
+                  - generic "RazorPay" [ref=f17e662]

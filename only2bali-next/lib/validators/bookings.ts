@@ -1,3 +1,4 @@
+import { PROTOCOLS } from "@/lib/protocols";
 import { z } from "zod";
 
 const travellerSchema = z.object({
@@ -7,9 +8,9 @@ const travellerSchema = z.object({
 });
 
 const sharedBookingFields = {
-  pax: z.number().int().min(1, "At least one traveller.").max(30, "Contact us for groups over 30."),
+  pax: z.coerce.number().int().min(1, "At least one traveller.").max(30, "Contact us for groups over 30."),
   rooms: z.number().int().min(1).max(15).optional(),
-  protocol: z.enum(["jain", "vegetarian", "vegan"]),
+  protocol: z.enum(PROTOCOLS),
   travellers: z
     .array(travellerSchema)
     .min(1, "Add at least the lead traveller.")
@@ -29,7 +30,15 @@ export const departureBookingSchema = z.object({
 });
 
 export const listingBookingSchema = z.object({
-  listingId: z.uuid("Choose a service."),
+  listingId: z
+    .string()
+    .trim()
+    .min(8, "Choose a service.")
+    .max(80, "Choose a service.")
+    .regex(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$|^sample-svc-[a-z0-9-]+$/i,
+      "Choose a service."
+    ),
   /** ISO calendar date YYYY-MM-DD in the service's local day. */
   serviceDate: z
     .string()

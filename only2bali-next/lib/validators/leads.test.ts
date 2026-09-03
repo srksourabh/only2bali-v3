@@ -39,7 +39,7 @@ describe("leadSchema", () => {
   });
 
   it("refuses a protocol outside the database enum", () => {
-    expect(leadSchema.safeParse({ ...validLead, protocol: "eggetarian" }).success).toBe(false);
+    expect(leadSchema.safeParse({ ...validLead, protocol: "not_a_protocol" }).success).toBe(false);
   });
 
   it("caps the free-text message so one submission cannot fill the table", () => {

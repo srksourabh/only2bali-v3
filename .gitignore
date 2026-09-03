@@ -53,7 +53,13 @@ only2bali-next/.vercel
 
 # Agent state - local tooling only, never in git
 .agent/
+.agents/
+skills-lock.json
 .serena/
 .claude/
 .qodo/
 saas-audit-output/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
+.env*

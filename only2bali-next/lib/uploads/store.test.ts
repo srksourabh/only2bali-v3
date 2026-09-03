@@ -1,10 +1,13 @@
 import { describe, it, expect, beforeAll, afterEach, vi } from "vitest";
 import { createHmac } from "node:crypto";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
 import {
   mintDocumentHandle,
   verifyDocumentHandle,
   isAllowedStoredUrl,
   readDocumentBytes,
+  storeUpload,
   uploadsConfigured,
   uploadBackend,
 } from "./store";
@@ -190,5 +193,56 @@ describe("isAllowedStoredUrl (media path, unchanged)", () => {
     expect(isAllowedStoredUrl("/uploads/providers/abc/media/photo-1.jpg")).toBe(true);
     expect(isAllowedStoredUrl("https://xyz.public.blob.vercel-storage.com/a.jpg")).toBe(true);
     expect(isAllowedStoredUrl("http://example.com/a.jpg")).toBe(false);
+  });
+});
+
+/**
+ * The local branch of readDocumentBytes had no coverage, and it did not agree
+ * with the local branch of storeUpload: the write put the file under
+ * `.uploads/providers/<vendor>/…` and the read looked for it under
+ * `.uploads/<vendor>/…`. Every KYC document uploaded on a developer machine
+ * was therefore stored once and never readable again. Round-trip it rather
+ * than asserting either path, so the two cannot drift apart again.
+ */
+describe("local private document storage", () => {
+  const LOCAL_VENDOR = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+
+  afterEach(async () => {
+    await rm(path.join(process.cwd(), ".uploads", "providers", LOCAL_VENDOR), {
+      recursive: true,
+      force: true,
+    });
+  });
+
+  it("reads back exactly what it wrote", async () => {
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("BLOB_PRIVATE_READ_WRITE_TOKEN", "");
+
+    const file = new File([new Uint8Array([0x25, 0x50, 0x44, 0x46])], "licence.pdf", {
+      type: "application/pdf",
+    });
+    const stored = await storeUpload(file, { folder: "documents", vendorId: LOCAL_VENDOR });
+    if (!("ref" in stored)) throw new Error("a documents upload must return a private ref");
+
+    expect(stored.ref).toBe(`providers/${LOCAL_VENDOR}/documents/${stored.ref.split("/").pop()}`);
+
+    const read = await readDocumentBytes(stored.ref);
+    expect(read).not.toBeNull();
+    expect(read!.bytes.toString("hex")).toBe("25504446");
+    expect(read!.contentType).toBe("application/pdf");
+  });
+
+  it("still refuses to walk out of the private root", async () => {
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv("BLOB_PRIVATE_READ_WRITE_TOKEN", "");
+
+    const outside = path.join(process.cwd(), ".uploads", "escaped.pdf");
+    await mkdir(path.dirname(outside), { recursive: true });
+    await writeFile(outside, "should never be served");
+
+    expect(await readDocumentBytes("providers/../escaped.pdf")).toBeNull();
+    expect(await readDocumentBytes("../.uploads/escaped.pdf")).toBeNull();
+
+    await rm(outside, { force: true });
   });
 });

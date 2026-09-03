@@ -11,6 +11,7 @@
 import { and, eq, lt, sql } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 import { db } from "@/lib/db";
+import { namedTravellersFitGroup } from "@/lib/repositories/booking-travellers";
 import {
   availability,
   booking,
@@ -24,17 +25,14 @@ import {
   vendor,
 } from "@/lib/db/schema";
 import type { DepartureBookingInput, ListingBookingInput } from "@/lib/validators/bookings";
+import { resolveBookableListingId } from "@/lib/repositories/fallback-listings";
 import { computeListingGrossAmount } from "@/lib/repositories/listing-price";
 import { isPubliclyVisibleListing } from "@/lib/repositories/listings-public";
+import { resolveCommissionRate, splitGrossAmount } from "@/lib/payments/fee";
+import { getPlatformFeeRate } from "@/lib/repositories/platform-settings";
 
 /** How long a seat / date is held while the traveller pays. */
 export const HOLD_MINUTES = 15;
-
-/**
- * Platform commission when the sale comes from the catalogue rather than from a
- * provider's own offer. A provider-originated booking uses `vendor.commission_rate`.
- */
-const CATALOGUE_COMMISSION_RATE = 0.15;
 
 export type BookingFailure =
   | "departure_not_found"
@@ -89,7 +87,7 @@ export async function createBooking(
   accountId: string,
   input: DepartureBookingInput
 ): Promise<BookingResult> {
-  if (input.travellers.length !== input.pax) {
+  if (!namedTravellersFitGroup(input.pax, input.travellers.length)) {
     return { ok: false, reason: "traveller_count_mismatch" };
   }
 
@@ -161,7 +159,8 @@ export async function createBooking(
       .where(eq(departure.id, dep.id));
 
     const grossAmount = dep.priceAmount * input.pax;
-    const commissionAmount = Math.round(grossAmount * CATALOGUE_COMMISSION_RATE);
+    const catalogueRate = await getPlatformFeeRate(tx);
+    const split = splitGrossAmount(grossAmount, catalogueRate);
 
     const [row] = await tx
       .insert(booking)
@@ -175,9 +174,9 @@ export async function createBooking(
         rooms: input.rooms,
         grossAmount,
         currency: dep.priceCurrency,
-        commissionRate: CATALOGUE_COMMISSION_RATE.toFixed(4),
-        commissionAmount,
-        netAmount: grossAmount - commissionAmount,
+        commissionRate: split.rateString,
+        commissionAmount: split.commissionAmount,
+        netAmount: split.netAmount,
         status: "pending_payment",
       })
       .returning({ id: booking.id, reference: booking.reference });
@@ -214,7 +213,7 @@ export async function createListingBooking(
   accountId: string,
   input: ListingBookingInput
 ): Promise<BookingResult> {
-  if (input.travellers.length !== input.pax) {
+  if (!namedTravellersFitGroup(input.pax, input.travellers.length)) {
     return { ok: false, reason: "traveller_count_mismatch" };
   }
 
@@ -223,11 +222,14 @@ export async function createListingBooking(
     return { ok: false, reason: "listing_unavailable" };
   }
 
+  const listingId = await resolveBookableListingId(input.listingId);
+  if (!listingId) return { ok: false, reason: "listing_not_found" };
+
   return db.transaction(async (tx) => {
     const [listingRow] = await tx
       .select()
       .from(serviceListing)
-      .where(eq(serviceListing.id, input.listingId))
+      .where(eq(serviceListing.id, listingId))
       .limit(1)
       .for("update");
 
@@ -340,8 +342,9 @@ export async function createListingBooking(
       pax: input.pax,
       priceOverrideAmount: slot.priceOverrideAmount,
     });
-    const commissionRate = Number(listing.commissionRate ?? "0.15");
-    const commissionAmount = Math.round(grossAmount * commissionRate);
+    const platformRate = await getPlatformFeeRate(tx);
+    const commissionRate = resolveCommissionRate(listing.commissionRate, platformRate);
+    const split = splitGrossAmount(grossAmount, commissionRate);
 
     const [row] = await tx
       .insert(booking)
@@ -354,9 +357,9 @@ export async function createListingBooking(
         rooms: input.rooms,
         grossAmount,
         currency: listing.priceCurrency,
-        commissionRate: commissionRate.toFixed(4),
-        commissionAmount,
-        netAmount: grossAmount - commissionAmount,
+        commissionRate: split.rateString,
+        commissionAmount: split.commissionAmount,
+        netAmount: split.netAmount,
         status: "pending_payment",
       })
       .returning({ id: booking.id, reference: booking.reference });

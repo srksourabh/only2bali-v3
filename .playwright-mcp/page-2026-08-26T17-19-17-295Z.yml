@@ -1,0 +1,56 @@
+- generic [active] [ref=f13e1]:
+  - banner [ref=f13e2]:
+    - generic [ref=f13e3]:
+      - link "Only2Bali Only2Bali" [ref=f13e4] [cursor=pointer]:
+        - /url: /en
+        - img "Only2Bali" [ref=f13e5]
+        - generic [ref=f13e9]: Only2Bali
+      - navigation "Primary" [ref=f13e11]:
+        - menubar [ref=f13e13]:
+          - menuitem "Home" [ref=f13e14] [cursor=pointer]
+          - menuitem "Destinations" [ref=f13e16] [cursor=pointer]
+          - menuitem "Providers" [ref=f13e18] [cursor=pointer]
+          - menuitem "Services" [ref=f13e20] [cursor=pointer]
+          - menuitem "Packages" [ref=f13e22] [cursor=pointer]
+          - menuitem "Trip quality" [ref=f13e24] [cursor=pointer]
+      - generic [ref=f13e26]:
+        - button "Language" [ref=f13e28] [cursor=pointer]:
+          - generic [ref=f13e32]: English
+        - link "Sign in" [ref=f13e33] [cursor=pointer]:
+          - /url: /en/login
+        - link "Plan your trip" [ref=f13e34] [cursor=pointer]:
+          - /url: /en/planner
+  - main [ref=f13e35]:
+    - generic [ref=f13e42]:
+      - tablist "Login type" [ref=f13e43]:
+        - tab "Traveler" [selected] [ref=f13e44] [cursor=pointer]
+        - tab "Service provider" [ref=f13e45] [cursor=pointer]
+        - tab "Admin" [ref=f13e46] [cursor=pointer]
+      - generic [ref=f13e47]:
+        - heading "Sign in as traveler" [level=1] [ref=f13e48]
+        - paragraph [ref=f13e49]: Use username and password, or continue with Google. Your session stays in a secure HTTP-only cookie.
+        - tablist "Account action" [ref=f13e50]:
+          - tab "Sign in" [selected] [ref=f13e51] [cursor=pointer]
+          - tab "Create account" [ref=f13e52] [cursor=pointer]
+        - generic [ref=f13e53]:
+          - button "Continue with Google" [disabled] [ref=f13e54]:
+            - generic [ref=f13e55]: G
+            - text: Continue with Google
+          - button "Continue with Apple" [disabled] [ref=f13e56]:
+            - generic [ref=f13e57]: A
+            - text: Continue with Apple
+        - paragraph [ref=f13e58]: Or use password below.
+        - generic [ref=f13e59]: Username or email
+        - textbox "Username or email" [ref=f13e60]: admin
+        - generic [ref=f13e61]: Password
+        - textbox "Password" [ref=f13e62]: Ldf409dMg8QpdAQr
+        - button "Sign in" [ref=f13e63] [cursor=pointer]
+  - contentinfo [ref=f13e64]:
+    - generic [ref=f13e66]:
+      - generic [ref=f13e67]: Only2Bali
+      - paragraph [ref=f13e73]: Indonesia travel marketplace for Indian groups — Bali, Jakarta and beyond.
+      - paragraph [ref=f13e74]:
+        - text: © 2026 Only2Bali · Photography and palette from the existing site. ·
+        - link "hello@only2bali.com" [ref=f13e75] [cursor=pointer]:
+          - /url: mailto:hello@only2bali.com
+  - alert [ref=f13e76]

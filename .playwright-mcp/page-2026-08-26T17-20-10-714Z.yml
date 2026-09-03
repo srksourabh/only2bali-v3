@@ -1,0 +1,91 @@
+- generic [active] [ref=f14e1]:
+  - banner [ref=f14e2]:
+    - generic [ref=f14e3]:
+      - link "Only2Bali Only2Bali" [ref=f14e4] [cursor=pointer]:
+        - /url: /en
+        - img "Only2Bali" [ref=f14e5]
+        - generic [ref=f14e9]: Only2Bali
+      - navigation "Primary" [ref=f14e11]:
+        - menubar [ref=f14e13]:
+          - menuitem "Home" [ref=f14e14] [cursor=pointer]
+          - menuitem "Destinations" [ref=f14e16] [cursor=pointer]
+          - menuitem "Providers" [ref=f14e18] [cursor=pointer]
+          - menuitem "Services" [ref=f14e20] [cursor=pointer]
+          - menuitem "Packages" [ref=f14e22] [cursor=pointer]
+          - menuitem "Trip quality" [ref=f14e24] [cursor=pointer]
+      - generic [ref=f14e26]:
+        - button "Language" [ref=f14e28] [cursor=pointer]:
+          - generic [ref=f14e32]: English
+        - link "My account" [ref=f14e33] [cursor=pointer]:
+          - /url: /en/account
+        - link "Plan your trip" [ref=f14e34] [cursor=pointer]:
+          - /url: /en/planner
+  - main [ref=f14e35]:
+    - generic [ref=f14e36]:
+      - generic [ref=f14e37]:
+        - generic [ref=f14e38]:
+          - text: Signed in as
+          - heading "o2b-webhook-test@only2bali.com" [level=1] [ref=f14e39]
+          - generic [ref=f14e40]: Traveller
+        - button "Sign out" [ref=f14e41] [cursor=pointer]
+      - generic [ref=f14e42]:
+        - generic [ref=f14e43]:
+          - heading "Your trip requests" [level=2] [ref=f14e44]
+          - paragraph [ref=f14e45]: Compare provider offers. Contact details stay masked until booking is confirmed.
+          - list
+          - generic [ref=f14e46]:
+            - heading "Verify a mobile number" [level=3] [ref=f14e47]
+            - paragraph [ref=f14e48]: Providers only see published requests after a mobile is verified.
+            - generic [ref=f14e49]:
+              - text: Mobile with country code
+              - textbox "Mobile with country code" [ref=f14e50]:
+                - /placeholder: +9198XXXXXXXX
+            - button "Send code" [ref=f14e51] [cursor=pointer]
+          - generic [ref=f14e52]:
+            - heading "Post a trip request" [level=3] [ref=f14e53]
+            - generic [ref=f14e54]:
+              - text: Food protocol
+              - combobox "Food protocol" [ref=f14e55]:
+                - option "Jain"
+                - option "Vegetarian" [selected]
+                - option "Vegan"
+            - generic [ref=f14e56]:
+              - text: Group size
+              - spinbutton "Group size" [ref=f14e57]: "8"
+            - generic [ref=f14e58]:
+              - text: Departure city
+              - textbox "Departure city" [ref=f14e59]:
+                - /placeholder: Mumbai
+            - generic [ref=f14e60]:
+              - text: Travel month
+              - textbox "Travel month" [ref=f14e61]:
+                - /placeholder: October
+            - generic [ref=f14e62]:
+              - text: What do you need?
+              - textbox "What do you need?" [ref=f14e63]:
+                - /placeholder: Villa with Jain kitchen, Hindi guide, 6 nights
+            - button "Send to verified providers" [ref=f14e64] [cursor=pointer]
+          - link "Or start from the enquiry form" [ref=f14e65] [cursor=pointer]:
+            - /url: /en/inquiry
+        - generic [ref=f14e66]:
+          - heading "Messages" [level=2] [ref=f14e67]
+          - paragraph [ref=f14e68]: "Pre-booking: phones, emails and links are masked."
+          - list
+        - generic [ref=f14e69]:
+          - heading "Bookings" [level=2] [ref=f14e70]
+          - paragraph [ref=f14e71]: Nothing booked yet. Bookings appear here with your vouchers and payment schedule.
+        - generic [ref=f14e72]:
+          - heading "Saved packages" [level=2] [ref=f14e73]
+          - paragraph [ref=f14e74]: Packages you save will show up here.
+          - link "Browse packages" [ref=f14e75] [cursor=pointer]:
+            - /url: /en/packages
+      - paragraph [ref=f14e76]: Set your food protocol once and every itinerary we build respects it.
+  - contentinfo [ref=f14e77]:
+    - generic [ref=f14e79]:
+      - generic [ref=f14e80]: Only2Bali
+      - paragraph [ref=f14e86]: Indonesia travel marketplace for Indian groups — Bali, Jakarta and beyond.
+      - paragraph [ref=f14e87]:
+        - text: © 2026 Only2Bali · Photography and palette from the existing site. ·
+        - link "hello@only2bali.com" [ref=f14e88] [cursor=pointer]:
+          - /url: mailto:hello@only2bali.com
+  - alert [ref=f14e89]

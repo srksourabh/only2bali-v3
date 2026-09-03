@@ -1,0 +1,223 @@
+- generic [active] [ref=f1e1]:
+  - banner [ref=f1e2]:
+    - generic [ref=f1e3]:
+      - link "Only2Bali Only2Bali" [ref=f1e4] [cursor=pointer]:
+        - /url: /en
+        - img "Only2Bali" [ref=f1e5]
+        - generic [ref=f1e9]: Only2Bali
+      - navigation "Primary" [ref=f1e11]:
+        - menubar [ref=f1e13]:
+          - menuitem "Home" [ref=f1e14] [cursor=pointer]
+          - menuitem "Destinations" [ref=f1e16] [cursor=pointer]
+          - menuitem "Providers" [ref=f1e18] [cursor=pointer]
+          - menuitem "Services" [ref=f1e20] [cursor=pointer]
+          - menuitem "Packages" [ref=f1e22] [cursor=pointer]
+          - menuitem "Trip quality" [ref=f1e24] [cursor=pointer]
+      - generic [ref=f1e26]:
+        - button "Language" [ref=f1e28] [cursor=pointer]:
+          - generic [ref=f1e32]: English
+        - link "My account" [ref=f1e33] [cursor=pointer]:
+          - /url: /en/account
+        - link "Plan your trip" [ref=f1e34] [cursor=pointer]:
+          - /url: /en/planner
+  - main [ref=f1e94]:
+    - generic [ref=f1e95]:
+      - navigation "Breadcrumb" [ref=f1e96]:
+        - link "Packages" [ref=f1e97] [cursor=pointer]:
+          - /url: /en/packages
+        - text: / Bali Veg Explorer
+      - generic [ref=f1e98]:
+        - generic [ref=f1e99]:
+          - generic [ref=f1e100]: Mixed
+          - heading "Bali Veg Explorer" [level=1] [ref=f1e101]
+          - paragraph [ref=f1e102]: 5 days · 4 nights · Kuta, Ubud, Uluwatu, Tanah Lot
+          - paragraph [ref=f1e103]: Latest budget partner offer for first-time Bali groups needing vegetarian restaurants, a quality ride and a practical stay.
+          - generic [ref=f1e104]:
+            - generic [ref=f1e105]: Vegetarian
+            - generic [ref=f1e106]: Jain
+            - generic [ref=f1e107]: Budget option
+            - generic [ref=f1e108]: Cook available
+        - complementary [ref=f1e109]:
+          - generic [ref=f1e110]:
+            - text: ₹39,500
+            - generic [ref=f1e111]: starting offer / person
+          - paragraph [ref=f1e112]: Group of 2–30
+          - link "View itinerary & offer" [ref=f1e113] [cursor=pointer]:
+            - /url: /en/inquiry?package=bali-veg-explorer
+      - region [ref=f1e114]:
+        - heading "Meal compliance across this itinerary" [level=2] [ref=f1e115]
+        - list [ref=f1e116]:
+          - listitem [ref=f1e117]:
+            - generic [ref=f1e119]: "10"
+            - text: fully compliant
+          - listitem [ref=f1e120]:
+            - generic [ref=f1e122]: "5"
+            - text: compliant on request
+          - listitem [ref=f1e123]:
+            - generic [ref=f1e125]: "0"
+            - text: substitution arranged
+        - paragraph [ref=f1e126]: Every one of the 15 meals below carries its own rating. Amber and red are shown, not hidden — an amber meal is one we confirm with the kitchen before you fly.
+      - region [ref=f1e127]:
+        - heading "Why this itinerary" [level=2] [ref=f1e128]
+        - list [ref=f1e129]:
+          - listitem [ref=f1e130]: ✓ Latest budget partner offer for first-time groups
+          - listitem [ref=f1e131]: ✓ Water sports and Uluwatu Kecak included
+          - listitem [ref=f1e132]: ✓ Built for first-time groups on a tighter budget
+      - region [ref=f1e133]:
+        - heading "Day by day" [level=2] [ref=f1e134]
+        - list [ref=f1e135]:
+          - listitem [ref=f1e136]:
+            - generic [ref=f1e137]: Day 1
+            - generic [ref=f1e138]:
+              - heading "Arrival, Kuta check-in and sunset dinner" [level=3] [ref=f1e139]
+              - paragraph [ref=f1e140]: Meet your driver, check in and keep the first evening light.
+              - paragraph [ref=f1e141]:
+                - generic [ref=f1e142]: "Stay: Kuta"
+                - generic [ref=f1e143]: Airport pickup in private AC car or van.
+              - list [ref=f1e144]:
+                - listitem [ref=f1e145]:
+                  - generic [ref=f1e147]: breakfast
+                  - generic [ref=f1e148]: In-flight meal
+                  - generic [ref=f1e149]: Compliant on request
+                  - generic [ref=f1e150]: Airline meal request.
+                - listitem [ref=f1e151]:
+                  - generic [ref=f1e153]: lunch
+                  - generic [ref=f1e154]: Arrival snacks and Indian tea
+                  - generic [ref=f1e155]: Fully compliant
+                - listitem [ref=f1e156]:
+                  - generic [ref=f1e158]: dinner
+                  - generic [ref=f1e159]: Vegetarian dinner near Kuta
+                  - generic [ref=f1e160]: Fully compliant
+                  - generic [ref=f1e161]: Jain variant on request.
+          - listitem [ref=f1e162]:
+            - generic [ref=f1e163]: Day 2
+            - generic [ref=f1e164]:
+              - heading "Water sports and Uluwatu Kecak" [level=3] [ref=f1e165]
+              - paragraph [ref=f1e166]: Tanjung Benoa activities, beach time and sunset Kecak show.
+              - paragraph [ref=f1e167]:
+                - generic [ref=f1e168]: "Stay: Kuta"
+                - generic [ref=f1e169]: Full-day private car with driver.
+              - list [ref=f1e170]:
+                - listitem [ref=f1e171]:
+                  - generic [ref=f1e173]: breakfast
+                  - generic [ref=f1e174]: Hotel breakfast with vegetarian counter
+                  - generic [ref=f1e175]: Compliant on request
+                  - generic [ref=f1e176]: Shared hotel kitchen.
+                - listitem [ref=f1e177]:
+                  - generic [ref=f1e179]: lunch
+                  - generic [ref=f1e180]: Indian vegetarian lunch in Nusa Dua
+                  - generic [ref=f1e181]: Fully compliant
+                - listitem [ref=f1e182]:
+                  - generic [ref=f1e184]: dinner
+                  - generic [ref=f1e185]: Post-show thali dinner
+                  - generic [ref=f1e186]: Fully compliant
+                  - generic [ref=f1e187]: Pre-booked table.
+          - listitem [ref=f1e188]:
+            - generic [ref=f1e189]: Day 3
+            - generic [ref=f1e190]:
+              - heading "Ubud rice terraces and market day" [level=3] [ref=f1e191]
+              - paragraph [ref=f1e192]: Cultural Ubud route with rice terraces, local market and craft stops.
+              - paragraph [ref=f1e193]:
+                - generic [ref=f1e194]: "Stay: Ubud"
+                - generic [ref=f1e195]: Car or van transfer from Kuta to Ubud.
+              - list [ref=f1e196]:
+                - listitem [ref=f1e197]:
+                  - generic [ref=f1e199]: breakfast
+                  - generic [ref=f1e200]: Hotel breakfast
+                  - generic [ref=f1e201]: Compliant on request
+                  - generic [ref=f1e202]: Vegetarian selection checked.
+                - listitem [ref=f1e203]:
+                  - generic [ref=f1e205]: lunch
+                  - generic [ref=f1e206]: Pure vegetarian Ubud restaurant
+                  - generic [ref=f1e207]: Fully compliant
+                - listitem [ref=f1e208]:
+                  - generic [ref=f1e210]: dinner
+                  - generic [ref=f1e211]: Simple Indian dinner at Ubud stay
+                  - generic [ref=f1e212]: Fully compliant
+                  - generic [ref=f1e213]: No non-veg prep for group order.
+          - listitem [ref=f1e214]:
+            - generic [ref=f1e215]: Day 4
+            - generic [ref=f1e216]:
+              - heading "Tanah Lot and shopping" [level=3] [ref=f1e217]
+              - paragraph [ref=f1e218]: Late start, temple sunset and local shopping with flexible meal timing.
+              - paragraph [ref=f1e219]:
+                - generic [ref=f1e220]: "Stay: Kuta"
+                - generic [ref=f1e221]: Private vehicle retained until dinner.
+              - list [ref=f1e222]:
+                - listitem [ref=f1e223]:
+                  - generic [ref=f1e225]: breakfast
+                  - generic [ref=f1e226]: Resort breakfast
+                  - generic [ref=f1e227]: Compliant on request
+                - listitem [ref=f1e228]:
+                  - generic [ref=f1e230]: lunch
+                  - generic [ref=f1e231]: Vegetarian lunch box during shopping
+                  - generic [ref=f1e232]: Fully compliant
+                - listitem [ref=f1e233]:
+                  - generic [ref=f1e235]: dinner
+                  - generic [ref=f1e236]: Indian restaurant dinner after Tanah Lot
+                  - generic [ref=f1e237]: Fully compliant
+                  - generic [ref=f1e238]: Jain order cutoff is 24 hours.
+          - listitem [ref=f1e239]:
+            - generic [ref=f1e240]: Day 5
+            - generic [ref=f1e241]:
+              - heading "Souvenir stop and departure" [level=3] [ref=f1e242]
+              - paragraph [ref=f1e243]: Checkout, souvenir stop and airport transfer.
+              - paragraph [ref=f1e244]:
+                - generic [ref=f1e245]: "Stay: Flight home"
+                - generic [ref=f1e246]: Airport drop included.
+              - list [ref=f1e247]:
+                - listitem [ref=f1e248]:
+                  - generic [ref=f1e250]: breakfast
+                  - generic [ref=f1e251]: Hotel breakfast
+                  - generic [ref=f1e252]: Compliant on request
+                - listitem [ref=f1e253]:
+                  - generic [ref=f1e255]: lunch
+                  - generic [ref=f1e256]: Packed vegetarian meal
+                  - generic [ref=f1e257]: Fully compliant
+                - listitem [ref=f1e258]:
+                  - generic [ref=f1e260]: dinner
+                  - generic [ref=f1e261]: In-flight meal
+                  - generic [ref=f1e262]: Compliant on request
+                  - generic [ref=f1e263]: Airline meal request.
+      - region [ref=f1e264]:
+        - heading "Upcoming departures" [level=2] [ref=f1e265]
+        - list [ref=f1e266]:
+          - listitem [ref=f1e267]:
+            - generic [ref=f1e268]: 16-09-2026
+            - generic [ref=f1e269]: ₹39,500
+            - generic [ref=f1e270]: 18 seats left
+            - link "View itinerary & offer" [ref=f1e271] [cursor=pointer]:
+              - /url: /en/inquiry?package=bali-veg-explorer
+          - listitem [ref=f1e272]:
+            - generic [ref=f1e273]: 14-10-2026
+            - generic [ref=f1e274]: ₹42,500
+            - generic [ref=f1e275]: 16 seats left
+            - link "View itinerary & offer" [ref=f1e276] [cursor=pointer]:
+              - /url: /en/inquiry?package=bali-veg-explorer
+      - region [ref=f1e277]:
+        - heading "What is and is not included" [level=2] [ref=f1e278]
+        - generic [ref=f1e279]:
+          - generic [ref=f1e280]:
+            - heading "Included" [level=3] [ref=f1e281]
+            - list [ref=f1e282]:
+              - listitem [ref=f1e283]: 4 nights stay
+              - listitem [ref=f1e284]: Private airport transfers
+              - listitem [ref=f1e285]: Daily private ride
+              - listitem [ref=f1e286]: Selected vegetarian meals
+              - listitem [ref=f1e287]: Basic guide coordination
+          - generic [ref=f1e288]:
+            - heading "Not included" [level=3] [ref=f1e289]
+            - list [ref=f1e290]:
+              - listitem [ref=f1e291]: Flights
+              - listitem [ref=f1e292]: Visa
+              - listitem [ref=f1e293]: Water-sport ticket upgrades
+              - listitem [ref=f1e294]: Luxury car upgrade
+  - contentinfo [ref=f1e81]:
+    - generic [ref=f1e83]:
+      - generic [ref=f1e84]: Only2Bali
+      - paragraph [ref=f1e90]: Indonesia travel marketplace for Indian groups — Bali, Jakarta and beyond.
+      - paragraph [ref=f1e91]:
+        - text: © 2026 Only2Bali · Photography and palette from the existing site. ·
+        - link "hello@only2bali.com" [ref=f1e92] [cursor=pointer]:
+          - /url: mailto:hello@only2bali.com
+  - alert [ref=f1e93]: Bali Veg Explorer — 5 days in Bali — Only2Bali

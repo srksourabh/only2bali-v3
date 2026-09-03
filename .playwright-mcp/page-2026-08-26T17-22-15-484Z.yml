@@ -1,0 +1,196 @@
+- generic [ref=f16e1]:
+  - banner [ref=f16e2]:
+    - generic [ref=f16e3]:
+      - link "Only2Bali Only2Bali" [ref=f16e4] [cursor=pointer]:
+        - /url: /en
+        - img "Only2Bali" [ref=f16e5]
+        - generic [ref=f16e9]: Only2Bali
+      - navigation "Primary" [ref=f16e11]:
+        - menubar [ref=f16e13]:
+          - menuitem "Home" [ref=f16e14] [cursor=pointer]
+          - menuitem "Destinations" [ref=f16e16] [cursor=pointer]
+          - menuitem "Providers" [ref=f16e18] [cursor=pointer]
+          - menuitem "Services" [ref=f16e20] [cursor=pointer]
+          - menuitem "Packages" [ref=f16e22] [cursor=pointer]
+          - menuitem "Trip quality" [ref=f16e24] [cursor=pointer]
+      - generic [ref=f16e26]:
+        - button "Language" [ref=f16e28] [cursor=pointer]:
+          - generic [ref=f16e32]: English
+        - link "My account" [ref=f16e74] [cursor=pointer]:
+          - /url: /en/account
+        - link "Plan your trip" [ref=f16e34] [cursor=pointer]:
+          - /url: /en/planner
+  - main [ref=f16e35]:
+    - generic [ref=f16e37]:
+      - link "← All services" [ref=f16e38] [cursor=pointer]:
+        - /url: /en/services
+      - generic [ref=f16e40]:
+        - generic [ref=f16e41]: transport · Kuta
+        - heading "TEST -- delete me -- webhook verification service" [level=1] [ref=f16e42]
+        - paragraph [ref=f16e43]:
+          - link "TEST -- delete me -- webhook verification" [ref=f16e44] [cursor=pointer]:
+            - /url: /en/providers/test-delete-me-webhook-verification
+      - generic [ref=f16e45]:
+        - generic [ref=f16e46]:
+          - text: ₹1,000
+          - generic [ref=f16e47]: from · per trip · comfort
+        - paragraph [ref=f16e48]: Internal test listing to verify Razorpay webhook. Safe to delete.
+      - generic [ref=f16e49]:
+        - paragraph [ref=f16e75]: Held — reference O2B-BDUM-VNFP
+        - generic [ref=f16e76]:
+          - paragraph [ref=f16e77]: Pay ₹1,000
+          - group "Payment methods" [ref=f16e78]:
+            - generic [ref=f16e79]:
+              - button "Stripe · ₹1,000" [disabled] [ref=f16e80] [cursor=pointer]
+              - paragraph [ref=f16e81]: Stripe secret key is not configured.
+            - button "Opening..." [disabled] [ref=f16e84] [cursor=pointer]
+  - contentinfo [ref=f16e61]:
+    - generic [ref=f16e63]:
+      - generic [ref=f16e64]: Only2Bali
+      - paragraph [ref=f16e70]: Indonesia travel marketplace for Indian groups — Bali, Jakarta and beyond.
+      - paragraph [ref=f16e71]:
+        - text: © 2026 Only2Bali · Photography and palette from the existing site. ·
+        - link "hello@only2bali.com" [ref=f16e72] [cursor=pointer]:
+          - /url: mailto:hello@only2bali.com
+  - alert [ref=f16e73]
+  - generic [ref=f16e85]:
+    - generic [ref=f16e86]: Test Mode
+    - iframe [active] [ref=f16e88]:
+      - generic [ref=f17e2]:
+        - generic [ref=f17e3]:
+          - generic [ref=f17e4]:
+            - generic [ref=f17e7]:
+              - generic [ref=f17e8]: O
+              - generic "Only2Bali" [ref=f17e10]
+            - generic [ref=f17e12]:
+              - generic [ref=f17e17]:
+                - generic [ref=f17e18]: Price Summary
+                - heading "₹ 0 1 2 3 4 5 6 7 8 9 0 , 0 1 2 3 4 5 6 7 8 9 0 0 1 2 3 4 5 6 7 8 9 0 0 1 2 3 4 5 6 7 8 9 0" [level=3] [ref=f17e22]:
+                  - generic [ref=f17e23]: ₹
+                  - generic [ref=f17e24]:
+                    - generic [ref=f17e25]: "0"
+                    - generic [ref=f17e26]: "1"
+                    - generic [ref=f17e27]: "2"
+                    - generic [ref=f17e28]: "3"
+                    - generic [ref=f17e29]: "4"
+                    - generic [ref=f17e30]: "5"
+                    - generic [ref=f17e31]: "6"
+                    - generic [ref=f17e32]: "7"
+                    - generic [ref=f17e33]: "8"
+                    - generic [ref=f17e34]: "9"
+                    - generic [ref=f17e35]: "0"
+                  - generic [ref=f17e36]: ","
+                  - generic [ref=f17e37]:
+                    - generic [ref=f17e38]: "0"
+                    - generic [ref=f17e39]: "1"
+                    - generic [ref=f17e40]: "2"
+                    - generic [ref=f17e41]: "3"
+                    - generic [ref=f17e42]: "4"
+                    - generic [ref=f17e43]: "5"
+                    - generic [ref=f17e44]: "6"
+                    - generic [ref=f17e45]: "7"
+                    - generic [ref=f17e46]: "8"
+                    - generic [ref=f17e47]: "9"
+                    - generic [ref=f17e48]: "0"
+                  - generic [ref=f17e49]:
+                    - generic [ref=f17e50]: "0"
+                    - generic [ref=f17e51]: "1"
+                    - generic [ref=f17e52]: "2"
+                    - generic [ref=f17e53]: "3"
+                    - generic [ref=f17e54]: "4"
+                    - generic [ref=f17e55]: "5"
+                    - generic [ref=f17e56]: "6"
+                    - generic [ref=f17e57]: "7"
+                    - generic [ref=f17e58]: "8"
+                    - generic [ref=f17e59]: "9"
+                    - generic [ref=f17e60]: "0"
+                  - generic [ref=f17e61]:
+                    - generic [ref=f17e62]: "0"
+                    - generic [ref=f17e63]: "1"
+                    - generic [ref=f17e64]: "2"
+                    - generic [ref=f17e65]: "3"
+                    - generic [ref=f17e66]: "4"
+                    - generic [ref=f17e67]: "5"
+                    - generic [ref=f17e68]: "6"
+                    - generic [ref=f17e69]: "7"
+                    - generic [ref=f17e70]: "8"
+                    - generic [ref=f17e71]: "9"
+                    - generic [ref=f17e72]: "0"
+              - generic [ref=f17e73]:
+                - generic [ref=f17e74]: Secured by
+                - generic "RazorPay" [ref=f17e75]
+          - generic [ref=f17e79]:
+            - generic [ref=f17e80]:
+              - generic [ref=f17e81]: Payment Options
+              - generic [ref=f17e82]:
+                - button "Show more options" [ref=f17e83] [cursor=pointer]
+                - button "Close Checkout" [ref=f17e87] [cursor=pointer]
+            - separator [ref=f17e91]
+            - generic [ref=f17e96]:
+              - generic [ref=f17e98]:
+                - generic [ref=f17e99] [cursor=pointer]:
+                  - radio "Cards VISA MC RUPAY MAES"
+                  - generic [ref=f17e101]:
+                    - generic [ref=f17e102]: Cards
+                    - generic [ref=f17e106]:
+                      - img "VISA" [ref=f17e108]
+                      - img "MC" [ref=f17e110]
+                      - img "RUPAY" [ref=f17e112]
+                      - img "MAES" [ref=f17e114]
+                - generic [ref=f17e115] [cursor=pointer]:
+                  - radio "Netbanking BARB_R CNRB PUNB_R UTBI"
+                  - generic [ref=f17e117]:
+                    - generic [ref=f17e118]: Netbanking
+                    - generic [ref=f17e122]:
+                      - img "BARB_R" [ref=f17e124]
+                      - img "CNRB" [ref=f17e126]
+                      - img "PUNB_R" [ref=f17e128]
+                      - img "UTBI" [ref=f17e130]
+                - generic [ref=f17e131] [cursor=pointer]:
+                  - radio "Wallet mobikwik airtelmoney olamoney"
+                  - generic [ref=f17e133]:
+                    - generic [ref=f17e134]: Wallet
+                    - generic [ref=f17e138]:
+                      - img "mobikwik" [ref=f17e140]
+                      - img "airtelmoney" [ref=f17e142]
+                      - img "olamoney" [ref=f17e144]
+                - generic [ref=f17e145] [cursor=pointer]:
+                  - radio "Pay Later lazypay icic hdfc epaylater"
+                  - generic [ref=f17e147]:
+                    - generic [ref=f17e148]: Pay Later
+                    - generic [ref=f17e152]:
+                      - img "lazypay" [ref=f17e154]
+                      - img "icic" [ref=f17e156]
+                      - img "hdfc" [ref=f17e158]
+                      - img "epaylater" [ref=f17e160]
+              - generic [ref=f17e166]:
+                - heading "Add a new card" [level=3] [ref=f17e167]
+                - generic [ref=f17e168]:
+                  - generic [ref=f17e169]:
+                    - textbox "Card Number" [ref=f17e172]
+                    - generic [ref=f17e173]:
+                      - textbox "MM / YY" [ref=f17e175]
+                      - textbox "CVV" [ref=f17e177]
+                  - generic [ref=f17e179] [cursor=pointer]:
+                    - checkbox "Save this card as per RBI guidelines" [ref=f17e180]
+                    - generic [ref=f17e181]: Save this card as per RBI guidelines
+                  - button "Continue" [ref=f17e183] [cursor=pointer]
+            - generic [ref=f17e186]:
+              - text: By proceeding, I agree to Razorpay’s
+              - button "Privacy Notice" [ref=f17e187] [cursor=pointer]
+              - text: •
+              - button "Edit Preferences" [ref=f17e188] [cursor=pointer]
+        - generic [ref=f17e192]:
+          - button [ref=f17e193] [cursor=pointer]
+          - generic [ref=f17e197]:
+            - generic [ref=f17e199]:
+              - heading "Contact details" [level=3] [ref=f17e201]
+              - paragraph [ref=f17e202]: Enter mobile number to continue
+              - generic [ref=f17e203]:
+                - generic [ref=f17e204]:
+                  - button "9999999999" [ref=f17e215] [cursor=pointer]:
+                    - img "IN" [ref=f17e207]
+                    - text: "+91"
+                  - textbox "Mobile number" [active] [invalid] [ref=f17e211]: "9999999999"
+                - alert [ref=f17e217]: Please enter a valid mobile number
+            - button "Continue" [ref=f17e213] [cursor=pointer]
