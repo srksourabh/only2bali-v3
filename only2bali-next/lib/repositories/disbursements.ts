@@ -212,11 +212,19 @@ export async function adminPatchDisbursement(
   return { ok: true as const, disbursement: updated };
 }
 
+/** Checkout.js e2e uses HMAC-signed `pay_e2e_*` ids that never exist at Razorpay. */
+export function isSimulatedRazorpayPaymentId(providerPaymentId: string): boolean {
+  return providerPaymentId.startsWith("pay_e2e_");
+}
+
 /**
  * Refund-first-from-platform: mark payment + booking refunded; cancel unpaid
  * disbursements; if already paid, leave a clawback ledger event (partner must settle).
  */
 async function createRazorpayRefund(paymentId: string, providerPaymentId: string, amount: number, alreadyRefunded: number) {
+  if (isSimulatedRazorpayPaymentId(providerPaymentId)) {
+    return `rfnd_e2e_${paymentId}_${alreadyRefunded}_${amount}`;
+  }
   const config = razorpayConfig();
   if (!config.keyId || !config.keySecret) throw new Error("Razorpay refund credentials are incomplete.");
   const idempotencyKey = `o2b-refund-${paymentId}-${alreadyRefunded}-${amount}`;
