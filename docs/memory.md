@@ -5,6 +5,18 @@
 >
 > Agent config lives in `CLAUDE.md` (Claude Code / Cursor) and `AGENTS.md` (Antigravity).
 
+## QA tester fixes (2026-09-03)
+
+On `fix/mvp-demo-readiness`. Six live failures from username/password signup,
+My Account Send Code, Plan Your Trip, Book and Pay (both roles), and identical
+auto-generated itineraries.
+
+- Duplicate `account.email` is 409, not a 500 "Could not create account."
+- Send Code surfaces the 503 when SMS is not configured; 10-digit IN numbers get `+91`.
+- Planner accepts empty/null age, `veg`/`non-veg`, and long briefs.
+- Fallback `sample-svc-*` listings materialize into Postgres on first book.
+- Mock itinerary (no Gemini) varies by food, group, airport, vehicle, interests, and brief.
+
 ## QA tester fixes (2026-08-24)
 
 Live on https://only2bali.vercel.app after CLI production deploy

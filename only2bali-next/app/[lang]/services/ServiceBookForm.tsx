@@ -91,7 +91,9 @@ export default function ServiceBookForm({
         }),
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok || !json?.success) throw new Error(json?.error ?? bookCopy.errGeneric);
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.fields?.[0]?.message ?? json?.error ?? bookCopy.errGeneric);
+      }
       setCreated({
         bookingId: json.data.bookingId,
         reference: json.data.reference,

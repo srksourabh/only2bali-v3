@@ -9,6 +9,17 @@
 >
 > This tracks the **real project**, not a greenfield build. The product is already live.
 
+## Tester QA batch (2026-09-03)
+
+On `fix/mvp-demo-readiness` (commit pending production promote).
+
+- [x] Signup duplicate email no longer 500
+- [x] My Account Send Code shows SMS-unavailable instead of a silent throw
+- [x] Plan Your Trip accepts real briefs (aliases, empty age, long text)
+- [x] Book and Pay accepts fallback `sample-svc-*` ids and materializes them
+- [x] Auto-generate mock itinerary changes with trip details
+- [ ] Owner: `SPRINGEDGE_API_KEY` still required before SMS codes actually send
+
 ## Tester QA batch (2026-08-24)
 
 Shipped: commit `4f090f6` on `feat/schema-status-health`, production deploy

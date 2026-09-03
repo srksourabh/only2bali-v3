@@ -180,27 +180,31 @@ export default function TravellerMarketplacePanel({ lang }: { lang: string }) {
               e.preventDefault();
               setError("");
               setInfo("");
-              if (!mobileForm.sent) {
-                const res = await fetch("/api/auth/verify-mobile/request", {
+              try {
+                if (!mobileForm.sent) {
+                  const res = await fetch("/api/auth/verify-mobile/request", {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({ mobile: mobileForm.mobile }),
+                  });
+                  const json = await res.json();
+                  if (!res.ok || !json.success) throw new Error(json.error ?? "Could not send a code.");
+                  setMobileForm({ ...mobileForm, sent: true });
+                  setInfo("Enter the six-digit code sent to that number.");
+                  return;
+                }
+                const res = await fetch("/api/auth/verify-mobile/confirm", {
                   method: "POST",
                   headers: { "content-type": "application/json" },
-                  body: JSON.stringify({ mobile: mobileForm.mobile }),
+                  body: JSON.stringify({ mobile: mobileForm.mobile, code: mobileForm.code }),
                 });
                 const json = await res.json();
-                if (!res.ok || !json.success) throw new Error(json.error ?? "Could not send a code.");
-                setMobileForm({ ...mobileForm, sent: true });
-                setInfo("Enter the six-digit code sent to that number.");
-                return;
+                if (!res.ok || !json.success) throw new Error(json.error ?? "Could not verify that number.");
+                setMobileVerified(true);
+                setInfo("Mobile verified. New trip requests can go to the provider board.");
+              } catch (err) {
+                setError(err instanceof Error ? err.message : "Could not send a code.");
               }
-              const res = await fetch("/api/auth/verify-mobile/confirm", {
-                method: "POST",
-                headers: { "content-type": "application/json" },
-                body: JSON.stringify({ mobile: mobileForm.mobile, code: mobileForm.code }),
-              });
-              const json = await res.json();
-              if (!res.ok || !json.success) throw new Error(json.error ?? "Could not verify that number.");
-              setMobileVerified(true);
-              setInfo("Mobile verified. New trip requests can go to the provider board.");
             }}
           >
             <h3>Verify a mobile number</h3>

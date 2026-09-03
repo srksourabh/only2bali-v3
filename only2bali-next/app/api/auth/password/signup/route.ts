@@ -29,7 +29,11 @@ export async function POST(req: Request) {
       userAgent: req.headers.get("user-agent") ?? undefined,
     });
     if (!result.ok) {
-      return NextResponse.json({ success: false, error: "That username is already taken." }, { status: 409 });
+      const error =
+        result.reason === "email_taken"
+          ? "That email is already registered. Sign in instead."
+          : "That username is already taken.";
+      return NextResponse.json({ success: false, error }, { status: 409 });
     }
 
     const res = NextResponse.json({ success: true, data: { accountId: result.accountId } }, { status: 201 });

@@ -330,10 +330,11 @@ function PlannerWizardComponent() {
     setLoadingMsgIdx(0);
     setError(null);
 
+    const ageNum = parseInt(age, 10);
     const payload = {
       plain_request: plainRequest,
       name,
-      age: parseInt(age),
+      age: Number.isFinite(ageNum) ? String(ageNum) : undefined,
       crew_type: crewType,
       number_of_people: numberOfPeople,
       times_visited_bali: timesVisitedBali,
@@ -366,7 +367,7 @@ function PlannerWizardComponent() {
         setActiveDayTab(1);
         setStep(6);
       } else {
-        setError(data.error || "Failed to generate itinerary. Please try again.");
+        setError(data.fields?.[0]?.message ?? data.error ?? "Failed to generate itinerary. Please try again.");
       }
     } catch (e: any) {
       console.error(e);
@@ -428,7 +429,7 @@ function PlannerWizardComponent() {
         setStep(6);
         setPublishedPreview(true);
       } else {
-        setError(data.error || "Failed to generate itinerary. Please try again.");
+        setError(data.fields?.[0]?.message ?? data.error ?? "Failed to generate itinerary. Please try again.");
       }
     } catch (e: any) {
       console.error(e);

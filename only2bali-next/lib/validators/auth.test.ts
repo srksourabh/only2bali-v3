@@ -67,6 +67,12 @@ describe("verifyMobileRequestSchema", () => {
     if (parsed.success) expect(parsed.data.mobile).toBe("+919876543210");
   });
 
+  it("prefixes a 10-digit Indian mobile with +91", () => {
+    const parsed = verifyMobileRequestSchema.safeParse({ mobile: "9876543210" });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.mobile).toBe("+919876543210");
+  });
+
   it("rejects an email-only payload", () => {
     expect(verifyMobileRequestSchema.safeParse({ email: "a@b.com" }).success).toBe(false);
   });

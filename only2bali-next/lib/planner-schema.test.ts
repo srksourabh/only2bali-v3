@@ -26,8 +26,25 @@ describe("plannerInputSchema", () => {
     expect(result.number_of_people).toBe(2);
   });
 
-  it("rejects an unknown food protocol", () => {
-    expect(plannerInputSchema.safeParse({ food: "non-veg" }).success).toBe(false);
+  it("maps common food aliases instead of rejecting the trip", () => {
+    expect(plannerInputSchema.parse({ food: "veg" }).food).toBe("vegetarian");
+    expect(plannerInputSchema.parse({ food: "non-veg" }).food).toBe("non_veg");
+  });
+
+  it("accepts a plain-English brief with empty optional numbers", () => {
+    const parsed = plannerInputSchema.safeParse({
+      plain_request: "Eight friends from Mumbai, vegetarian food, van with driver, 5 nights in October.",
+      name: "Anita",
+      age: null,
+      number_of_people: 0,
+      from_date: "2026-10-12",
+      to_date: "2026-10-17",
+      international_airport: "Chhatrapati Shivaji Maharaj International Airport (Mumbai)",
+      food: "vegetarian",
+      budget: "comfort",
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.number_of_people).toBe(2);
   });
 
   it("rejects an unknown budget tier", () => {
@@ -36,7 +53,6 @@ describe("plannerInputSchema", () => {
 
   it("rejects an absurd group size", () => {
     expect(plannerInputSchema.safeParse({ number_of_people: 100000 }).success).toBe(false);
-    expect(plannerInputSchema.safeParse({ number_of_people: 0 }).success).toBe(false);
   });
 
   it("rejects oversized free text rather than passing it to the model", () => {

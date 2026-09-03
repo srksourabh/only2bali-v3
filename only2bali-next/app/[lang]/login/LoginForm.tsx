@@ -251,9 +251,13 @@ export default function LoginForm({
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete={mode === "signup" ? "new-password" : "current-password"}
+            minLength={mode === "signup" ? 10 : undefined}
             required
             aria-invalid={Boolean(error)}
           />
+          {mode === "signup" && role !== "admin" && (
+            <p className="fineprint">Password must be at least 10 characters.</p>
+          )}
 
           {mode === "signup" && role !== "admin" && (
             <>

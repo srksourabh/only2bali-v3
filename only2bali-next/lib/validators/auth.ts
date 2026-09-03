@@ -7,7 +7,11 @@ import { z } from "zod";
 const mobile = z
   .string()
   .trim()
-  .transform((v) => v.replace(/[\s()-]/g, ""))
+  .transform((v) => {
+    const digits = v.replace(/[\s()-]/g, "");
+    if (/^[6-9]\d{9}$/.test(digits)) return `+91${digits}`;
+    return digits;
+  })
   .pipe(z.string().regex(/^\+?[1-9]\d{7,14}$/, "Enter a valid mobile number with country code."));
 
 const email = z.string().trim().toLowerCase().email("Enter a valid email address.").max(254);

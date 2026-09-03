@@ -1,5 +1,6 @@
 import { and, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { uniqueConstraintName } from "@/lib/db/unique-violation";
 import { account, otpCode, session, auditLog, traveller, vendor, oauthAccount } from "@/lib/db/schema";
 import {
   generateOtp, hashOtp, safeEqual, generateSessionToken, hashSessionToken, hashPassword, verifyPassword,
@@ -23,7 +24,7 @@ export type VerifyResult =
 
 export type PasswordAuthResult =
   | { ok: true; accountId: string; token: string; expiresAt: Date; isNewAccount: boolean }
-  | { ok: false; reason: "invalid" | "role_mismatch" | "username_taken" };
+  | { ok: false; reason: "invalid" | "role_mismatch" | "username_taken" | "email_taken" };
 
 interface Identifier {
   email?: string;
@@ -206,17 +207,36 @@ export async function signUpWithPassword(
     .limit(1);
   if (existing.length) return { ok: false, reason: "username_taken" };
 
-  const [created] = await db
-    .insert(account)
-    .values({
-      username: input.username,
-      passwordHash: hashPassword(input.password),
-      email: input.email || null,
-      role: input.role,
-      emailVerifiedAt: null,
-      lastLoginAt: new Date(),
-    })
-    .returning();
+  if (input.email) {
+    const taken = await db
+      .select({ id: account.id })
+      .from(account)
+      .where(eq(account.email, input.email))
+      .limit(1);
+    if (taken.length) return { ok: false, reason: "email_taken" };
+  }
+
+  let created: { id: string };
+  try {
+    const [row] = await db
+      .insert(account)
+      .values({
+        username: input.username,
+        passwordHash: hashPassword(input.password),
+        email: input.email || null,
+        role: input.role,
+        emailVerifiedAt: null,
+        lastLoginAt: new Date(),
+      })
+      .returning({ id: account.id });
+    if (!row) throw new Error("Account insert returned no row.");
+    created = row;
+  } catch (err) {
+    const constraint = uniqueConstraintName(err);
+    if (constraint === "account_email_unique") return { ok: false, reason: "email_taken" };
+    if (constraint === "account_username_unique") return { ok: false, reason: "username_taken" };
+    throw err;
+  }
 
   if (input.role === "vendor") {
     await createVendorIfMissing(created.id, input.businessName!);

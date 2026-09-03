@@ -25,6 +25,7 @@ import {
   vendor,
 } from "@/lib/db/schema";
 import type { DepartureBookingInput, ListingBookingInput } from "@/lib/validators/bookings";
+import { resolveBookableListingId } from "@/lib/repositories/fallback-listings";
 import { computeListingGrossAmount } from "@/lib/repositories/listing-price";
 import { isPubliclyVisibleListing } from "@/lib/repositories/listings-public";
 import { resolveCommissionRate, splitGrossAmount } from "@/lib/payments/fee";
@@ -221,11 +222,14 @@ export async function createListingBooking(
     return { ok: false, reason: "listing_unavailable" };
   }
 
+  const listingId = await resolveBookableListingId(input.listingId);
+  if (!listingId) return { ok: false, reason: "listing_not_found" };
+
   return db.transaction(async (tx) => {
     const [listingRow] = await tx
       .select()
       .from(serviceListing)
-      .where(eq(serviceListing.id, input.listingId))
+      .where(eq(serviceListing.id, listingId))
       .limit(1)
       .for("update");
 
