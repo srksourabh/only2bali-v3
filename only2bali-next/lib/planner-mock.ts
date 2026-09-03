@@ -168,6 +168,7 @@ export function generateMockItinerary(start: Date, days: number, body: PlannerIn
 
   const result: ItineraryDay[] = [];
   const n = Math.max(1, days);
+  const packOffset = hash32(seed) % keys.length;
 
   for (let i = 0; i < n; i++) {
     const date = isoDate(start, i);
@@ -222,12 +223,17 @@ export function generateMockItinerary(start: Date, days: number, body: PlannerIn
       continue;
     }
 
-    const pack = PACKS[keys[(hash32(`${seed}:${i}`) + i) % keys.length]!] ?? PACKS.culture;
+    // Cycle through every matched interest before repeating one. Hashing each
+    // day independently caused short plans to select the same pack repeatedly.
+    const pack = PACKS[keys[(packOffset + i - 1) % keys.length]!] ?? PACKS.culture;
     result.push({
       day: i + 1,
       date,
       title: `${pack.title} · ${people} pax`,
-      activities: pack.activities.map((line) => `${line} (${pace}, ${guide} guide)`),
+      activities: [
+        ...(plain ? [`Built around this trip brief: ${plain.slice(0, 140)}${plain.length > 140 ? "..." : ""}`] : []),
+        ...pack.activities.map((line) => `${line} (${pace}, ${guide} guide)`),
+      ],
       meals: {
         breakfast: `${hotel} breakfast — ${food}`,
         lunch: `${pack.area} lunch reserved as ${food}`,

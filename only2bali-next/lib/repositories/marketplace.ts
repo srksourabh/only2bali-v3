@@ -55,7 +55,7 @@ export async function createTravellerRequest(
   input: TripRequestCreateInput
 ) {
   const profile = await getOrCreateTraveller(accountId);
-  const publish = input.publishToProviders && hasVerifiedMobile;
+  const publish = input.publishToProviders;
   const bidsCloseAt = publish ? new Date(Date.now() + 7 * 86_400_000) : null;
 
   const [row] = await db

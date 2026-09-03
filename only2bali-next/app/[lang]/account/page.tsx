@@ -147,8 +147,8 @@ export default async function AccountPage({ params }: { params: Promise<{ lang: 
             <section className="acard">
               <h2>Provider workspace</h2>
               <p className="empty">Manage prices, services, photos, events, offers, address and payout details.</p>
-              <Link className="btn btn-solid btn-sm" href={`/${lang}/provider`}>
-                Open provider dashboard
+              <Link className="btn btn-solid btn-sm" href={`/${lang}/provider#payment-methods`}>
+                Manage payment methods
               </Link>
             </section>
           )}

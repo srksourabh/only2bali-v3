@@ -44,7 +44,7 @@ export function canDeliver(channel: "email" | "sms"): boolean {
 
 /** Login UI should not offer OTP when no channel can reach a person. */
 export function otpOffered(): boolean {
-  return deliveryChannels().length > 0;
+  return false;
 }
 
 export async function deliverOtp(
@@ -82,7 +82,7 @@ async function sendSms(mobileNumber: string, code: string): Promise<DeliveryResu
     `Dear User, Your OTP is ${code} from Only2Bali. Valid for 10 minutes. Best regards, Straits Partners`
   );
 
-  const res = await fetch(url, { method: "POST", signal: AbortSignal.timeout(8000) });
+  const res = await fetch(url, { method: "POST", signal: AbortSignal.timeout(1500) });
   if (!res.ok) {
     // Do not surface provider detail to the caller; it leaks account existence.
     console.error("[auth] SMS delivery failed", res.status, await res.text().catch(() => ""));

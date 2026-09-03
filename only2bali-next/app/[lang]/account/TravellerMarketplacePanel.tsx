@@ -43,6 +43,7 @@ export default function TravellerMarketplacePanel({ lang }: { lang: string }) {
   const [requests, setRequests] = useState<RequestRow[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [offers, setOffers] = useState<OfferRow[]>([]);
+  const [offersLoading, setOffersLoading] = useState(false);
   const [threads, setThreads] = useState<ThreadRow[]>([]);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Array<{ id: string; body: string; sentAt: string }>>([]);
@@ -82,10 +83,17 @@ export default function TravellerMarketplacePanel({ lang }: { lang: string }) {
   const loadOffers = async (requestId: string) => {
     setSelected(requestId);
     setInfo("");
-    const res = await fetch(`/api/trip-requests/${requestId}/offers`, { cache: "no-store" });
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error);
-    setOffers(json.data.offers ?? []);
+    setError("");
+    setOffers([]);
+    setOffersLoading(true);
+    try {
+      const res = await fetch(`/api/trip-requests/${requestId}/offers`, { cache: "no-store" });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success) throw new Error(json?.error ?? "Could not load offers.");
+      setOffers(json.data.offers ?? []);
+    } finally {
+      setOffersLoading(false);
+    }
   };
 
   const loadThread = async (id: string) => {
@@ -173,7 +181,7 @@ export default function TravellerMarketplacePanel({ lang }: { lang: string }) {
             </li>
           ))}
         </ul>
-        {mobileVerified === false && (
+        {false && mobileVerified === false && (
           <form
             className="leadform"
             onSubmit={async (e) => {
@@ -294,8 +302,12 @@ export default function TravellerMarketplacePanel({ lang }: { lang: string }) {
       </section>
 
       {selected && (
-        <section className="acard">
+        <section className="acard" aria-live="polite">
           <h2>Offer comparison</h2>
+          {offersLoading && <p className="empty">Loading provider offers...</p>}
+          {!offersLoading && offers.length === 0 && (
+            <p className="empty">No provider offers have arrived for this request yet.</p>
+          )}
           <ul className="admin-list">
             {offers.map((o) => (
               <li key={o.id}>
