@@ -1,0 +1,1 @@
+ALTER TABLE "trip_request" DROP CONSTRAINT "trip_publish_requires_verified_mobile";

@@ -557,8 +557,8 @@ async function main() {
       `HTTP ${res.status}`
     );
     check(
-      "email-only travellers keep the request private until mobile is verified",
-      body?.data?.publishedToProviders === false,
+      "OTP-free travellers can publish a request to providers",
+      body?.data?.publishedToProviders === true,
       `published=${body?.data?.publishedToProviders}`
     );
   }
