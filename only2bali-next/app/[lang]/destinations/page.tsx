@@ -69,7 +69,7 @@ export default async function DestinationsPage({
                     {"soon" in r && r.soon ? (
                       <span className="chip">Coming soon</span>
                     ) : (
-                      <Link className="btn btn-solid btn-sm" href={`/${lang}/services?region=${r.slug}`}>
+                      <Link className="btn btn-solid btn-sm" href={`/${lang}/destinations/${r.slug}`}>
                         {dict.services.viewCta}
                       </Link>
                     )}

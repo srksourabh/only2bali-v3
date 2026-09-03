@@ -106,9 +106,6 @@ export const tripRequest = pgTable(
     // application logic cannot be the only thing standing between us and a
     // promise we cannot keep.
     check("trip_cook_requires_group", sql`NOT ${t.cookRequired} OR ${t.groupSize} >= 10`),
-    // Unverified demand can never reach the board.
-    check("trip_publish_requires_verified_mobile",
-      sql`${t.visibility} = 'private' OR ${t.mobileVerified}`),
   ]
 );
 

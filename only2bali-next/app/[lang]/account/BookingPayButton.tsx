@@ -279,14 +279,6 @@ export default function BookingPayButton({
       <p className="paychoose">Pay {price}</p>
       <div className="payoptions" role="group" aria-label="Payment methods">
         <GatewayButton
-          label={`Stripe · ${price}`}
-          available={gateways.stripe.available}
-          reason={gateways.stripe.reason}
-          busy={busy === "stripe"}
-          locked={busy !== null}
-          onClick={() => startPay("stripe")}
-        />
-        <GatewayButton
           label={`Razorpay · ${price}`}
           available={gateways.razorpay.available}
           reason={gateways.razorpay.reason}

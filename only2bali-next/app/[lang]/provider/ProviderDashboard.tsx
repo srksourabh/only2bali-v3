@@ -22,7 +22,14 @@ interface Catalog {
   media: Array<{ id: string; fileUrl: string; kind: string; approved: boolean }>;
   events: Array<{ id: string; title: string; startsAt: string; status: string }>;
   promotions: Array<{ id: string; title: string; status: string }>;
-  payoutAccount: { status: string; currency: string; maskedAccount: string | null } | null;
+  payoutAccount: {
+    status: string;
+    currency: string;
+    accountHolderName: string;
+    bankName: string | null;
+    maskedAccount: string | null;
+    upiId: string | null;
+  } | null;
 }
 
 interface ProviderBooking {
@@ -91,6 +98,15 @@ export default function ProviderDashboard() {
     const catalogJson = await catalogRes.json();
     if (!catalogJson.success) throw new Error(catalogJson.error);
     setCatalog(catalogJson.data);
+    if (catalogJson.data.payoutAccount) {
+      setPayout({
+        accountHolderName: catalogJson.data.payoutAccount.accountHolderName ?? "",
+        bankName: catalogJson.data.payoutAccount.bankName ?? "",
+        currency: catalogJson.data.payoutAccount.currency ?? "IDR",
+        maskedAccount: catalogJson.data.payoutAccount.maskedAccount ?? "",
+        upiId: catalogJson.data.payoutAccount.upiId ?? "",
+      });
+    }
     setProfile({
       businessName: catalogJson.data.provider.businessName ?? "",
       baseArea: catalogJson.data.provider.baseArea ?? "",
@@ -397,8 +413,8 @@ export default function ProviderDashboard() {
             </button>
           </section>
 
-          <section className="acard">
-            <h2>Payout details</h2>
+          <section className="acard" id="payment-methods">
+            <h2>Payment methods and payout details</h2>
             <label>Account holder</label>
             <input value={payout.accountHolderName} onChange={(e) => setPayout({ ...payout, accountHolderName: e.target.value })} />
             <label>Bank name</label>

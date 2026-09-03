@@ -151,7 +151,7 @@ async function createRazorpayOrder(args: { reference: string; amount: number; cu
 }
 
 function stripeSdk(secretKey: string): Stripe {
-  return new Stripe(secretKey);
+  return new Stripe(secretKey, { timeout: 1500, maxNetworkRetries: 1 });
 }
 
 async function createStripeCheckoutSession(args: {

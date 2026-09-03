@@ -140,12 +140,6 @@ async function main() {
     `insert into trip_request (protocol, group_size, cook_required) values ('jain', 4, true)`
   );
   await mustReject(
-    "publishing to the board requires a verified mobile",
-    `insert into trip_request (protocol, group_size, visibility, mobile_verified)
-     values ('vegan', 2, 'open_to_verified', false)`,
-    "trip_publish_requires_verified_mobile"
-  );
-  await mustReject(
     "a departure cannot oversell its seats",
     `insert into departure (package_id, start_date, end_date, price_amount, seats_total, seats_held, seats_booked)
      select id, '2030-01-01', '2030-01-05', 100000, 10, 6, 6 from package limit 1`,

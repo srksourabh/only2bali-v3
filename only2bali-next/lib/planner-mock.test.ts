@@ -53,4 +53,14 @@ describe("generateMockItinerary", () => {
     expect(jainTemple.some((d) => /jain/i.test(JSON.stringify(d.meals)))).toBe(true);
     expect(jainTemple.some((d) => /Ubud|temple|wellness/i.test(JSON.stringify(d.activities)))).toBe(true);
   });
+
+  it("cycles selected interests and carries the trip brief into activity days", () => {
+    const plan = generateMockItinerary(start, 6, base({
+      interests: ["Natural Beauty & Beaches", "Local Cultures & Traditions", "Wellness & Relaxation"],
+      plain_request: "A slow anniversary trip based in Ubud with one beach day.",
+    }));
+    const middle = plan.slice(1, -1);
+    expect(new Set(middle.slice(0, 3).map((day) => day.title)).size).toBe(3);
+    expect(middle.every((day) => day.activities.some((item) => item.includes("anniversary")))).toBe(true);
+  });
 });
