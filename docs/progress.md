@@ -9,6 +9,15 @@
 >
 > This tracks the **real project**, not a greenfield build. The product is already live.
 
+## Tester QA batch (2026-09-10)
+
+Provider "List my business as a provider" form (`only2bali-next` `/[lang]/vendors`).
+
+- [x] Mobile accepts only a 10-digit Indian number (13-digit input is cut/refused)
+- [x] Placeholder emails such as `test@test.com` are refused
+- [x] Submit requires email OTP; no mobile OTP on this form
+- [ ] Owner: email sender still required in production before the code actually arrives
+
 ## Tester QA batch (2026-09-03)
 
 On `fix/mvp-demo-readiness` (commit pending production promote).

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { wa, CFG } from "@/lib/config";
+import { indianMobile10Schema, vendorEmailSchema } from "@/lib/validators/leads";
 
 const TYPES = ["Vegetarian restaurant","Vegan café","Jain-capable kitchen","Villa with kitchen","Hotel with veg meal support","Transport provider","Guide (Indian language)","Chef / cook","Activity partner"];
 const CAPS = ["Vegetarian", "Jain", "Vegan", "Kitchen available"];
@@ -8,11 +9,54 @@ const CAPS = ["Vegetarian", "Jain", "Vegan", "Kitchen available"];
 export default function Vendors() {
   const [f, setF] = useState({ name: "", type: "", loc: "", cuisine: "", langs: "", price: "", phone: "", email: "", avail: "", notes: "" });
   const [caps, setCaps] = useState<string[]>([]);
+  const [emailCode, setEmailCode] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
   const [sending, setSending] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setF((s) => ({ ...s, [k]: e.target.value }));
+
+  const setPhone = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+    setErr(null);
+    setF((s) => ({ ...s, phone: digits }));
+  };
+
+  const setEmail = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCodeSent(false);
+    setEmailCode("");
+    setErr(null);
+    setF((s) => ({ ...s, email: e.target.value }));
+  };
+
+  async function sendEmailCode() {
+    const email = vendorEmailSchema.safeParse(f.email);
+    if (!email.success) {
+      setErr(email.error.issues[0]?.message ?? "Enter a valid email address.");
+      return;
+    }
+    setErr(null);
+    setSendingCode(true);
+    try {
+      const res = await fetch("/api/vendor-applications/verify-email", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: email.data }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success) {
+        setErr(json?.fields?.[0]?.message ?? json?.error ?? "We could not send a code just now.");
+        return;
+      }
+      setCodeSent(true);
+    } catch {
+      setErr("Network problem — the code was not sent. Please try again.");
+    } finally {
+      setSendingCode(false);
+    }
+  }
 
   /**
    * The application is stored before WhatsApp is opened. Onboarding a provider
@@ -21,10 +65,24 @@ export default function Vendors() {
    */
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!f.name || !f.type || !f.loc || !f.phone || caps.length === 0) {
-      setErr("Please complete: name, business type, location, WhatsApp/phone, and at least one dietary capability."); return;
+    if (!f.name || !f.type || !f.loc || !f.phone || !f.email || caps.length === 0) {
+      setErr("Please complete: name, business type, location, 10-digit mobile, email, and at least one dietary capability.");
+      return;
     }
-    if (f.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email)) { setErr("Please enter a valid email address (or leave it blank)."); return; }
+    const phone = indianMobile10Schema.safeParse(f.phone);
+    if (!phone.success) {
+      setErr(phone.error.issues[0]?.message ?? "Enter a valid 10-digit mobile number.");
+      return;
+    }
+    const email = vendorEmailSchema.safeParse(f.email);
+    if (!email.success) {
+      setErr(email.error.issues[0]?.message ?? "Enter a valid email address.");
+      return;
+    }
+    if (!/^\d{6}$/.test(emailCode)) {
+      setErr("Enter the six-digit code sent to your email.");
+      return;
+    }
     setErr(null);
 
     setSending(true);
@@ -40,15 +98,16 @@ export default function Vendors() {
           capabilities: caps,
           languages: f.langs,
           priceBand: f.price,
-          whatsapp: f.phone,
-          email: f.email,
+          whatsapp: phone.data,
+          email: email.data,
+          emailCode,
           availability: f.avail,
           notes: f.notes,
         }),
       });
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.success) {
-        setErr(json?.error ?? "We could not save that just now. Please try again.");
+        setErr(json?.fields?.[0]?.message ?? json?.error ?? "We could not save that just now. Please try again.");
         return;
       }
     } catch {
@@ -58,7 +117,7 @@ export default function Vendors() {
       setSending(false);
     }
 
-    const body = `VENDOR APPLICATION — Only2Bali\n• Business: ${f.name}\n• Type: ${f.type}\n• Location/areas: ${f.loc}${f.cuisine ? `\n• Cuisine/service: ${f.cuisine}` : ""}\n• Capability: ${caps.join(", ")}${f.langs ? `\n• Languages: ${f.langs}` : ""}${f.price ? `\n• Pricing band: ${f.price}` : ""}\n• Phone/WA: ${f.phone}${f.email ? `\n• Email: ${f.email}` : ""}${f.avail ? `\n• Availability: ${f.avail}` : ""}${f.notes ? `\n• Notes: ${f.notes}` : ""}`;
+    const body = `VENDOR APPLICATION — Only2Bali\n• Business: ${f.name}\n• Type: ${f.type}\n• Location/areas: ${f.loc}${f.cuisine ? `\n• Cuisine/service: ${f.cuisine}` : ""}\n• Capability: ${caps.join(", ")}${f.langs ? `\n• Languages: ${f.langs}` : ""}${f.price ? `\n• Pricing band: ${f.price}` : ""}\n• Phone/WA: ${phone.data}\n• Email: ${email.data}${f.avail ? `\n• Availability: ${f.avail}` : ""}${f.notes ? `\n• Notes: ${f.notes}` : ""}`;
     const link = wa(body);
     if (link) window.open(link, "_blank");
     setOk(true);
@@ -67,7 +126,7 @@ export default function Vendors() {
   return (
     <main><section><div className="wrap">
       <span className="tag">Bali Vendor Onboarding</span>
-      <h2>Run a veg-friendly business in Bali? Join the network.</h2>
+      <h2>List my business as a provider</h2>
       <p className="sub">We onboard vegetarian restaurants, vegan cafés, Jain-capable kitchens, villas with kitchens, veg-supportive hotels, transport providers, Indian-language guides, chefs and activity partners.</p>
       <form onSubmit={submit} noValidate className="card">
         <div className="row">
@@ -98,8 +157,46 @@ export default function Vendors() {
             </select></div>
         </div>
         <div className="row">
-          <div><label htmlFor="vph">WhatsApp / phone *</label><input id="vph" type="tel" value={f.phone} onChange={set("phone")} placeholder="+62…" required /></div>
-          <div><label htmlFor="ve">Email</label><input id="ve" type="email" value={f.email} onChange={set("email")} /></div>
+          <div>
+            <label htmlFor="vph">Mobile number *</label>
+            <input
+              id="vph"
+              type="tel"
+              inputMode="numeric"
+              autoComplete="tel"
+              maxLength={10}
+              pattern="[6-9][0-9]{9}"
+              value={f.phone}
+              onChange={setPhone}
+              placeholder="10-digit mobile"
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="ve">Email *</label>
+            <input id="ve" type="email" autoComplete="email" value={f.email} onChange={setEmail} required />
+          </div>
+        </div>
+        <div className="row">
+          <div>
+            <label htmlFor="vec">Email verification code *</label>
+            <input
+              id="vec"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              pattern="[0-9]{6}"
+              value={emailCode}
+              onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder={codeSent ? "Six-digit code" : "Send a code first"}
+              required
+            />
+          </div>
+          <div style={{ display: "flex", alignItems: "flex-end" }}>
+            <button className="btn" type="button" onClick={sendEmailCode} disabled={sendingCode}>
+              {sendingCode ? "Sending code…" : codeSent ? "Resend code" : "Send verification code"}
+            </button>
+          </div>
         </div>
         <div className="row">
           <div><label htmlFor="va">Availability</label><input id="va" value={f.avail} onChange={set("avail")} /></div>

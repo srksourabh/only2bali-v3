@@ -5,6 +5,17 @@
 >
 > Agent config lives in `CLAUDE.md` (Claude Code / Cursor) and `AGENTS.md` (Antigravity).
 
+## QA tester fixes (2026-09-10)
+
+Provider application form (`/[lang]/vendors`, "List my business as a provider"):
+
+- Mobile is digits-only, max 10, Indian `[6-9]xxxxxxxx`. Optional `+91` is
+  stripped server-side; 13-digit values are refused. No SMS verification.
+- Email is required. Placeholder domains (`test.com`, `example.com`, …) are
+  refused. Submit needs a six-digit email OTP from
+  `POST /api/vendor-applications/verify-email`. Production still needs an
+  email sender configured or the send-code step returns 503.
+
 ## QA tester fixes (2026-09-03)
 
 On `fix/mvp-demo-readiness`. Six live failures from username/password signup,

@@ -68,7 +68,7 @@ export async function createVendorApplication(
         : null,
       priceBand: input.priceBand || null,
       whatsapp: input.whatsapp,
-      email: input.email || null,
+      email: input.email,
       availability: input.availability || null,
       notes: input.notes || null,
       ip: meta.ip,

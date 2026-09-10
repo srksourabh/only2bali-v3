@@ -76,6 +76,9 @@ const ADMIN_EMAIL = `e2e-admin-${run}@only2bali.test`;
 const ADMIN_USERNAME = `admin-${run}`;
 const APPLICANT_EMAIL = `e2e-applicant-${run}@only2bali.test`;
 const APPLICANT_BUSINESS = `E2E Applicant Kitchen ${run}`;
+const KITCHEN_EMAIL = `e2e-kitchen-${run}@only2bali.test`;
+const KITCHEN_PHONE = `96${String(Date.now()).slice(-8)}`;
+const APPLICANT_PHONE = `97${String(Date.now()).slice(-8)}`;
 /** Run-unique so a half-cleaned earlier run cannot collide on the unique index. */
 const MOBILE = `+9198${String(Date.now()).slice(-8)}`;
 /** What the provider asks to be paid. The traveller's price is derived from it. */
@@ -153,6 +156,12 @@ async function otpFromLog(email: string, timeoutMs = 15_000): Promise<string | n
     await new Promise((r) => setTimeout(r, 300));
   }
   return null;
+}
+
+async function requestVendorEmailCode(email: string): Promise<{ status: number; code: string | null }> {
+  const res = await call("/api/vendor-applications/verify-email", { body: { email } });
+  if (res.status !== 200) return { status: res.status, code: null };
+  return { status: res.status, code: await otpFromLog(email) };
 }
 
 function cookieFrom(res: Response): string {
@@ -394,10 +403,48 @@ async function main() {
         baseArea: "Ubud",
         capabilities: ["Jain", "Vegetarian"],
         languages: "English, Hindi",
-        whatsapp: "+6281234567890",
+        whatsapp: "9876543210123",
+        email: KITCHEN_EMAIL,
+        emailCode: "123456",
       },
     });
-    check("a vendor application is accepted", res.status === 201, `HTTP ${res.status}`);
+    check("a 13-digit mobile is refused", res.status === 400, `HTTP ${res.status}`);
+  }
+  {
+    const res = await call("/api/vendor-applications", {
+      body: {
+        businessName: `E2E Kitchen ${run}`,
+        businessType: "Jain-capable kitchen",
+        baseArea: "Ubud",
+        capabilities: ["Jain", "Vegetarian"],
+        whatsapp: KITCHEN_PHONE,
+        email: "test@test.com",
+        emailCode: "123456",
+      },
+    });
+    check("a placeholder email is refused", res.status === 400, `HTTP ${res.status}`);
+  }
+  {
+    const res = await call("/api/vendor-applications/verify-email", { body: { email: "test@test.com" } });
+    check("a placeholder email cannot request a code", res.status === 400, `HTTP ${res.status}`);
+  }
+  {
+    const issued = await requestVendorEmailCode(KITCHEN_EMAIL);
+    check("a vendor-application email code is issued", issued.status === 200 && Boolean(issued.code), `HTTP ${issued.status}`);
+
+    const res = await call("/api/vendor-applications", {
+      body: {
+        businessName: `E2E Kitchen ${run}`,
+        businessType: "Jain-capable kitchen",
+        baseArea: "Ubud",
+        capabilities: ["Jain", "Vegetarian"],
+        languages: "English, Hindi",
+        whatsapp: KITCHEN_PHONE,
+        email: KITCHEN_EMAIL,
+        emailCode: issued.code,
+      },
+    });
+    check("a vendor application is accepted after email verification", res.status === 201, `HTTP ${res.status}`);
 
     const [row] = (await db.execute(sql`
       select status, capabilities from vendor_application where business_name = ${`E2E Kitchen ${run}`}
@@ -407,11 +454,20 @@ async function main() {
   }
   {
     const res = await call("/api/vendor-applications", {
-      body: { businessName: "No capabilities", businessType: "x", baseArea: "y", capabilities: [], whatsapp: "+6281234567890" },
+      body: {
+        businessName: "No capabilities",
+        businessType: "x",
+        baseArea: "y",
+        capabilities: [],
+        whatsapp: APPLICANT_PHONE,
+        email: APPLICANT_EMAIL,
+        emailCode: "123456",
+      },
     });
     check("an application with no dietary capability is refused", res.status === 400, `HTTP ${res.status}`);
   }
   {
+    const issued = await requestVendorEmailCode(APPLICANT_EMAIL);
     const res = await call("/api/vendor-applications", {
       body: {
         businessName: APPLICANT_BUSINESS,
@@ -419,13 +475,14 @@ async function main() {
         baseArea: "Ubud",
         capabilities: ["Jain", "Vegetarian"],
         languages: "English, Hindi",
-        whatsapp: "+6281234567891",
+        whatsapp: APPLICANT_PHONE,
         email: APPLICANT_EMAIL,
+        emailCode: issued.code,
       },
     });
     const body = await json(res);
     applicantApplicationId = body?.data?.id ?? body?.data?.application?.id ?? "";
-    check("an application with an email is accepted", res.status === 201 && Boolean(applicantApplicationId), `HTTP ${res.status}`);
+    check("an application with a verified email is accepted", res.status === 201 && Boolean(applicantApplicationId), `HTTP ${res.status}`);
   }
 
   // ---------- the account page is guarded ----------
@@ -2289,7 +2346,7 @@ async function cleanup() {
   }
 
   await db.execute(sql`delete from account where email in (${EMAIL}, ${VENDOR_EMAIL}, ${ADMIN_EMAIL}, ${APPLICANT_EMAIL})`);
-  await db.execute(sql`delete from otp_code where identifier in (${`email:${EMAIL}`}, ${`email:${FLOOD_EMAIL}`}, ${`mobile:${MOBILE}`})`);
+  await db.execute(sql`delete from otp_code where identifier in (${`email:${EMAIL}`}, ${`email:${FLOOD_EMAIL}`}, ${`mobile:${MOBILE}`}, ${`vendor-app:${KITCHEN_EMAIL}`}, ${`vendor-app:${APPLICANT_EMAIL}`})`);
   await db.execute(sql`delete from lead where name = ${`E2E ${run}`}`);
   await db.execute(sql`delete from vendor_application where business_name in (${`E2E Kitchen ${run}`}, ${APPLICANT_BUSINESS})`);
   await db.execute(sql`delete from rate_limit where key like ${`%${IP_MAIN}`} or key like ${`%${IP_FLOOD}`}`);
@@ -2303,7 +2360,7 @@ async function cleanup() {
     + (select count(*) from service_listing where title = ${MARKETPLACE_LISTING})
     + (select count(*) from booking_traveller where full_name like ${`E2E %${run}%`})
     + (select count(*) from offer where title like ${`E2E %${run}%`})
-    + (select count(*) from otp_code where identifier = ${`mobile:${MOBILE}`}) as n
+    + (select count(*) from otp_code where identifier in (${`mobile:${MOBILE}`}, ${`vendor-app:${KITCHEN_EMAIL}`}, ${`vendor-app:${APPLICANT_EMAIL}`})) as n
   `)) as unknown as [{ n: number }];
   check("the test leaves nothing behind", Number(left.n) === 0, `${left.n} rows remain`);
 }
