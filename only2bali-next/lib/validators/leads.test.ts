@@ -62,11 +62,42 @@ describe("vendorApplicationSchema", () => {
     businessType: "Jain-capable kitchen",
     baseArea: "Ubud",
     capabilities: ["Jain", "Vegetarian"],
-    whatsapp: "+6281234567890",
+    whatsapp: "9876543210",
+    email: "kitchen@ubudgreen.com",
+    emailCode: "012345",
   };
 
-  it("accepts a complete application", () => {
-    expect(vendorApplicationSchema.safeParse(validVendor).success).toBe(true);
+  it("accepts a complete application and stores +91 on the 10-digit mobile", () => {
+    const parsed = vendorApplicationSchema.parse(validVendor);
+    expect(parsed.whatsapp).toBe("+919876543210");
+    expect(parsed.email).toBe("kitchen@ubudgreen.com");
+  });
+
+  it("accepts a pasted +91 prefix as long as the local number is 10 digits", () => {
+    const parsed = vendorApplicationSchema.parse({ ...validVendor, whatsapp: "+91 98765-43210" });
+    expect(parsed.whatsapp).toBe("+919876543210");
+  });
+
+  it("refuses a 13-digit mobile", () => {
+    expect(vendorApplicationSchema.safeParse({ ...validVendor, whatsapp: "9876543210123" }).success).toBe(false);
+  });
+
+  it("refuses a placeholder email such as test@test.com", () => {
+    expect(vendorApplicationSchema.safeParse({ ...validVendor, email: "test@test.com" }).success).toBe(false);
+  });
+
+  it("accepts a real-looking mailbox including the e2e .test TLD", () => {
+    expect(vendorApplicationSchema.safeParse({ ...validVendor, email: "kitchen@only2bali.test" }).success).toBe(true);
+  });
+
+  it("refuses a missing email rather than treating it as optional", () => {
+    const { email, ...noEmail } = validVendor;
+    expect(vendorApplicationSchema.safeParse(noEmail).success).toBe(false);
+  });
+
+  it("refuses an application without the email verification code", () => {
+    const { emailCode, ...noCode } = validVendor;
+    expect(vendorApplicationSchema.safeParse(noCode).success).toBe(false);
   });
 
   it("refuses an application claiming no dietary capability at all", () => {

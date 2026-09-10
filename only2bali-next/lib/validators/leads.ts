@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { PROTOCOLS } from "@/lib/protocols";
+
+export { PROTOCOLS };
 
 /**
  * What the public forms are allowed to send.
@@ -16,9 +19,57 @@ const phone = z
   .max(24)
   .regex(/^[+\d][\d\s-]{7,}$/, "Enter a valid phone number, for example +91 98xxxxxxx.");
 
-import { PROTOCOLS } from "@/lib/protocols";
+/**
+ * Dummy / reserved domains that look like an email but are not a mailbox we
+ * can reach. `test@test.com` is the QA example; RFC 2606 holds example.*.
+ * `.test` as a TLD stays allowed because the e2e suite uses @only2bali.test.
+ */
+const PLACEHOLDER_EMAIL_DOMAINS = new Set([
+  "test.com",
+  "test.in",
+  "test.net",
+  "test.org",
+  "testing.com",
+  "example.com",
+  "example.net",
+  "example.org",
+]);
 
-export { PROTOCOLS };
+export const vendorEmailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .email("Enter a valid email address.")
+  .max(254)
+  .refine((value) => {
+    const domain = value.split("@")[1] ?? "";
+    return !PLACEHOLDER_EMAIL_DOMAINS.has(domain);
+  }, "Enter a valid email address.");
+
+/** 10-digit Indian mobile. Optional +91 is stripped; anything else is refused. */
+export const indianMobile10Schema = z
+  .string()
+  .trim()
+  .transform((value) => {
+    const digits = value.replace(/\D/g, "");
+    if (digits.startsWith("91") && digits.length === 12) return digits.slice(2);
+    return digits;
+  })
+  .pipe(
+    z
+      .string()
+      .regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number.")
+      .transform((local) => `+91${local}`)
+  );
+
+export const vendorEmailCodeSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{6}$/, "Enter the six-digit code sent to your email.");
+
+export const vendorEmailVerifySchema = z.object({
+  email: vendorEmailSchema,
+});
 
 export const leadSchema = z.object({
   name: z.string().trim().min(1, "Tell us your name.").max(120),
@@ -44,8 +95,9 @@ export const vendorApplicationSchema = z.object({
     .max(10),
   languages: z.string().trim().max(200).optional(),
   priceBand: z.string().trim().max(80).optional(),
-  whatsapp: phone,
-  email: z.string().trim().toLowerCase().email().max(254).optional().or(z.literal("")),
+  whatsapp: indianMobile10Schema,
+  email: vendorEmailSchema,
+  emailCode: vendorEmailCodeSchema,
   availability: z.string().trim().max(200).optional(),
   notes: z.string().trim().max(2000).optional(),
 });

@@ -536,6 +536,77 @@ export async function confirmMobileVerification(
   return { ok: true };
 }
 
+/**
+ * Vendor-application email verification.
+ *
+ * Reuses the unused `signup` purpose so we do not need a schema migration.
+ * The identifier is `vendor-app:` rather than `email:` so a form code cannot
+ * be spent as a login, and a login code cannot submit an application.
+ */
+const VENDOR_APP_OTP_PURPOSE = "signup" as const;
+
+function vendorAppEmailKey(email: string): string {
+  return `vendor-app:${email}`;
+}
+
+export async function requestVendorApplicationEmailCode(
+  email: string,
+  meta: { ip?: string; userAgent?: string } = {}
+): Promise<{ issued: true }> {
+  const key = vendorAppEmailKey(email);
+  const code = generateOtp();
+
+  await db
+    .update(otpCode)
+    .set({ consumedAt: new Date() })
+    .where(
+      and(eq(otpCode.identifier, key), eq(otpCode.purpose, VENDOR_APP_OTP_PURPOSE), isNull(otpCode.consumedAt))
+    );
+
+  await db.insert(otpCode).values({
+    identifier: key,
+    codeHash: hashOtp(code, key),
+    purpose: VENDOR_APP_OTP_PURPOSE,
+    maxAttempts: OTP_MAX_ATTEMPTS,
+    expiresAt: new Date(Date.now() + OTP_TTL_MINUTES * 60_000),
+    ip: meta.ip,
+    userAgent: meta.userAgent,
+  });
+
+  await deliverOtp({ email }, code);
+  return { issued: true };
+}
+
+export async function consumeVendorApplicationEmailCode(
+  email: string,
+  code: string
+): Promise<{ ok: true } | { ok: false; reason: VerifyFailure }> {
+  const key = vendorAppEmailKey(email);
+  const [row] = await db
+    .select()
+    .from(otpCode)
+    .where(
+      and(eq(otpCode.identifier, key), eq(otpCode.purpose, VENDOR_APP_OTP_PURPOSE), isNull(otpCode.consumedAt))
+    )
+    .orderBy(sql`${otpCode.createdAt} desc`)
+    .limit(1);
+
+  if (!row) return { ok: false, reason: "no_code" };
+  if (row.expiresAt.getTime() < Date.now()) return { ok: false, reason: "expired" };
+  if (row.attempts >= row.maxAttempts) return { ok: false, reason: "locked" };
+
+  if (!safeEqual(row.codeHash, hashOtp(code, key))) {
+    await db
+      .update(otpCode)
+      .set({ attempts: row.attempts + 1 })
+      .where(eq(otpCode.id, row.id));
+    return { ok: false, reason: row.attempts + 1 >= row.maxAttempts ? "locked" : "invalid" };
+  }
+
+  await db.update(otpCode).set({ consumedAt: new Date() }).where(eq(otpCode.id, row.id));
+  return { ok: true };
+}
+
 export async function destroySession(token: string | undefined): Promise<void> {
   if (!token) return;
   await db.delete(session).where(eq(session.tokenHash, hashSessionToken(token)));
