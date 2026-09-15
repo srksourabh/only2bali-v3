@@ -1,0 +1,329 @@
+"use client";
+import { useState } from "react";
+import { wa, CFG } from "@/lib/config";
+import {
+  indianMobile10Schema,
+  vendorEmailIssue,
+  vendorEmailSchema,
+} from "@/lib/validators/leads";
+
+const TYPES = [
+  "Vegetarian restaurant",
+  "Vegan café",
+  "Jain-capable kitchen",
+  "Villa with kitchen",
+  "Hotel with veg meal support",
+  "Transport provider",
+  "Guide (Indian language)",
+  "Chef / cook",
+  "Activity partner",
+];
+const CAPS = ["Vegetarian", "Jain", "Vegan", "Kitchen available"];
+
+const DELIVERY_UNAVAILABLE =
+  "Email verification is not available yet, so a code cannot be sent. Apply stays closed until email sending is configured.";
+
+export default function VendorApplyForm({
+  emailVerificationAvailable,
+}: {
+  emailVerificationAvailable: boolean;
+}) {
+  const [f, setF] = useState({
+    name: "",
+    type: "",
+    loc: "",
+    cuisine: "",
+    langs: "",
+    price: "",
+    phone: "",
+    email: "",
+    avail: "",
+    notes: "",
+  });
+  const [caps, setCaps] = useState<string[]>([]);
+  const [emailCode, setEmailCode] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
+  const [emailChecked, setEmailChecked] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [ok, setOk] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
+
+  const emailOk = vendorEmailSchema.safeParse(f.email).success;
+  const canSendCode = emailVerificationAvailable && emailOk && !sendingCode;
+  const canApply = emailVerificationAvailable && emailOk && !sending;
+
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setF((s) => ({ ...s, [k]: e.target.value }));
+
+  const setPhone = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+    setErr(null);
+    setF((s) => ({ ...s, phone: digits }));
+  };
+
+  const showEmailIssue = (value: string) => {
+    const issue = vendorEmailIssue(value);
+    setEmailError(issue);
+    return issue;
+  };
+
+  const setEmail = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setCodeSent(false);
+    setEmailCode("");
+    setErr(null);
+    setF((s) => ({ ...s, email: value }));
+    if (emailChecked) showEmailIssue(value);
+  };
+
+  const onEmailBlur = () => {
+    setEmailChecked(true);
+    showEmailIssue(f.email);
+  };
+
+  async function sendEmailCode() {
+    const issue = showEmailIssue(f.email);
+    setEmailChecked(true);
+    if (issue) return;
+    if (!emailVerificationAvailable) {
+      setErr(DELIVERY_UNAVAILABLE);
+      return;
+    }
+    const email = vendorEmailSchema.parse(f.email);
+    setErr(null);
+    setSendingCode(true);
+    try {
+      const res = await fetch("/api/vendor-applications/verify-email", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success) {
+        setErr(json?.fields?.[0]?.message ?? json?.error ?? "We could not send a code just now.");
+        return;
+      }
+      setCodeSent(true);
+    } catch {
+      setErr("Network problem — the code was not sent. Please try again.");
+    } finally {
+      setSendingCode(false);
+    }
+  }
+
+  /**
+   * The application is stored before WhatsApp is opened. Onboarding a provider
+   * is the whole point of the marketplace; losing the submission because the
+   * visitor never sent the draft is not acceptable.
+   */
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEmailChecked(true);
+    const issue = showEmailIssue(f.email);
+    if (issue) return;
+    if (!emailVerificationAvailable) {
+      setErr(DELIVERY_UNAVAILABLE);
+      return;
+    }
+    if (!f.name || !f.type || !f.loc || !f.phone || caps.length === 0) {
+      setErr("Please complete: name, business type, location, 10-digit mobile, email, and at least one dietary capability.");
+      return;
+    }
+    const phone = indianMobile10Schema.safeParse(f.phone);
+    if (!phone.success) {
+      setErr(phone.error.issues[0]?.message ?? "Enter a valid 10-digit mobile number.");
+      return;
+    }
+    const email = vendorEmailSchema.parse(f.email);
+    if (!/^\d{6}$/.test(emailCode)) {
+      setErr("Enter the six-digit code sent to your email.");
+      return;
+    }
+    setErr(null);
+
+    setSending(true);
+    try {
+      const res = await fetch("/api/vendor-applications", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          businessName: f.name,
+          businessType: f.type,
+          baseArea: f.loc,
+          cuisine: f.cuisine,
+          capabilities: caps,
+          languages: f.langs,
+          priceBand: f.price,
+          whatsapp: phone.data,
+          email,
+          emailCode,
+          availability: f.avail,
+          notes: f.notes,
+        }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success) {
+        setErr(json?.fields?.[0]?.message ?? json?.error ?? "We could not save that just now. Please try again.");
+        return;
+      }
+    } catch {
+      setErr("Network problem — your application was not sent. Please try again.");
+      return;
+    } finally {
+      setSending(false);
+    }
+
+    const body = `VENDOR APPLICATION — Only2Bali\n• Business: ${f.name}\n• Type: ${f.type}\n• Location/areas: ${f.loc}${f.cuisine ? `\n• Cuisine/service: ${f.cuisine}` : ""}\n• Capability: ${caps.join(", ")}${f.langs ? `\n• Languages: ${f.langs}` : ""}${f.price ? `\n• Pricing band: ${f.price}` : ""}\n• Phone/WA: ${phone.data}\n• Email: ${email}${f.avail ? `\n• Availability: ${f.avail}` : ""}${f.notes ? `\n• Notes: ${f.notes}` : ""}`;
+    const link = wa(body);
+    if (link) window.open(link, "_blank");
+    setOk(true);
+  };
+
+  return (
+    <form onSubmit={submit} noValidate className="card">
+      <div className="row">
+        <div>
+          <label htmlFor="vn">Business / your name *</label>
+          <input id="vn" value={f.name} onChange={set("name")} required />
+        </div>
+        <div>
+          <label htmlFor="vt">Business type *</label>
+          <select id="vt" value={f.type} onChange={set("type")} required>
+            <option value="">Select…</option>
+            {TYPES.map((t) => (
+              <option key={t}>{t}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="row">
+        <div>
+          <label htmlFor="vl">Location / service areas *</label>
+          <input id="vl" value={f.loc} onChange={set("loc")} placeholder="Ubud, Seminyak…" required />
+        </div>
+        <div>
+          <label htmlFor="vc">Cuisine / service type</label>
+          <input id="vc" value={f.cuisine} onChange={set("cuisine")} />
+        </div>
+      </div>
+      <div style={{ marginBottom: "1rem" }}>
+        <label>Dietary capability *</label>
+        <div className="checks">
+          {CAPS.map((c) => (
+            <label key={c}>
+              <input
+                type="checkbox"
+                checked={caps.includes(c)}
+                onChange={(e) => setCaps(e.target.checked ? [...caps, c] : caps.filter((x) => x !== c))}
+              />{" "}
+              {c}
+            </label>
+          ))}
+        </div>
+      </div>
+      <div className="row">
+        <div>
+          <label htmlFor="vg">Languages spoken</label>
+          <input id="vg" value={f.langs} onChange={set("langs")} placeholder="English, Hindi, Bahasa…" />
+        </div>
+        <div>
+          <label htmlFor="vp">Pricing band</label>
+          <select id="vp" value={f.price} onChange={set("price")}>
+            <option value="">Select…</option>
+            <option>Budget</option>
+            <option>Mid-range</option>
+            <option>Premium</option>
+          </select>
+        </div>
+      </div>
+      <div className="row">
+        <div>
+          <label htmlFor="vph">Mobile number *</label>
+          <input
+            id="vph"
+            type="tel"
+            inputMode="numeric"
+            autoComplete="tel"
+            maxLength={10}
+            pattern="[6-9][0-9]{9}"
+            value={f.phone}
+            onChange={setPhone}
+            placeholder="10-digit mobile"
+            required
+          />
+        </div>
+        <div>
+          <label htmlFor="ve">Email *</label>
+          <input
+            id="ve"
+            type="email"
+            autoComplete="email"
+            value={f.email}
+            onChange={setEmail}
+            onBlur={onEmailBlur}
+            required
+            aria-invalid={Boolean(emailError)}
+            aria-describedby={emailError ? "ve-error" : undefined}
+          />
+          {emailError && (
+            <p id="ve-error" className="errmsg" role="alert">
+              {emailError}
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="row">
+        <div>
+          <label htmlFor="vec">Email verification code *</label>
+          <input
+            id="vec"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            pattern="[0-9]{6}"
+            value={emailCode}
+            onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            placeholder={codeSent ? "Six-digit code" : "Send a code first"}
+            required
+          />
+        </div>
+        <div style={{ display: "flex", alignItems: "flex-end" }}>
+          <button className="btn" type="button" onClick={sendEmailCode} disabled={!canSendCode}>
+            {sendingCode ? "Sending code…" : codeSent ? "Resend code" : "Send verification code"}
+          </button>
+        </div>
+      </div>
+      <div className="row">
+        <div>
+          <label htmlFor="va">Availability</label>
+          <input id="va" value={f.avail} onChange={set("avail")} />
+        </div>
+        <div>
+          <label htmlFor="vno">Special notes</label>
+          <input id="vno" value={f.notes} onChange={set("notes")} />
+        </div>
+      </div>
+      {!emailVerificationAvailable && (
+        <p className="errmsg" role="status">
+          {DELIVERY_UNAVAILABLE}
+        </p>
+      )}
+      {err && (
+        <p className="errmsg" role="alert">
+          {err}
+        </p>
+      )}
+      <button className="btn btn-p" type="submit" disabled={!canApply}>
+        {sending ? "Sending…" : "Apply to Join"}
+      </button>
+      <p className="fineprint">
+        {CFG.whatsapp
+          ? "Your application is recorded when you submit, and WhatsApp opens with a copy so you can add anything else."
+          : "Your application is recorded when you submit."}
+      </p>
+      {ok && <div className="okbox">✅ Application received. We typically respond within 2 business days.</div>}
+    </form>
+  );
+}

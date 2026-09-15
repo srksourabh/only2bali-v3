@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { leadSchema, vendorApplicationSchema, toProtocol } from "./leads";
+import {
+  leadSchema,
+  toProtocol,
+  vendorApplicationSchema,
+  vendorEmailIssue,
+  vendorEmailSchema,
+  VENDOR_EMAIL_FORMAT_MESSAGE,
+  VENDOR_EMAIL_PLACEHOLDER_MESSAGE,
+} from "./leads";
 
 const validLead = {
   name: "Meera Shah",
@@ -83,7 +91,10 @@ describe("vendorApplicationSchema", () => {
   });
 
   it("refuses a placeholder email such as test@test.com", () => {
-    expect(vendorApplicationSchema.safeParse({ ...validVendor, email: "test@test.com" }).success).toBe(false);
+    const parsed = vendorApplicationSchema.safeParse({ ...validVendor, email: "test@test.com" });
+    expect(parsed.success).toBe(false);
+    if (parsed.success) return;
+    expect(parsed.error.issues.some((issue) => issue.message === VENDOR_EMAIL_PLACEHOLDER_MESSAGE)).toBe(true);
   });
 
   it("accepts a real-looking mailbox including the e2e .test TLD", () => {
@@ -106,6 +117,29 @@ describe("vendorApplicationSchema", () => {
 
   it("refuses a business with no name", () => {
     expect(vendorApplicationSchema.safeParse({ ...validVendor, businessName: "  " }).success).toBe(false);
+  });
+});
+
+describe("vendorEmailSchema", () => {
+  it("names a malformed address as a format problem", () => {
+    const parsed = vendorEmailSchema.safeParse("not-an-email");
+    expect(parsed.success).toBe(false);
+    expect(vendorEmailIssue("not-an-email")).toBe(VENDOR_EMAIL_FORMAT_MESSAGE);
+  });
+
+  it("names test@test.com as a placeholder, not a format problem", () => {
+    const parsed = vendorEmailSchema.safeParse("test@test.com");
+    expect(parsed.success).toBe(false);
+    expect(vendorEmailIssue("test@test.com")).toBe(VENDOR_EMAIL_PLACEHOLDER_MESSAGE);
+  });
+
+  it("names example.com the same way", () => {
+    expect(vendorEmailIssue("qa@example.com")).toBe(VENDOR_EMAIL_PLACEHOLDER_MESSAGE);
+  });
+
+  it("accepts a reachable-looking mailbox", () => {
+    expect(vendorEmailSchema.safeParse("kitchen@ubudgreen.com").success).toBe(true);
+    expect(vendorEmailIssue("kitchen@ubudgreen.com")).toBeNull();
   });
 });
 

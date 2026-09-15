@@ -5,6 +5,24 @@
 >
 > Agent config lives in `CLAUDE.md` (Claude Code / Cursor) and `AGENTS.md` (Antigravity).
 
+## QA tester fixes (2026-09-15)
+
+Follow-up on the provider form (`/[lang]/vendors`). Placeholder emails were
+already refused by `vendorEmailSchema`, but the field looked like it accepted
+`test@test.com` because validation only ran on Send/Apply and the error sat at
+the bottom of the form.
+
+- Email is checked on blur (and on change after the first failure). Placeholder
+  domains (`test@test.com`, `example.com`, …) show
+  "That looks like a test address…" under the field. Send and Apply stay
+  disabled until the mailbox parses.
+- `canDeliver("email")` is passed from the server page into `VendorApplyForm`.
+  Production without Resend/SMTP disables Send and Apply up front with
+  "Email verification is not available yet, so a code cannot be sent." The
+  API 503 remains a backstop. Local `next dev` still uses the console channel.
+- Owner still: set `RESEND_API_KEY`+`EMAIL_FROM` or SMTP on Vercel before a
+  code can reach an inbox (`docs/launch-checklist.md` item 2).
+
 ## QA tester fixes (2026-09-10)
 
 Provider application form (`/[lang]/vendors`, "List my business as a provider"):
