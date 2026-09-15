@@ -35,16 +35,27 @@ const PLACEHOLDER_EMAIL_DOMAINS = new Set([
   "example.org",
 ]);
 
+export const VENDOR_EMAIL_FORMAT_MESSAGE = "Enter a valid email address.";
+export const VENDOR_EMAIL_PLACEHOLDER_MESSAGE =
+  "That looks like a test address. Use a real email, not test.com or example.com.";
+
 export const vendorEmailSchema = z
   .string()
   .trim()
   .toLowerCase()
-  .email("Enter a valid email address.")
+  .email(VENDOR_EMAIL_FORMAT_MESSAGE)
   .max(254)
   .refine((value) => {
     const domain = value.split("@")[1] ?? "";
     return !PLACEHOLDER_EMAIL_DOMAINS.has(domain);
-  }, "Enter a valid email address.");
+  }, VENDOR_EMAIL_PLACEHOLDER_MESSAGE);
+
+/** Field-level copy for the provider form; null when the mailbox is usable. */
+export function vendorEmailIssue(value: string): string | null {
+  const parsed = vendorEmailSchema.safeParse(value);
+  if (parsed.success) return null;
+  return parsed.error.issues[0]?.message ?? VENDOR_EMAIL_FORMAT_MESSAGE;
+}
 
 /** 10-digit Indian mobile. Optional +91 is stripped; anything else is refused. */
 export const indianMobile10Schema = z

@@ -9,6 +9,14 @@
 >
 > This tracks the **real project**, not a greenfield build. The product is already live.
 
+## Tester QA batch (2026-09-15)
+
+Provider form follow-up (`only2bali-next` `/[lang]/vendors`).
+
+- [x] `test@test.com` shows an inline placeholder error on blur; Send and Apply stay disabled
+- [x] Send/Apply disabled in production when `otpDelivery` is none (no 503 after a click)
+- [ ] Owner: email sender still required in production before a code actually arrives
+
 ## Tester QA batch (2026-09-10)
 
 Provider "List my business as a provider" form (`only2bali-next` `/[lang]/vendors`).
